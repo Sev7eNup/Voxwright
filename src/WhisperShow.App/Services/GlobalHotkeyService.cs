@@ -12,7 +12,10 @@ public class GlobalHotkeyService : IGlobalHotkeyService
 {
     private const int HotkeyIdToggle = 0x0001;
     private const int HotkeyIdPushToTalk = 0x0002;
+    private const int HotkeyIdEscape = 0x0003;
     private const int PollIntervalMs = 30;
+    private const uint ModNoRepeat = 0x4000;
+    private const uint VkEscape = 0x1B;
 
     private readonly ILogger<GlobalHotkeyService> _logger;
     private HotkeyBinding _toggleBinding;
@@ -21,11 +24,13 @@ public class GlobalHotkeyService : IGlobalHotkeyService
     private HwndSource? _hwndSource;
     private DispatcherTimer? _releaseTimer;
     private int _trackedVirtualKey;
+    private bool _escapeRegistered;
     private bool _disposed;
 
     public event EventHandler? ToggleHotkeyPressed;
     public event EventHandler? PushToTalkHotkeyPressed;
     public event EventHandler? PushToTalkHotkeyReleased;
+    public event EventHandler? EscapePressed;
 
     public GlobalHotkeyService(
         ILogger<GlobalHotkeyService> logger,
@@ -65,6 +70,7 @@ public class GlobalHotkeyService : IGlobalHotkeyService
     public void Unregister()
     {
         StopPolling();
+        UnregisterEscapeHotkey();
 
         if (_hwndSource is not null)
         {
@@ -74,6 +80,29 @@ public class GlobalHotkeyService : IGlobalHotkeyService
             _hwndSource = null;
             _logger.LogInformation("Global hotkeys unregistered");
         }
+    }
+
+    public void RegisterEscapeHotkey()
+    {
+        if (_escapeRegistered || _windowHandle == IntPtr.Zero) return;
+
+        if (!NativeMethods.RegisterHotKey(_windowHandle, HotkeyIdEscape, ModNoRepeat, VkEscape))
+        {
+            _logger.LogWarning("Failed to register Escape hotkey. It may be in use by another application.");
+            return;
+        }
+
+        _escapeRegistered = true;
+        _logger.LogDebug("Escape hotkey registered");
+    }
+
+    public void UnregisterEscapeHotkey()
+    {
+        if (!_escapeRegistered || _windowHandle == IntPtr.Zero) return;
+
+        NativeMethods.UnregisterHotKey(_windowHandle, HotkeyIdEscape);
+        _escapeRegistered = false;
+        _logger.LogDebug("Escape hotkey unregistered");
     }
 
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
@@ -92,6 +121,12 @@ public class GlobalHotkeyService : IGlobalHotkeyService
                 _logger.LogInformation("Push-to-Talk hotkey pressed");
                 PushToTalkHotkeyPressed?.Invoke(this, EventArgs.Empty);
                 StartPollingForRelease();
+                handled = true;
+            }
+            else if (id == HotkeyIdEscape)
+            {
+                _logger.LogInformation("Escape hotkey pressed");
+                EscapePressed?.Invoke(this, EventArgs.Empty);
                 handled = true;
             }
         }

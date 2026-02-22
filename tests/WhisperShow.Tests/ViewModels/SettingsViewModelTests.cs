@@ -764,4 +764,33 @@ public class SettingsViewModelTests
 
         _preloadService.Received(1).PreloadCorrectionModel("gemma-2b.gguf");
     }
+
+    // --- Mic Test ---
+
+    [Fact]
+    public void StopMicTest_WhenNotRunning_DoesNotThrow()
+    {
+        var vm = CreateViewModel();
+
+        var act = () => vm.StopMicTest();
+
+        act.Should().NotThrow();
+        vm.IsMicTesting.Should().BeFalse();
+        vm.MicTestLevel.Should().Be(0);
+    }
+
+    [Fact]
+    public void StopMicTest_ResetsState()
+    {
+        var vm = CreateViewModel();
+
+        // Directly set state to simulate running test (avoids needing real audio device)
+        vm.IsMicTesting = true;
+        vm.MicTestLevel = 0.5f;
+
+        vm.StopMicTest();
+
+        vm.IsMicTesting.Should().BeFalse();
+        vm.MicTestLevel.Should().Be(0);
+    }
 }

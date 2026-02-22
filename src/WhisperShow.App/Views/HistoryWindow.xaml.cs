@@ -1,5 +1,7 @@
 using System.ComponentModel;
+using System.Globalization;
 using System.Windows;
+using System.Windows.Data;
 using System.Windows.Input;
 using WhisperShow.App.ViewModels;
 
@@ -21,6 +23,7 @@ public partial class HistoryWindow : Window
         _viewModel.Refresh();
         Show();
         Activate();
+        SearchBox.Focus();
     }
 
     private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -39,4 +42,22 @@ public partial class HistoryWindow : Window
         e.Cancel = true;
         Hide();
     }
+}
+
+public class EmptyStringToVisibilityConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        => string.IsNullOrEmpty(value as string) ? Visibility.Visible : Visibility.Collapsed;
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        => throw new NotSupportedException();
+}
+
+public class NonEmptyStringToVisibilityConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        => string.IsNullOrEmpty(value as string) ? Visibility.Collapsed : Visibility.Visible;
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        => throw new NotSupportedException();
 }

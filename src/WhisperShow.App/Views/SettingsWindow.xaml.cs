@@ -26,6 +26,7 @@ public partial class SettingsWindow : Window
                 new Rect(0, 0, e.NewSize.Width, e.NewSize.Height), 12, 12);
         };
         _viewModel.PropertyChanged += ViewModel_PropertyChanged;
+        IsVisibleChanged += (_, _) => { if (!IsVisible) _viewModel.StopMicTest(); };
 
         // Apply initial theme
         ApplyTheme(_viewModel.IsDarkMode);
