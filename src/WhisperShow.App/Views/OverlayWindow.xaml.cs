@@ -1,4 +1,7 @@
 using System.ComponentModel;
+using System.IO;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -23,6 +26,7 @@ public partial class OverlayWindow : Window
     private Storyboard? _spinStoryboard;
     private const int WaveformBarCount = 20;
     private readonly Rectangle[] _waveformBars = new Rectangle[WaveformBarCount];
+    private CancellationTokenSource? _saveCts;
 
     public OverlayWindow(OverlayViewModel viewModel, IGlobalHotkeyService hotkeyService,
         IOptions<WhisperShowOptions> options)
@@ -64,10 +68,8 @@ public partial class OverlayWindow : Window
         // Create waveform bars
         CreateWaveformBars();
 
-        // Position: bottom center of primary screen, above taskbar
-        var workArea = SystemParameters.WorkArea;
-        Left = (workArea.Width - ActualWidth) / 2 + workArea.Left;
-        Top = workArea.Bottom - ActualHeight - 60;
+        // Position: restore saved or default to bottom-center
+        RestorePosition();
     }
 
     private void CreateWaveformBars()
@@ -133,10 +135,7 @@ public partial class OverlayWindow : Window
                 if (!IsVisible)
                 {
                     Show();
-                    // Re-position in case screen resolution changed
-                    var workArea = SystemParameters.WorkArea;
-                    Left = (workArea.Width - ActualWidth) / 2 + workArea.Left;
-                    Top = workArea.Bottom - ActualHeight - 60;
+                    RestorePosition();
                 }
             }
             else if (state == RecordingState.Idle)
@@ -199,6 +198,9 @@ public partial class OverlayWindow : Window
             if (Mouse.Captured is UIElement captured)
                 captured.ReleaseMouseCapture();
             DragMove();
+            _options.Overlay.PositionX = Left;
+            _options.Overlay.PositionY = Top;
+            SavePositionAsync();
         }
     }
 
@@ -225,6 +227,52 @@ public partial class OverlayWindow : Window
     private void DismissButton_Click(object sender, RoutedEventArgs e)
     {
         _viewModel.DismissResultCommand.Execute(null);
+    }
+
+    private void RestorePosition()
+    {
+        if (_options.Overlay.PositionX >= 0 && _options.Overlay.PositionY >= 0)
+        {
+            Left = _options.Overlay.PositionX;
+            Top = _options.Overlay.PositionY;
+        }
+        else
+        {
+            var workArea = SystemParameters.WorkArea;
+            Left = (workArea.Width - ActualWidth) / 2 + workArea.Left;
+            Top = workArea.Bottom - ActualHeight - 60;
+        }
+    }
+
+    private void SavePositionAsync()
+    {
+        _saveCts?.Cancel();
+        _saveCts = new CancellationTokenSource();
+        var token = _saveCts.Token;
+        var left = Left;
+        var top = Top;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(300, token);
+                var path = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "appsettings.json");
+                var json = await File.ReadAllTextAsync(path, token);
+                var doc = JsonNode.Parse(json, documentOptions: new JsonDocumentOptions
+                {
+                    CommentHandling = JsonCommentHandling.Skip
+                })!;
+
+                doc["WhisperShow"]!["Overlay"]!["PositionX"] = left;
+                doc["WhisperShow"]!["Overlay"]!["PositionY"] = top;
+
+                var options = new JsonSerializerOptions { WriteIndented = true };
+                await File.WriteAllTextAsync(path, doc.ToJsonString(options), token);
+            }
+            catch (TaskCanceledException) { }
+            catch { /* position save is best-effort */ }
+        }, token);
     }
 
     protected override void OnClosing(CancelEventArgs e)
