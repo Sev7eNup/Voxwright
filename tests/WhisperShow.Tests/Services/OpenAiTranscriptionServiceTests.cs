@@ -57,7 +57,7 @@ public class OpenAiTranscriptionServiceTests
 
     private static OpenAiTranscriptionService CreateService(string? apiKey)
     {
-        var options = OptionsHelper.Create(o => o.OpenAI.ApiKey = apiKey);
+        var options = OptionsHelper.CreateMonitor(o => o.OpenAI.ApiKey = apiKey);
         return new OpenAiTranscriptionService(
             NullLogger<OpenAiTranscriptionService>.Instance, options,
             Substitute.For<IAudioCompressor>());

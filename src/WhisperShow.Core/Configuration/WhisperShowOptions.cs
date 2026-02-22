@@ -30,9 +30,11 @@ public class LocalWhisperOptions
     public bool GpuAcceleration { get; set; } = true;
 
     public string GetModelDirectory() =>
-        ModelDirectory ?? Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "WhisperShow", "models");
+        string.IsNullOrEmpty(ModelDirectory)
+            ? Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "WhisperShow", "models")
+            : ModelDirectory;
 }
 
 public class HotkeyOptions
@@ -67,16 +69,34 @@ public class OverlayOptions
 
 public class TextCorrectionOptions
 {
-    public bool Enabled { get; set; }
+    public TextCorrectionProvider Provider { get; set; } = TextCorrectionProvider.Off;
+
+    // Cloud correction
     public string Model { get; set; } = "gpt-4o-mini";
     public string? SystemPrompt { get; set; }
-    public string? CombinedSystemPrompt { get; set; }
+
+    // Local correction
+    public string LocalModelName { get; set; } = "";
+    public string? LocalModelDirectory { get; set; }
+    public bool LocalGpuAcceleration { get; set; } = true;
+
+    public string GetLocalModelDirectory() =>
+        string.IsNullOrEmpty(LocalModelDirectory)
+            ? Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "WhisperShow", "correction-models")
+            : LocalModelDirectory;
+
+    // Combined audio model (cloud-only optimization)
     public bool UseCombinedAudioModel { get; set; }
     public string CombinedAudioModel { get; set; } = "gpt-4o-mini-audio-preview";
+    public string? CombinedSystemPrompt { get; set; }
 }
 
 public class AppOptions
 {
     public bool LaunchAtLogin { get; set; }
     public bool SoundEffects { get; set; } = true;
+    public int MaxHistoryEntries { get; set; } = 20;
+    public string Theme { get; set; } = "Light";
 }

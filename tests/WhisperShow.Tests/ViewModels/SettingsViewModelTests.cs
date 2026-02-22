@@ -5,6 +5,9 @@ using WhisperShow.App.ViewModels;
 using WhisperShow.Core.Configuration;
 using WhisperShow.Core.Models;
 using WhisperShow.Core.Services.Hotkey;
+using WhisperShow.Core.Services.ModelManagement;
+using WhisperShow.Core.Services.Statistics;
+using WhisperShow.Core.Services.TextCorrection;
 using WhisperShow.Tests.TestHelpers;
 
 namespace WhisperShow.Tests.ViewModels;
@@ -28,7 +31,7 @@ public class SettingsViewModelTests
             },
             Audio = new AudioOptions { DeviceIndex = 0, MaxRecordingSeconds = 300 },
             Overlay = new OverlayOptions { AutoDismissSeconds = 10 },
-            TextCorrection = new TextCorrectionOptions { Enabled = true },
+            TextCorrection = new TextCorrectionOptions { Provider = TextCorrectionProvider.Cloud },
             OpenAI = new OpenAiOptions { ApiKey = "sk-test-key-1234", Model = "whisper-1" },
             Local = new LocalWhisperOptions { GpuAcceleration = true }
         };
@@ -51,6 +54,10 @@ public class SettingsViewModelTests
                 o.App = _options.App;
             }),
             _hotkeyService,
+            Substitute.For<IDictionaryService>(),
+            Substitute.For<IUsageStatsService>(),
+            Substitute.For<IModelManager>(),
+            Substitute.For<ICorrectionModelManager>(),
             NullLogger<SettingsViewModel>.Instance);
     }
 
@@ -67,7 +74,7 @@ public class SettingsViewModelTests
         vm.PttKey.Should().Be("Space");
         vm.SelectedLanguageCode.Should().Be("de");
         vm.Provider.Should().Be(TranscriptionProvider.OpenAI);
-        vm.TextCorrectionEnabled.Should().BeTrue();
+        vm.CorrectionProvider.Should().Be(TextCorrectionProvider.Cloud);
         vm.AudioCompressionEnabled.Should().BeTrue();
         vm.UseCombinedAudioModel.Should().BeFalse();
         vm.AutoDismissSeconds.Should().Be(10);
@@ -162,8 +169,8 @@ public class SettingsViewModelTests
         vm.NavigateCommand.Execute(SettingsPage.System);
         vm.SelectedPage.Should().Be(SettingsPage.System);
 
-        vm.NavigateCommand.Execute(SettingsPage.Transcription);
-        vm.SelectedPage.Should().Be(SettingsPage.Transcription);
+        vm.NavigateCommand.Execute(SettingsPage.Models);
+        vm.SelectedPage.Should().Be(SettingsPage.Models);
 
         vm.NavigateCommand.Execute(SettingsPage.General);
         vm.SelectedPage.Should().Be(SettingsPage.General);
@@ -513,17 +520,15 @@ public class SettingsViewModelTests
     // --- System: Transcription Settings ---
 
     [Fact]
-    public void ToggleTextCorrection_BindingFlipsAndCommandRetains()
+    public void SelectCorrectionProvider_ChangesProvider()
     {
-        var vm = CreateViewModel(o => o.TextCorrection.Enabled = true);
+        var vm = CreateViewModel(o => o.TextCorrection.Provider = TextCorrectionProvider.Off);
 
-        vm.TextCorrectionEnabled = false;
-        vm.ToggleTextCorrectionCommand.Execute(null);
-        vm.TextCorrectionEnabled.Should().BeFalse();
+        vm.SelectCorrectionProviderCommand.Execute("Cloud");
+        vm.CorrectionProvider.Should().Be(TextCorrectionProvider.Cloud);
 
-        vm.TextCorrectionEnabled = true;
-        vm.ToggleTextCorrectionCommand.Execute(null);
-        vm.TextCorrectionEnabled.Should().BeTrue();
+        vm.SelectCorrectionProviderCommand.Execute("Off");
+        vm.CorrectionProvider.Should().Be(TextCorrectionProvider.Off);
     }
 
     [Fact]

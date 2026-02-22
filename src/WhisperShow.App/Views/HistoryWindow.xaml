@@ -1,0 +1,190 @@
+<Window x:Class="WhisperShow.App.Views.HistoryWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="NoResize"
+        ShowInTaskbar="True"
+        Width="420" Height="520"
+        Title="Transcription History">
+
+    <Window.Resources>
+        <SolidColorBrush x:Key="BgBrush" Color="#FAF8F5"/>
+        <SolidColorBrush x:Key="SidebarBgBrush" Color="#F5F0EB"/>
+        <SolidColorBrush x:Key="CardBgBrush" Color="#F0EBE4"/>
+        <SolidColorBrush x:Key="ButtonBgBrush" Color="#EAE4DC"/>
+        <SolidColorBrush x:Key="ButtonBorderBrush" Color="#DED8D0"/>
+        <SolidColorBrush x:Key="TextPrimaryBrush" Color="#1A1A1A"/>
+        <SolidColorBrush x:Key="TextSecondaryBrush" Color="#8A8A8A"/>
+        <SolidColorBrush x:Key="DividerBrush" Color="#E8E0D8"/>
+    </Window.Resources>
+
+    <Border CornerRadius="12">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="20" ShadowDepth="2" Opacity="0.12" Color="#000000"/>
+        </Border.Effect>
+        <Border CornerRadius="12" Background="{StaticResource BgBrush}" ClipToBounds="True">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Title bar -->
+                <Grid Grid.Row="0" Height="40" Background="{StaticResource SidebarBgBrush}"
+                      MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+                    <TextBlock Text="Transcription History" FontSize="13" FontWeight="SemiBold"
+                               FontFamily="Segoe UI" Foreground="{StaticResource TextPrimaryBrush}"
+                               HorizontalAlignment="Left" VerticalAlignment="Center" Margin="16,0,0,0"/>
+                    <Button HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,8,0"
+                            Cursor="Hand" Click="CloseButton_Click">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="Bd" Background="Transparent" CornerRadius="6" Width="28" Height="28">
+                                    <TextBlock Text="&#xE8BB;" FontFamily="Segoe MDL2 Assets" FontSize="10"
+                                               Foreground="{StaticResource TextSecondaryBrush}"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="Bd" Property="Background" Value="{StaticResource ButtonBgBrush}"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                </Grid>
+
+                <!-- Entry list -->
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="12,8,12,0">
+                    <ItemsControl ItemsSource="{Binding Entries}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{StaticResource CardBgBrush}" CornerRadius="10"
+                                        Padding="14,10" Margin="0,0,0,6">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+
+                                        <!-- Text preview + time -->
+                                        <Grid Grid.Row="0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="{Binding Preview}" FontSize="12" FontFamily="Segoe UI"
+                                                       Foreground="{StaticResource TextPrimaryBrush}"
+                                                       TextWrapping="Wrap" TextTrimming="CharacterEllipsis"
+                                                       MaxHeight="38"/>
+                                            <TextBlock Grid.Column="1" Text="{Binding TimeAgo}" FontSize="10"
+                                                       FontFamily="Segoe UI" Foreground="{StaticResource TextSecondaryBrush}"
+                                                       VerticalAlignment="Top" Margin="8,0,0,0"/>
+                                        </Grid>
+
+                                        <!-- Action buttons -->
+                                        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,6,0,0">
+                                            <Button Content="Copy" Cursor="Hand" FontSize="11" FontFamily="Segoe UI"
+                                                    Command="{Binding DataContext.CopyEntryCommand,
+                                                        RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                    CommandParameter="{Binding}">
+                                                <Button.Template>
+                                                    <ControlTemplate TargetType="Button">
+                                                        <Border x:Name="Bd" Background="{StaticResource ButtonBgBrush}"
+                                                                CornerRadius="6" Padding="10,4"
+                                                                BorderBrush="{StaticResource ButtonBorderBrush}" BorderThickness="1">
+                                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        </Border>
+                                                        <ControlTemplate.Triggers>
+                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource ButtonBorderBrush}"/>
+                                                            </Trigger>
+                                                        </ControlTemplate.Triggers>
+                                                    </ControlTemplate>
+                                                </Button.Template>
+                                            </Button>
+                                            <Button Content="Insert" Cursor="Hand" FontSize="11" FontFamily="Segoe UI"
+                                                    Margin="6,0,0,0"
+                                                    Command="{Binding DataContext.InsertEntryCommand,
+                                                        RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                    CommandParameter="{Binding}">
+                                                <Button.Template>
+                                                    <ControlTemplate TargetType="Button">
+                                                        <Border x:Name="Bd" Background="{StaticResource ButtonBgBrush}"
+                                                                CornerRadius="6" Padding="10,4"
+                                                                BorderBrush="{StaticResource ButtonBorderBrush}" BorderThickness="1">
+                                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        </Border>
+                                                        <ControlTemplate.Triggers>
+                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource ButtonBorderBrush}"/>
+                                                            </Trigger>
+                                                        </ControlTemplate.Triggers>
+                                                    </ControlTemplate>
+                                                </Button.Template>
+                                            </Button>
+                                            <Button Cursor="Hand" FontSize="10" FontFamily="Segoe MDL2 Assets"
+                                                    Margin="6,0,0,0"
+                                                    Command="{Binding DataContext.RemoveEntryCommand,
+                                                        RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                    CommandParameter="{Binding}">
+                                                <Button.Template>
+                                                    <ControlTemplate TargetType="Button">
+                                                        <Border x:Name="Bd" Background="Transparent"
+                                                                CornerRadius="6" Width="26" Height="26">
+                                                            <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="10"
+                                                                       Foreground="{StaticResource TextSecondaryBrush}"
+                                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        </Border>
+                                                        <ControlTemplate.Triggers>
+                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource ButtonBgBrush}"/>
+                                                            </Trigger>
+                                                        </ControlTemplate.Triggers>
+                                                    </ControlTemplate>
+                                                </Button.Template>
+                                            </Button>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+
+                <!-- Bottom bar -->
+                <Border Grid.Row="2" Background="{StaticResource SidebarBgBrush}" Padding="12,8"
+                        CornerRadius="0,0,12,12">
+                    <Grid>
+                        <TextBlock Text="{Binding Entries.Count, StringFormat='{}{0} entries'}"
+                                   FontSize="11" FontFamily="Segoe UI"
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   VerticalAlignment="Center"/>
+                        <Button Content="Clear all" HorizontalAlignment="Right" Cursor="Hand"
+                                FontSize="11" FontFamily="Segoe UI"
+                                Command="{Binding ClearAllCommand}">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border x:Name="Bd" Background="{StaticResource ButtonBgBrush}"
+                                            CornerRadius="8" Padding="12,5"
+                                            BorderBrush="{StaticResource ButtonBorderBrush}" BorderThickness="1">
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource ButtonBorderBrush}"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Border>
+    </Border>
+</Window>

@@ -26,6 +26,9 @@ public partial class SettingsWindow : Window
                 new Rect(0, 0, e.NewSize.Width, e.NewSize.Height), 12, 12);
         };
         _viewModel.PropertyChanged += ViewModel_PropertyChanged;
+
+        // Apply initial theme
+        ApplyTheme(_viewModel.IsDarkMode);
     }
 
     private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -47,8 +50,30 @@ public partial class SettingsWindow : Window
 
     // --- Dialog highlight management ---
 
+    private void ApplyTheme(bool isDark)
+    {
+        var themePath = isDark
+            ? "/Themes/SettingsDarkTheme.xaml"
+            : "/Themes/SettingsLightTheme.xaml";
+
+        var themeUri = new Uri(themePath, UriKind.Relative);
+        var themeDict = new ResourceDictionary { Source = themeUri };
+
+        // Replace the first merged dictionary (the theme one)
+        var merged = Resources.MergedDictionaries;
+        if (merged.Count > 0)
+            merged[0] = themeDict;
+        else
+            merged.Insert(0, themeDict);
+    }
+
     private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (e.PropertyName == nameof(SettingsViewModel.IsDarkMode))
+        {
+            Dispatcher.Invoke(() => ApplyTheme(_viewModel.IsDarkMode));
+        }
+
         if (e.PropertyName is nameof(SettingsViewModel.ActiveDialog) or nameof(SettingsViewModel.IsDialogOpen))
         {
             if (_viewModel.IsDialogOpen)
@@ -163,6 +188,18 @@ public partial class SettingsWindow : Window
             _viewModel.SelectLanguageCommand.Execute(code);
     }
 
+    private void ProviderCard_Click(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is Border border && border.Tag is string providerName)
+            _viewModel.SelectProviderCommand.Execute(providerName);
+    }
+
+    private void CorrectionProviderCard_Click(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is Border border && border.Tag is string providerName)
+            _viewModel.SelectCorrectionProviderCommand.Execute(providerName);
+    }
+
     // --- Inline editing handlers (System & Transcription pages) ---
 
     private void ProviderComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -195,6 +232,20 @@ public partial class SettingsWindow : Window
         else if (e.Key == Key.Escape)
         {
             _viewModel.IsEditingModel = false;
+            e.Handled = true;
+        }
+    }
+
+    private void CorrectionModelTextBox_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter && sender is TextBox tb)
+        {
+            _viewModel.ApplyCorrectionModel(tb.Text);
+            e.Handled = true;
+        }
+        else if (e.Key == Key.Escape)
+        {
+            _viewModel.IsEditingCorrectionModel = false;
             e.Handled = true;
         }
     }
@@ -237,6 +288,15 @@ public partial class SettingsWindow : Window
         else if (e.Key == Key.Escape)
         {
             _viewModel.IsEditingCombinedAudioModel = false;
+            e.Handled = true;
+        }
+    }
+
+    private void DictionaryTextBox_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter)
+        {
+            _viewModel.AddDictionaryEntryCommand.Execute(null);
             e.Handled = true;
         }
     }
@@ -292,7 +352,8 @@ public class StringEqualsToVisibilityConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        if (value is string str && parameter is string expected)
+        var str = value?.ToString();
+        if (str is not null && parameter is string expected)
             return str == expected ? Visibility.Visible : Visibility.Collapsed;
         return Visibility.Collapsed;
     }
@@ -311,5 +372,47 @@ public class CapturingHotkeyTextConverter : IValueConverter
     }
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        => throw new NotSupportedException();
+}
+
+/// <summary>Show Download button when !IsDownloaded and !IsDownloading.</summary>
+public class ModelActionVisibilityConverter : IMultiValueConverter
+{
+    public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (values.Length == 2 && values[0] is bool isDownloaded && values[1] is bool isDownloading)
+            return !isDownloaded && !isDownloading ? Visibility.Visible : Visibility.Collapsed;
+        return Visibility.Collapsed;
+    }
+
+    public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+        => throw new NotSupportedException();
+}
+
+/// <summary>Show Delete button when IsDownloaded and !IsActive and !IsDownloading.</summary>
+public class ModelDeleteVisibilityConverter : IMultiValueConverter
+{
+    public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (values.Length == 3 && values[0] is bool isDownloaded && values[1] is bool isDownloading && values[2] is bool isActive)
+            return isDownloaded && !isDownloading && !isActive ? Visibility.Visible : Visibility.Collapsed;
+        return Visibility.Collapsed;
+    }
+
+    public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+        => throw new NotSupportedException();
+}
+
+/// <summary>Show Use button when IsDownloaded and !IsActive and !IsDownloading.</summary>
+public class ModelUseVisibilityConverter : IMultiValueConverter
+{
+    public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (values.Length == 3 && values[0] is bool isDownloaded && values[1] is bool isDownloading && values[2] is bool isActive)
+            return isDownloaded && !isDownloading && !isActive ? Visibility.Visible : Visibility.Collapsed;
+        return Visibility.Collapsed;
+    }
+
+    public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
         => throw new NotSupportedException();
 }

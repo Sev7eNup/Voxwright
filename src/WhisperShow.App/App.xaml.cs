@@ -1,6 +1,7 @@
 using System.Drawing;
 using System.IO;
 using System.Windows;
+using System.Windows.Interop;
 using H.NotifyIcon;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,9 +13,12 @@ using WhisperShow.App.Services;
 using WhisperShow.App.ViewModels;
 using WhisperShow.App.Views;
 using WhisperShow.Core.Configuration;
+using WhisperShow.Core.Models;
 using WhisperShow.Core.Services.Audio;
 using WhisperShow.Core.Services.Hotkey;
 using WhisperShow.Core.Services.ModelManagement;
+using WhisperShow.Core.Services.History;
+using WhisperShow.Core.Services.Statistics;
 using WhisperShow.Core.Services.TextCorrection;
 using WhisperShow.Core.Services.TextInsertion;
 using WhisperShow.Core.Services.Transcription;
@@ -30,6 +34,7 @@ public partial class App : Application
     protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        AddCudaLibraryPaths();
 
         // Single instance check
         _mutex = new Mutex(true, "WhisperShow-SingleInstance", out bool isNew);
@@ -75,9 +80,15 @@ public partial class App : Application
                 services.AddSingleton<TranscriptionProviderFactory>();
                 services.AddSingleton<ITextInsertionService, TextInsertionService>();
                 services.AddSingleton<ITextCorrectionService, OpenAiTextCorrectionService>();
+                services.AddSingleton<ITextCorrectionService, LocalTextCorrectionService>();
+                services.AddSingleton<TextCorrectionProviderFactory>();
                 services.AddSingleton<ICombinedTranscriptionCorrectionService, CombinedAudioTranscriptionService>();
                 services.AddSingleton<IGlobalHotkeyService, GlobalHotkeyService>();
                 services.AddSingleton<IModelManager, ModelManager>();
+                services.AddSingleton<ICorrectionModelManager, CorrectionModelManager>();
+                services.AddSingleton<IDictionaryService, DictionaryService>();
+                services.AddSingleton<IUsageStatsService, UsageStatsService>();
+                services.AddSingleton<ITranscriptionHistoryService, TranscriptionHistoryService>();
 
                 // App services
                 services.AddSingleton(sp =>
@@ -90,25 +101,41 @@ public partial class App : Application
                 // ViewModels
                 services.AddSingleton<OverlayViewModel>();
                 services.AddSingleton<SettingsViewModel>();
+                services.AddSingleton<HistoryViewModel>();
 
                 // Windows
                 services.AddSingleton<OverlayWindow>();
                 services.AddSingleton<SettingsWindow>();
+                services.AddSingleton<HistoryWindow>();
             })
             .Build();
 
         await _host.StartAsync();
 
-        // Sync autostart registry with config
-        var opts = _host.Services.GetRequiredService<IOptions<WhisperShowOptions>>().Value;
-        SyncAutoStartRegistry(opts);
+        try
+        {
+            // Sync autostart registry with config
+            var opts = _host.Services.GetRequiredService<IOptions<WhisperShowOptions>>().Value;
+            SyncAutoStartRegistry(opts);
 
-        // Show overlay window
-        var overlayWindow = _host.Services.GetRequiredService<OverlayWindow>();
-        overlayWindow.Show();
+            // Show overlay window
+            var overlayWindow = _host.Services.GetRequiredService<OverlayWindow>();
+            overlayWindow.Show();
 
-        // Setup system tray
-        SetupTrayIcon(overlayWindow);
+            // Setup system tray
+            SetupTrayIcon(overlayWindow);
+
+            // Preload local models in background (non-blocking)
+            PreloadLocalModels(opts);
+        }
+        catch (Exception ex)
+        {
+            Log.Fatal(ex, "Failed to start application");
+            Log.CloseAndFlush();
+            MessageBox.Show($"Startup error:\n\n{ex}", "WhisperShow Error",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+            Shutdown();
+        }
     }
 
     private void SetupTrayIcon(OverlayWindow overlayWindow)
@@ -149,14 +176,44 @@ public partial class App : Application
             settingsWindow.Activate();
         };
 
+        var historyItem = new System.Windows.Controls.MenuItem { Header = "History" };
+        historyItem.Click += (_, _) =>
+        {
+            var historyWindow = _host!.Services.GetRequiredService<HistoryWindow>();
+            historyWindow.ShowAndRefresh();
+        };
+
         contextMenu.Items.Add(showItem);
         contextMenu.Items.Add(hideItem);
         contextMenu.Items.Add(new System.Windows.Controls.Separator());
         contextMenu.Items.Add(settingsItem);
+        contextMenu.Items.Add(historyItem);
         contextMenu.Items.Add(new System.Windows.Controls.Separator());
         contextMenu.Items.Add(exitItem);
 
-        _trayIcon.ContextMenu = contextMenu;
+        _trayIcon.TrayRightMouseDown += (_, _) =>
+        {
+            // Win32 KB135788 workaround: the process must own a foreground window
+            // before showing a tray context menu, otherwise it closes immediately.
+            // The overlay has WS_EX_NOACTIVATE, so temporarily remove it.
+            var hwnd = new WindowInteropHelper(overlayWindow).Handle;
+            if (hwnd == IntPtr.Zero) return;
+
+            int exStyle = NativeMethods.GetWindowLongW(hwnd, NativeMethods.GWL_EXSTYLE);
+            NativeMethods.SetWindowLongW(hwnd, NativeMethods.GWL_EXSTYLE,
+                exStyle & ~NativeMethods.WS_EX_NOACTIVATE);
+            NativeMethods.SetForegroundWindow(hwnd);
+
+            contextMenu.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
+            contextMenu.IsOpen = true;
+
+            void OnClosed(object s, RoutedEventArgs e)
+            {
+                contextMenu.Closed -= OnClosed;
+                NativeMethods.SetWindowLongW(hwnd, NativeMethods.GWL_EXSTYLE, exStyle);
+            }
+            contextMenu.Closed += OnClosed;
+        };
 
         _trayIcon.TrayLeftMouseDown += (_, _) =>
         {
@@ -170,6 +227,33 @@ public partial class App : Application
         };
 
         _trayIcon.ForceCreate();
+    }
+
+    private void PreloadLocalModels(WhisperShowOptions opts)
+    {
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                if (opts.Provider == TranscriptionProvider.Local)
+                {
+                    var local = _host!.Services.GetServices<ITranscriptionService>()
+                        .OfType<LocalTranscriptionService>().FirstOrDefault();
+                    local?.Preload();
+                }
+
+                if (opts.TextCorrection.Provider == TextCorrectionProvider.Local)
+                {
+                    var local = _host!.Services.GetServices<ITextCorrectionService>()
+                        .OfType<LocalTextCorrectionService>().FirstOrDefault();
+                    local?.Preload();
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "Background model preload failed");
+            }
+        });
     }
 
     private static Icon CreateTrayIcon()
@@ -230,6 +314,53 @@ public partial class App : Application
         catch (Exception ex)
         {
             Log.Warning(ex, "Failed to sync autostart registry");
+        }
+    }
+
+    private static void AddCudaLibraryPaths()
+    {
+        var candidates = new List<string>();
+
+        // 1. Versioned env vars (CUDA_PATH_V13_1 etc.) — most specific
+        foreach (System.Collections.DictionaryEntry env in Environment.GetEnvironmentVariables())
+        {
+            var key = env.Key?.ToString() ?? "";
+            if (key.StartsWith("CUDA_PATH_V13", StringComparison.OrdinalIgnoreCase)
+                && env.Value is string val && !string.IsNullOrEmpty(val))
+                candidates.Add(val);
+        }
+
+        // 2. Generic CUDA_PATH
+        var cudaPath = Environment.GetEnvironmentVariable("CUDA_PATH");
+        if (!string.IsNullOrEmpty(cudaPath))
+            candidates.Add(cudaPath);
+
+        // 3. Scan standard CUDA toolkit directory for v13.x installations
+        var toolkitBase = @"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA";
+        if (Directory.Exists(toolkitBase))
+        {
+            foreach (var dir in Directory.GetDirectories(toolkitBase, "v13.*"))
+                candidates.Add(dir);
+        }
+
+        var currentPath = Environment.GetEnvironmentVariable("PATH") ?? "";
+        var additions = new List<string>();
+
+        foreach (var candidate in candidates)
+        {
+            var binX64 = Path.Combine(candidate, "bin", "x64");
+            if (Directory.Exists(binX64) && !currentPath.Contains(binX64, StringComparison.OrdinalIgnoreCase))
+                additions.Add(binX64);
+
+            var bin = Path.Combine(candidate, "bin");
+            if (Directory.Exists(bin) && !currentPath.Contains(bin, StringComparison.OrdinalIgnoreCase))
+                additions.Add(bin);
+        }
+
+        if (additions.Count > 0)
+        {
+            Environment.SetEnvironmentVariable("PATH", string.Join(";", additions) + ";" + currentPath);
+            Log.Information("Added CUDA library paths: {Paths}", string.Join(", ", additions));
         }
     }
 

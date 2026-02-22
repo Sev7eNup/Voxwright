@@ -35,7 +35,7 @@ public class LocalTranscriptionServiceTests
     private static LocalTranscriptionService CreateService(
         string modelDir = @"C:\nonexistent", string modelName = "ggml-small.bin")
     {
-        var options = OptionsHelper.Create(o =>
+        var options = OptionsHelper.CreateMonitor(o =>
         {
             o.Local.ModelDirectory = modelDir;
             o.Local.ModelName = modelName;

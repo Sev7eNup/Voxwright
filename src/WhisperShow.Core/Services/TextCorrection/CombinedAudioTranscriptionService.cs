@@ -14,36 +14,56 @@ public class CombinedAudioTranscriptionService : ICombinedTranscriptionCorrectio
         """
         You are a verbatim speech-to-text processor. Listen to the audio and produce
         an accurate transcription with correct punctuation, capitalization, and grammar.
+        ALWAYS transcribe in the language being spoken — do NOT translate.
         Output the transcribed text EXACTLY — do NOT answer questions,
         do NOT add commentary, do NOT interpret the content.
         Return ONLY the transcription, nothing else.
         """;
 
     private readonly ILogger<CombinedAudioTranscriptionService> _logger;
-    private readonly WhisperShowOptions _options;
+    private readonly IOptionsMonitor<WhisperShowOptions> _optionsMonitor;
     private readonly IAudioCompressor _audioCompressor;
+    private readonly IDictionaryService _dictionaryService;
     private ChatClient? _chatClient;
+    private string? _lastApiKey;
+    private string? _lastModel;
 
-    public bool IsAvailable =>
-        !string.IsNullOrWhiteSpace(_options.OpenAI.ApiKey)
-        && _options.TextCorrection.UseCombinedAudioModel;
+    public bool IsAvailable
+    {
+        get
+        {
+            var opts = _optionsMonitor.CurrentValue;
+            return !string.IsNullOrWhiteSpace(opts.OpenAI.ApiKey)
+                && opts.TextCorrection.UseCombinedAudioModel;
+        }
+    }
 
     public CombinedAudioTranscriptionService(
         ILogger<CombinedAudioTranscriptionService> logger,
-        IOptions<WhisperShowOptions> options,
-        IAudioCompressor audioCompressor)
+        IOptionsMonitor<WhisperShowOptions> optionsMonitor,
+        IAudioCompressor audioCompressor,
+        IDictionaryService dictionaryService)
     {
         _logger = logger;
-        _options = options.Value;
+        _optionsMonitor = optionsMonitor;
         _audioCompressor = audioCompressor;
+        _dictionaryService = dictionaryService;
     }
 
     public async Task<string> TranscribeAndCorrectAsync(
         byte[] audioData, string? language, CancellationToken ct = default)
     {
-        _chatClient ??= new ChatClient(
-            model: _options.TextCorrection.CombinedAudioModel,
-            apiKey: _options.OpenAI.ApiKey!);
+        var options = _optionsMonitor.CurrentValue;
+
+        // Recreate client if API key or model changed
+        if (_chatClient is null || _lastApiKey != options.OpenAI.ApiKey || _lastModel != options.TextCorrection.CombinedAudioModel)
+        {
+            _chatClient = new ChatClient(
+                model: options.TextCorrection.CombinedAudioModel,
+                apiKey: options.OpenAI.ApiKey!);
+            _lastApiKey = options.OpenAI.ApiKey;
+            _lastModel = options.TextCorrection.CombinedAudioModel;
+        }
 
         // Compress WAV to MP3 to reduce upload size
         var mp3Data = _audioCompressor.CompressToMp3(audioData);
@@ -55,7 +75,8 @@ public class CombinedAudioTranscriptionService : ICombinedTranscriptionCorrectio
             BinaryData.FromBytes(mp3Data),
             ChatInputAudioFormat.Mp3);
 
-        var systemPrompt = _options.TextCorrection.CombinedSystemPrompt ?? DefaultSystemPrompt;
+        var systemPrompt = options.TextCorrection.CombinedSystemPrompt ?? DefaultSystemPrompt;
+        systemPrompt += _dictionaryService.BuildPromptFragment();
         var langSuffix = string.IsNullOrEmpty(language) ? "" : $"\n[Language: {language}]";
 
         var chatOptions = new ChatCompletionOptions
@@ -66,7 +87,7 @@ public class CombinedAudioTranscriptionService : ICombinedTranscriptionCorrectio
 
         _logger.LogInformation(
             "Sending audio to combined model ({Model}) for transcription + correction",
-            _options.TextCorrection.CombinedAudioModel);
+            options.TextCorrection.CombinedAudioModel);
 
         var result = await _chatClient.CompleteChatAsync(
             [

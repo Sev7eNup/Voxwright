@@ -1,0 +1,29 @@
+namespace WhisperShow.Core.Models;
+
+public class UsageStats
+{
+    public int TotalTranscriptions { get; set; }
+    public double TotalRecordingSeconds { get; set; }
+    public long TotalAudioBytesProcessed { get; set; }
+    public int ErrorCount { get; set; }
+    public DateTime? FirstUsedUtc { get; set; }
+    public DateTime? LastUsedUtc { get; set; }
+    public Dictionary<string, int> TranscriptionsByProvider { get; set; } = new();
+
+    public double AverageRecordingSeconds => TotalTranscriptions > 0
+        ? TotalRecordingSeconds / TotalTranscriptions : 0;
+
+    public string TotalRecordingDisplay
+    {
+        get
+        {
+            var ts = TimeSpan.FromSeconds(TotalRecordingSeconds);
+            return ts.TotalHours >= 1
+                ? ts.ToString(@"h\:mm\:ss")
+                : ts.ToString(@"m\:ss");
+        }
+    }
+
+    // Rough cost estimate: Whisper API = $0.006/min
+    public double EstimatedApiCost => (TotalRecordingSeconds / 60.0) * 0.006;
+}
