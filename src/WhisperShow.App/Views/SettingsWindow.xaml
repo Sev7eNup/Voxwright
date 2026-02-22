@@ -307,9 +307,9 @@
                             </Grid.ColumnDefinitions>
                             <StackPanel>
                                 <TextBlock Text="Keybind shortcuts" FontSize="13" FontWeight="SemiBold"
-                                           FontFamily="Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                           FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                 <TextBlock Text="{Binding HotkeyDisplayText}" FontSize="12"
-                                           FontFamily="Segoe UI" Foreground="{DynamicResource TextSecondaryBrush}"
+                                           FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextSecondaryBrush}"
                                            Margin="0,3,0,0"/>
                             </StackPanel>
                             <Button Grid.Column="1" Content="Change" Style="{StaticResource PillButtonStyle}"
@@ -328,9 +328,9 @@
                             </Grid.ColumnDefinitions>
                             <StackPanel>
                                 <TextBlock Text="Microphone" FontSize="13" FontWeight="SemiBold"
-                                           FontFamily="Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                           FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                 <TextBlock Text="{Binding SelectedMicrophoneDisplay}" FontSize="12"
-                                           FontFamily="Segoe UI" Foreground="{DynamicResource TextSecondaryBrush}"
+                                           FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextSecondaryBrush}"
                                            Margin="0,3,0,0"/>
                             </StackPanel>
                             <Button Grid.Column="1" Style="{StaticResource PillButtonStyle}"
@@ -382,9 +382,9 @@
                             </Grid.ColumnDefinitions>
                             <StackPanel>
                                 <TextBlock Text="Language" FontSize="13" FontWeight="SemiBold"
-                                           FontFamily="Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                           FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                 <TextBlock Text="{Binding SelectedLanguageDisplay}" FontSize="12"
-                                           FontFamily="Segoe UI" Foreground="{DynamicResource TextSecondaryBrush}"
+                                           FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextSecondaryBrush}"
                                            Margin="0,3,0,0"/>
                             </StackPanel>
                             <Button Grid.Column="1" Content="Change" Style="{StaticResource PillButtonStyle}"
@@ -410,7 +410,7 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="Launch app at login" FontSize="13" FontFamily="Segoe UI"
+                            <TextBlock Text="Launch app at login" FontSize="13" FontFamily="Segoe UI Variable, Segoe UI"
                                        Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
                             <ToggleButton Grid.Column="1" Style="{StaticResource ToggleSwitchStyle}"
                                           IsChecked="{Binding LaunchAtLogin}"
@@ -423,7 +423,7 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="Show overlay at all times" FontSize="13" FontFamily="Segoe UI"
+                            <TextBlock Text="Show overlay at all times" FontSize="13" FontFamily="Segoe UI Variable, Segoe UI"
                                        Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
                             <ToggleButton Grid.Column="1" Style="{StaticResource ToggleSwitchStyle}"
                                           IsChecked="{Binding OverlayAlwaysVisible}"
@@ -436,7 +436,7 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="Show app in taskbar" FontSize="13" FontFamily="Segoe UI"
+                            <TextBlock Text="Show app in taskbar" FontSize="13" FontFamily="Segoe UI Variable, Segoe UI"
                                        Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
                             <ToggleButton Grid.Column="1" Style="{StaticResource ToggleSwitchStyle}"
                                           IsChecked="{Binding ShowInTaskbar}"
@@ -449,7 +449,7 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="Dark mode" FontSize="13" FontFamily="Segoe UI"
+                            <TextBlock Text="Dark mode" FontSize="13" FontFamily="Segoe UI Variable, Segoe UI"
                                        Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
                             <ToggleButton Grid.Column="1" Style="{StaticResource ToggleSwitchStyle}"
                                           IsChecked="{Binding IsDarkMode}"
@@ -468,7 +468,7 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="Dictation sound effects" FontSize="13" FontFamily="Segoe UI"
+                            <TextBlock Text="Dictation sound effects" FontSize="13" FontFamily="Segoe UI Variable, Segoe UI"
                                        Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
                             <ToggleButton Grid.Column="1" Style="{StaticResource ToggleSwitchStyle}"
                                           IsChecked="{Binding SoundEffectsEnabled}"
@@ -481,7 +481,7 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="Mute music while dictating" FontSize="13" FontFamily="Segoe UI"
+                            <TextBlock Text="Mute music while dictating" FontSize="13" FontFamily="Segoe UI Variable, Segoe UI"
                                        Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
                             <ToggleButton Grid.Column="1" Style="{StaticResource ToggleSwitchStyle}"
                                           IsChecked="{Binding MuteWhileDictating}"
@@ -500,7 +500,7 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="Audio compression" FontSize="13" FontFamily="Segoe UI"
+                            <TextBlock Text="Audio compression" FontSize="13" FontFamily="Segoe UI Variable, Segoe UI"
                                        Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
                             <ToggleButton Grid.Column="1" Style="{StaticResource ToggleSwitchStyle}"
                                           IsChecked="{Binding AudioCompressionEnabled}"
@@ -515,8 +515,8 @@
                             </Grid.ColumnDefinitions>
                             <StackPanel Visibility="{Binding IsEditingAutoDismiss, Converter={StaticResource InverseBoolToVisibility}}">
                                 <TextBlock Text="Auto-dismiss overlay" FontSize="13" FontWeight="SemiBold"
-                                           FontFamily="Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                <TextBlock FontSize="12" FontFamily="Segoe UI"
+                                           FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                <TextBlock FontSize="12" FontFamily="Segoe UI Variable, Segoe UI"
                                            Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,3,0,0">
                                     <Run Text="{Binding AutoDismissSeconds, Mode=OneWay}"/>
                                     <Run Text="seconds"/>
@@ -538,8 +538,8 @@
                             </Grid.ColumnDefinitions>
                             <StackPanel Visibility="{Binding IsEditingMaxRecording, Converter={StaticResource InverseBoolToVisibility}}">
                                 <TextBlock Text="Max recording duration" FontSize="13" FontWeight="SemiBold"
-                                           FontFamily="Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                <TextBlock FontSize="12" FontFamily="Segoe UI"
+                                           FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                <TextBlock FontSize="12" FontFamily="Segoe UI Variable, Segoe UI"
                                            Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,3,0,0">
                                     <Run Text="{Binding MaxRecordingSeconds, Mode=OneWay, Converter={StaticResource SecondsToMinutes}}"/>
                                     <Run Text="minutes"/>
@@ -563,7 +563,7 @@
             <StackPanel>
                 <TextBlock Text="Custom Dictionary" Style="{StaticResource PageTitleStyle}"/>
                 <TextBlock Text="Add custom words, names, and technical terms to improve transcription accuracy."
-                           FontSize="12" FontFamily="Segoe UI" Foreground="{DynamicResource TextSecondaryBrush}"
+                           FontSize="12" FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextSecondaryBrush}"
                            TextWrapping="Wrap" Margin="0,0,0,16"/>
 
                 <!-- Add word input -->
@@ -594,7 +594,7 @@
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="{Binding}" FontSize="13" FontFamily="Segoe UI"
+                                    <TextBlock Text="{Binding}" FontSize="13" FontFamily="Segoe UI Variable, Segoe UI"
                                                Foreground="{DynamicResource TextPrimaryBrush}"
                                                VerticalAlignment="Center"/>
                                     <Button Grid.Column="1" Content="&#xE711;" FontFamily="Segoe MDL2 Assets"
@@ -631,7 +631,7 @@
             <StackPanel>
                 <TextBlock Text="Snippets" Style="{StaticResource PageTitleStyle}"/>
                 <TextBlock Text="Define keywords that automatically expand into text blocks during transcription."
-                           FontSize="12" FontFamily="Segoe UI" Foreground="{DynamicResource TextSecondaryBrush}"
+                           FontSize="12" FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextSecondaryBrush}"
                            TextWrapping="Wrap" Margin="0,0,0,16"/>
 
                 <!-- Add snippet input -->
@@ -670,10 +670,10 @@
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
                                     <StackPanel VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding Trigger}" FontSize="13" FontFamily="Segoe UI"
+                                        <TextBlock Text="{Binding Trigger}" FontSize="13" FontFamily="Segoe UI Variable, Segoe UI"
                                                    FontWeight="SemiBold"
                                                    Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                        <TextBlock Text="{Binding Replacement}" FontSize="11" FontFamily="Segoe UI"
+                                        <TextBlock Text="{Binding Replacement}" FontSize="11" FontFamily="Segoe UI Variable, Segoe UI"
                                                    Foreground="{DynamicResource TextSecondaryBrush}"
                                                    TextTrimming="CharacterEllipsis" MaxHeight="40"
                                                    TextWrapping="Wrap" Margin="0,2,0,0"/>
@@ -712,7 +712,7 @@
             <StackPanel>
                 <TextBlock Text="Models" Style="{StaticResource PageTitleStyle}"/>
                 <TextBlock Text="Choose your transcription provider and configure model settings."
-                           FontSize="12" FontFamily="Segoe UI" Foreground="{DynamicResource TextSecondaryBrush}"
+                           FontSize="12" FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextSecondaryBrush}"
                            TextWrapping="Wrap" Margin="0,0,0,16"/>
 
                 <!-- Provider picker cards -->
@@ -742,9 +742,9 @@
                                 <TextBlock Text="&#xE753;" FontFamily="Segoe MDL2 Assets" FontSize="22"
                                            Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
                                 <TextBlock Text="Cloud" FontSize="14" FontWeight="SemiBold"
-                                           FontFamily="Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                           FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                 <TextBlock Text="OpenAI Whisper API" FontSize="12"
-                                           FontFamily="Segoe UI" Foreground="{DynamicResource TextSecondaryBrush}"
+                                           FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextSecondaryBrush}"
                                            Margin="0,2,0,0"/>
                             </StackPanel>
                             <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="14"
@@ -773,9 +773,9 @@
                                 <TextBlock Text="&#xE770;" FontFamily="Segoe MDL2 Assets" FontSize="22"
                                            Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
                                 <TextBlock Text="Local" FontSize="14" FontWeight="SemiBold"
-                                           FontFamily="Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                           FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                 <TextBlock Text="On-device processing" FontSize="12"
-                                           FontFamily="Segoe UI" Foreground="{DynamicResource TextSecondaryBrush}"
+                                           FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextSecondaryBrush}"
                                            Margin="0,2,0,0"/>
                             </StackPanel>
                             <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="14"
@@ -799,9 +799,9 @@
                                 </Grid.ColumnDefinitions>
                                 <StackPanel Visibility="{Binding IsEditingApiKey, Converter={StaticResource InverseBoolToVisibility}}">
                                     <TextBlock Text="API Key" FontSize="13" FontWeight="SemiBold"
-                                               FontFamily="Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                               FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                     <TextBlock Text="{Binding OpenAiApiKeyDisplay}" FontSize="12"
-                                               FontFamily="Segoe UI" Foreground="{DynamicResource TextSecondaryBrush}"
+                                               FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextSecondaryBrush}"
                                                Margin="0,3,0,0"/>
                                 </StackPanel>
                                 <TextBox Visibility="{Binding IsEditingApiKey, Converter={StaticResource BoolToVisibility}}"
@@ -820,8 +820,8 @@
                                 </Grid.ColumnDefinitions>
                                 <StackPanel Visibility="{Binding IsEditingEndpoint, Converter={StaticResource InverseBoolToVisibility}}">
                                     <TextBlock Text="API Endpoint" FontSize="13" FontWeight="SemiBold"
-                                               FontFamily="Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                    <TextBlock FontSize="12" FontFamily="Segoe UI"
+                                               FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                    <TextBlock FontSize="12" FontFamily="Segoe UI Variable, Segoe UI"
                                                Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,3,0,0">
                                         <TextBlock.Text>
                                             <Binding Path="OpenAiEndpoint" FallbackValue="Default (api.openai.com)">
@@ -855,9 +855,9 @@
                                 </Grid.ColumnDefinitions>
                                 <StackPanel Visibility="{Binding IsEditingModel, Converter={StaticResource InverseBoolToVisibility}}">
                                     <TextBlock Text="Model" FontSize="13" FontWeight="SemiBold"
-                                               FontFamily="Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                               FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                     <TextBlock Text="{Binding TranscriptionModel}" FontSize="12"
-                                               FontFamily="Segoe UI" Foreground="{DynamicResource TextSecondaryBrush}"
+                                               FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextSecondaryBrush}"
                                                Margin="0,3,0,0"/>
                                 </StackPanel>
                                 <TextBox Visibility="{Binding IsEditingModel, Converter={StaticResource BoolToVisibility}}"
@@ -882,7 +882,7 @@
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Text="GPU acceleration" FontSize="13" FontFamily="Segoe UI"
+                                <TextBlock Text="GPU acceleration" FontSize="13" FontFamily="Segoe UI Variable, Segoe UI"
                                            Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
                                 <ToggleButton Grid.Column="1" Style="{StaticResource ToggleSwitchStyle}"
                                               IsChecked="{Binding GpuAcceleration}"
@@ -923,19 +923,19 @@
                                             <StackPanel>
                                                 <StackPanel Orientation="Horizontal">
                                                     <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold"
-                                                               FontFamily="Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                                               FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                                     <TextBlock Text="{Binding SizeDisplay}" FontSize="12"
-                                                               FontFamily="Segoe UI" Foreground="{DynamicResource TextSecondaryBrush}"
+                                                               FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextSecondaryBrush}"
                                                                VerticalAlignment="Center" Margin="10,0,0,0"/>
                                                 </StackPanel>
                                                 <TextBlock Text="{Binding StatusText}" FontSize="11"
-                                                           FontFamily="Segoe UI" Foreground="{DynamicResource TextSecondaryBrush}"
+                                                           FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextSecondaryBrush}"
                                                            Margin="0,3,0,0"/>
                                             </StackPanel>
 
                                             <!-- Download button (!IsDownloaded && !IsDownloading) -->
                                             <Button Grid.Column="1" Content="Download" Cursor="Hand"
-                                                    FontSize="12" FontFamily="Segoe UI"
+                                                    FontSize="12" FontFamily="Segoe UI Variable, Segoe UI"
                                                     VerticalAlignment="Center"
                                                     Command="{Binding DataContext.DownloadModelCommand,
                                                         RelativeSource={RelativeSource AncestorType=ItemsControl}}"
@@ -967,7 +967,7 @@
 
                                             <!-- Use button (IsDownloaded && !IsActive && !IsDownloading) -->
                                             <Button Grid.Column="1" Content="Use" Cursor="Hand"
-                                                    FontSize="12" FontFamily="Segoe UI"
+                                                    FontSize="12" FontFamily="Segoe UI Variable, Segoe UI"
                                                     VerticalAlignment="Center"
                                                     Command="{Binding DataContext.ActivateModelCommand,
                                                         RelativeSource={RelativeSource AncestorType=ItemsControl}}"
@@ -1002,7 +1002,7 @@
 
                                             <!-- Delete button (IsDownloaded && !IsActive && !IsDownloading) -->
                                             <Button Grid.Column="2" Content="Delete" Cursor="Hand"
-                                                    FontSize="12" FontFamily="Segoe UI"
+                                                    FontSize="12" FontFamily="Segoe UI Variable, Segoe UI"
                                                     VerticalAlignment="Center" Margin="6,0,0,0"
                                                     Command="{Binding DataContext.DeleteModelCommand,
                                                         RelativeSource={RelativeSource AncestorType=ItemsControl}}"
@@ -1076,7 +1076,7 @@
                         </Border.Style>
                         <Grid>
                             <TextBlock Text="Off" FontSize="13" FontWeight="SemiBold"
-                                       FontFamily="Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                       FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"/>
                             <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="12"
                                        Foreground="{DynamicResource SelectedBorderBrush}"
                                        HorizontalAlignment="Right" VerticalAlignment="Top"
@@ -1101,9 +1101,9 @@
                         <Grid>
                             <StackPanel>
                                 <TextBlock Text="Cloud" FontSize="13" FontWeight="SemiBold"
-                                           FontFamily="Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                           FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                 <TextBlock Text="OpenAI" FontSize="11"
-                                           FontFamily="Segoe UI" Foreground="{DynamicResource TextSecondaryBrush}"
+                                           FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextSecondaryBrush}"
                                            Margin="0,2,0,0"/>
                             </StackPanel>
                             <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="12"
@@ -1130,9 +1130,9 @@
                         <Grid>
                             <StackPanel>
                                 <TextBlock Text="Local" FontSize="13" FontWeight="SemiBold"
-                                           FontFamily="Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                           FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                 <TextBlock Text="LLM" FontSize="11"
-                                           FontFamily="Segoe UI" Foreground="{DynamicResource TextSecondaryBrush}"
+                                           FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextSecondaryBrush}"
                                            Margin="0,2,0,0"/>
                             </StackPanel>
                             <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="12"
@@ -1153,10 +1153,10 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <StackPanel Visibility="{Binding IsEditingCorrectionModel, Converter={StaticResource InverseBoolToVisibility}}">
-                                <TextBlock Text="Model" FontSize="13" FontFamily="Segoe UI"
+                                <TextBlock Text="Model" FontSize="13" FontFamily="Segoe UI Variable, Segoe UI"
                                            Foreground="{DynamicResource TextPrimaryBrush}"/>
                                 <TextBlock Text="{Binding CorrectionCloudModel}" FontSize="12"
-                                           FontFamily="Segoe UI" Foreground="{DynamicResource TextSecondaryBrush}"
+                                           FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextSecondaryBrush}"
                                            Margin="0,3,0,0"/>
                             </StackPanel>
                             <TextBox Visibility="{Binding IsEditingCorrectionModel, Converter={StaticResource BoolToVisibility}}"
@@ -1178,7 +1178,7 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="GPU acceleration" FontSize="13" FontFamily="Segoe UI"
+                            <TextBlock Text="GPU acceleration" FontSize="13" FontFamily="Segoe UI Variable, Segoe UI"
                                        Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
                             <ToggleButton Grid.Column="1" Style="{StaticResource ToggleSwitchStyle}"
                                           IsChecked="{Binding CorrectionGpuAcceleration}"
@@ -1216,18 +1216,18 @@
                                         <StackPanel>
                                             <StackPanel Orientation="Horizontal">
                                                 <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold"
-                                                           FontFamily="Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                                           FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                                 <TextBlock Text="{Binding SizeDisplay}" FontSize="12" Margin="8,0,0,0"
-                                                           FontFamily="Segoe UI" Foreground="{DynamicResource TextSecondaryBrush}"
+                                                           FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextSecondaryBrush}"
                                                            VerticalAlignment="Center"/>
                                             </StackPanel>
                                             <TextBlock Text="{Binding StatusText}" FontSize="11"
-                                                       FontFamily="Segoe UI" Foreground="{DynamicResource TextSecondaryBrush}"
+                                                       FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextSecondaryBrush}"
                                                        Margin="0,2,0,0"/>
                                         </StackPanel>
                                         <!-- Download -->
                                         <Button Grid.Column="1" Content="Download" Cursor="Hand"
-                                                FontSize="12" FontFamily="Segoe UI" VerticalAlignment="Center" Margin="10,0,0,0"
+                                                FontSize="12" FontFamily="Segoe UI Variable, Segoe UI" VerticalAlignment="Center" Margin="10,0,0,0"
                                                 Command="{Binding DataContext.DownloadCorrectionModelCommand,
                                                     RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                 CommandParameter="{Binding}">
@@ -1254,7 +1254,7 @@
                                         </Button>
                                         <!-- Use -->
                                         <Button Grid.Column="1" Content="Use" Cursor="Hand"
-                                                FontSize="12" FontFamily="Segoe UI" VerticalAlignment="Center" Margin="10,0,0,0"
+                                                FontSize="12" FontFamily="Segoe UI Variable, Segoe UI" VerticalAlignment="Center" Margin="10,0,0,0"
                                                 Command="{Binding DataContext.ActivateCorrectionModelCommand,
                                                     RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                 CommandParameter="{Binding}">
@@ -1281,7 +1281,7 @@
                                         </Button>
                                         <!-- Delete -->
                                         <Button Grid.Column="2" Content="Delete" Cursor="Hand"
-                                                FontSize="12" FontFamily="Segoe UI" VerticalAlignment="Center" Margin="6,0,0,0"
+                                                FontSize="12" FontFamily="Segoe UI Variable, Segoe UI" VerticalAlignment="Center" Margin="6,0,0,0"
                                                 Command="{Binding DataContext.DeleteCorrectionModelCommand,
                                                     RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                 CommandParameter="{Binding}">
@@ -1331,7 +1331,7 @@
                             </Grid.ColumnDefinitions>
                             <TextBlock Text="&#x2139;" FontSize="14" Foreground="{DynamicResource AccentBrush}"
                                        VerticalAlignment="Top" Margin="0,0,8,0"/>
-                            <TextBlock Grid.Column="1" TextWrapping="Wrap" FontSize="11" FontFamily="Segoe UI"
+                            <TextBlock Grid.Column="1" TextWrapping="Wrap" FontSize="11" FontFamily="Segoe UI Variable, Segoe UI"
                                        Foreground="{DynamicResource TextSecondaryBrush}"
                                        Text="Sends audio directly to OpenAI for transcription + correction in a single API call. Requires an API key."/>
                         </Grid>
@@ -1342,10 +1342,10 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <StackPanel>
-                                <TextBlock Text="Combined audio model" FontSize="13" FontFamily="Segoe UI"
+                                <TextBlock Text="Combined audio model" FontSize="13" FontFamily="Segoe UI Variable, Segoe UI"
                                            Foreground="{DynamicResource TextPrimaryBrush}"/>
                                 <TextBlock Text="{Binding CombinedAudioModel}" FontSize="12"
-                                           FontFamily="Segoe UI" Foreground="{DynamicResource TextSecondaryBrush}"
+                                           FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextSecondaryBrush}"
                                            Margin="0,3,0,0"
                                            Visibility="{Binding UseCombinedAudioModel, Converter={StaticResource BoolToVisibility}}"/>
                             </StackPanel>
@@ -1378,7 +1378,7 @@
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="&#x2139;" FontSize="16" Foreground="{DynamicResource AccentBrush}"
                                    VerticalAlignment="Top" Margin="0,0,10,0"/>
-                        <TextBlock Grid.Column="1" TextWrapping="Wrap" FontSize="12" FontFamily="Segoe UI"
+                        <TextBlock Grid.Column="1" TextWrapping="Wrap" FontSize="12" FontFamily="Segoe UI Variable, Segoe UI"
                                    Foreground="{DynamicResource TextSecondaryBrush}"
                                    Text="Cloud text correction requires an OpenAI API key. Configure it above in the Transcription → Cloud section."/>
                     </Grid>
@@ -1391,7 +1391,7 @@
             <StackPanel>
                 <TextBlock Text="Statistics" Style="{StaticResource PageTitleStyle}"/>
                 <TextBlock Text="Usage statistics for your transcription sessions."
-                           FontSize="12" FontFamily="Segoe UI" Foreground="{DynamicResource TextSecondaryBrush}"
+                           FontSize="12" FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextSecondaryBrush}"
                            TextWrapping="Wrap" Margin="0,0,0,16"/>
 
                 <!-- Stats cards -->
@@ -1403,10 +1403,10 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="Total transcriptions" FontSize="13" FontFamily="Segoe UI"
+                            <TextBlock Text="Total transcriptions" FontSize="13" FontFamily="Segoe UI Variable, Segoe UI"
                                        Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
                             <TextBlock Grid.Column="1" Text="{Binding TotalTranscriptions}" FontSize="18"
-                                       FontWeight="Bold" FontFamily="Segoe UI"
+                                       FontWeight="Bold" FontFamily="Segoe UI Variable, Segoe UI"
                                        Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
                         </Grid>
                         <Border Height="1" Background="{DynamicResource DividerBrush}" Margin="20,0"/>
@@ -1417,10 +1417,10 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="Total recording time" FontSize="13" FontFamily="Segoe UI"
+                            <TextBlock Text="Total recording time" FontSize="13" FontFamily="Segoe UI Variable, Segoe UI"
                                        Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
                             <TextBlock Grid.Column="1" Text="{Binding TotalRecordingTimeDisplay}" FontSize="18"
-                                       FontWeight="Bold" FontFamily="Segoe UI"
+                                       FontWeight="Bold" FontFamily="Segoe UI Variable, Segoe UI"
                                        Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
                         </Grid>
                         <Border Height="1" Background="{DynamicResource DividerBrush}" Margin="20,0"/>
@@ -1431,10 +1431,10 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="Average duration" FontSize="13" FontFamily="Segoe UI"
+                            <TextBlock Text="Average duration" FontSize="13" FontFamily="Segoe UI Variable, Segoe UI"
                                        Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
                             <TextBlock Grid.Column="1" Text="{Binding AverageDurationDisplay}" FontSize="18"
-                                       FontWeight="Bold" FontFamily="Segoe UI"
+                                       FontWeight="Bold" FontFamily="Segoe UI Variable, Segoe UI"
                                        Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
                         </Grid>
                         <Border Height="1" Background="{DynamicResource DividerBrush}" Margin="20,0"/>
@@ -1446,13 +1446,13 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <StackPanel>
-                                <TextBlock Text="Estimated API cost" FontSize="13" FontFamily="Segoe UI"
+                                <TextBlock Text="Estimated API cost" FontSize="13" FontFamily="Segoe UI Variable, Segoe UI"
                                            Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                <TextBlock Text="Based on $0.006/min (Whisper API)" FontSize="11" FontFamily="Segoe UI"
+                                <TextBlock Text="Based on $0.006/min (Whisper API)" FontSize="11" FontFamily="Segoe UI Variable, Segoe UI"
                                            Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,2,0,0"/>
                             </StackPanel>
                             <TextBlock Grid.Column="1" Text="{Binding EstimatedCostDisplay}" FontSize="18"
-                                       FontWeight="Bold" FontFamily="Segoe UI"
+                                       FontWeight="Bold" FontFamily="Segoe UI Variable, Segoe UI"
                                        Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
                         </Grid>
                         <Border Height="1" Background="{DynamicResource DividerBrush}" Margin="20,0"/>
@@ -1463,10 +1463,10 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="Errors" FontSize="13" FontFamily="Segoe UI"
+                            <TextBlock Text="Errors" FontSize="13" FontFamily="Segoe UI Variable, Segoe UI"
                                        Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
                             <TextBlock Grid.Column="1" Text="{Binding ErrorCount}" FontSize="18"
-                                       FontWeight="Bold" FontFamily="Segoe UI"
+                                       FontWeight="Bold" FontFamily="Segoe UI Variable, Segoe UI"
                                        Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
                         </Grid>
                         <Border Height="1" Background="{DynamicResource DividerBrush}" Margin="20,0"/>
@@ -1477,10 +1477,10 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="By provider" FontSize="13" FontFamily="Segoe UI"
+                            <TextBlock Text="By provider" FontSize="13" FontFamily="Segoe UI Variable, Segoe UI"
                                        Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
                             <TextBlock Grid.Column="1" Text="{Binding ProviderBreakdownDisplay}" FontSize="13"
-                                       FontFamily="Segoe UI" Foreground="{DynamicResource TextSecondaryBrush}"
+                                       FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextSecondaryBrush}"
                                        VerticalAlignment="Center"/>
                         </Grid>
                     </StackPanel>
@@ -1517,7 +1517,7 @@
                 <Grid Grid.Row="0" Height="40" Background="{DynamicResource SidebarBgBrush}"
                       MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
                     <TextBlock Text="WhisperShow.net" FontSize="13" FontWeight="SemiBold"
-                               FontFamily="Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"
+                               FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"
                                HorizontalAlignment="Left" VerticalAlignment="Center" Margin="16,0,0,0"/>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center"
                                 Margin="0,0,8,0">
@@ -1537,7 +1537,7 @@
                     <Border Grid.Column="0" Background="{DynamicResource SidebarBgBrush}" CornerRadius="0,0,0,12">
                         <DockPanel>
                             <StackPanel DockPanel.Dock="Bottom" Margin="16,0,0,14">
-                                <TextBlock Text="{Binding VersionText}" FontSize="10" FontFamily="Segoe UI"
+                                <TextBlock Text="{Binding VersionText}" FontSize="10" FontFamily="Segoe UI Variable, Segoe UI"
                                            Foreground="{DynamicResource TextSecondaryBrush}"/>
                             </StackPanel>
                             <StackPanel Margin="8,8,8,0">
@@ -1625,16 +1625,16 @@
                             <!-- Header -->
                             <Grid Margin="0,0,0,20">
                                 <TextBlock Text="Keybind shortcuts" FontSize="18" FontWeight="SemiBold"
-                                           FontFamily="Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                           FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                 <Button Style="{StaticResource DialogCloseStyle}" HorizontalAlignment="Right"
                                         Command="{Binding CloseDialogCommand}" Margin="0,-4,-4,0"/>
                             </Grid>
 
                             <!-- TOGGLE SECTION -->
                             <TextBlock Text="Toggle mode" FontSize="13" FontWeight="SemiBold"
-                                       FontFamily="Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                       FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"/>
                             <TextBlock Text="Press to start and stop dictation" FontSize="12"
-                                       FontFamily="Segoe UI" Foreground="{DynamicResource TextSecondaryBrush}"
+                                       FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextSecondaryBrush}"
                                        Margin="0,2,0,10"/>
 
                             <ItemsControl ItemsSource="{Binding ToggleBadges}" Margin="0,0,0,10">
@@ -1649,7 +1649,7 @@
                                                 BorderBrush="{DynamicResource BadgeBorderBrush}"
                                                 BorderThickness="1" CornerRadius="5"
                                                 Padding="10,5" Margin="0,0,6,0">
-                                            <TextBlock Text="{Binding}" FontSize="12" FontFamily="Segoe UI"
+                                            <TextBlock Text="{Binding}" FontSize="12" FontFamily="Segoe UI Variable, Segoe UI"
                                                        Foreground="{DynamicResource TextPrimaryBrush}"/>
                                         </Border>
                                     </DataTemplate>
@@ -1663,10 +1663,10 @@
                                     <Border Background="{DynamicResource BadgeBgBrush}"
                                             BorderBrush="{DynamicResource BadgeBorderBrush}"
                                             BorderThickness="1" CornerRadius="5" Padding="8,3" Margin="0,0,10,0">
-                                        <TextBlock Text="enter" FontSize="11" FontFamily="Segoe UI"
+                                        <TextBlock Text="enter" FontSize="11" FontFamily="Segoe UI Variable, Segoe UI"
                                                    Foreground="{DynamicResource TextPrimaryBrush}"/>
                                     </Border>
-                                    <TextBlock FontSize="13" FontFamily="Segoe UI" VerticalAlignment="Center"
+                                    <TextBlock FontSize="13" FontFamily="Segoe UI Variable, Segoe UI" VerticalAlignment="Center"
                                                Foreground="{DynamicResource TextPrimaryBrush}">
                                         <TextBlock.Text>
                                             <Binding Path="CapturingHotkey"
@@ -1682,9 +1682,9 @@
 
                             <!-- PUSH-TO-TALK SECTION -->
                             <TextBlock Text="Push to Talk" FontSize="13" FontWeight="SemiBold"
-                                       FontFamily="Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                       FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"/>
                             <TextBlock Text="Hold to speak, release to stop" FontSize="12"
-                                       FontFamily="Segoe UI" Foreground="{DynamicResource TextSecondaryBrush}"
+                                       FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextSecondaryBrush}"
                                        Margin="0,2,0,10"/>
 
                             <ItemsControl ItemsSource="{Binding PttBadges}" Margin="0,0,0,10">
@@ -1699,7 +1699,7 @@
                                                 BorderBrush="{DynamicResource BadgeBorderBrush}"
                                                 BorderThickness="1" CornerRadius="5"
                                                 Padding="10,5" Margin="0,0,6,0">
-                                            <TextBlock Text="{Binding}" FontSize="12" FontFamily="Segoe UI"
+                                            <TextBlock Text="{Binding}" FontSize="12" FontFamily="Segoe UI Variable, Segoe UI"
                                                        Foreground="{DynamicResource TextPrimaryBrush}"/>
                                         </Border>
                                     </DataTemplate>
@@ -1713,10 +1713,10 @@
                                     <Border Background="{DynamicResource BadgeBgBrush}"
                                             BorderBrush="{DynamicResource BadgeBorderBrush}"
                                             BorderThickness="1" CornerRadius="5" Padding="8,3" Margin="0,0,10,0">
-                                        <TextBlock Text="enter" FontSize="11" FontFamily="Segoe UI"
+                                        <TextBlock Text="enter" FontSize="11" FontFamily="Segoe UI Variable, Segoe UI"
                                                    Foreground="{DynamicResource TextPrimaryBrush}"/>
                                     </Border>
-                                    <TextBlock FontSize="13" FontFamily="Segoe UI" VerticalAlignment="Center"
+                                    <TextBlock FontSize="13" FontFamily="Segoe UI Variable, Segoe UI" VerticalAlignment="Center"
                                                Foreground="{DynamicResource TextPrimaryBrush}">
                                         <TextBlock.Text>
                                             <Binding Path="CapturingHotkey"
@@ -1738,7 +1738,7 @@
                                     Margin="28,24,28,28">
                             <Grid Margin="0,0,0,16">
                                 <TextBlock Text="Microphone" FontSize="18" FontWeight="SemiBold"
-                                           FontFamily="Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                           FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                 <Button Style="{StaticResource DialogCloseStyle}" HorizontalAlignment="Right"
                                         Command="{Binding CloseDialogCommand}" Margin="0,-4,-4,0"/>
                             </Grid>
@@ -1750,7 +1750,7 @@
                                                 Cursor="Hand" MouseLeftButtonDown="MicrophoneItem_Click"
                                                 Background="{DynamicResource CardBgBrush}"
                                                 BorderThickness="2" BorderBrush="Transparent">
-                                            <TextBlock Text="{Binding Name}" FontSize="13" FontFamily="Segoe UI"
+                                            <TextBlock Text="{Binding Name}" FontSize="13" FontFamily="Segoe UI Variable, Segoe UI"
                                                        Foreground="{DynamicResource TextPrimaryBrush}"/>
                                         </Border>
                                     </DataTemplate>
@@ -1765,13 +1765,13 @@
                             <Grid Margin="0,0,0,4">
                                 <StackPanel>
                                     <TextBlock Text="Languages" FontSize="18" FontWeight="SemiBold"
-                                               FontFamily="Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                               FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                     <TextBlock Text="Select your language" FontSize="12"
-                                               FontFamily="Segoe UI" Foreground="{DynamicResource TextSecondaryBrush}"
+                                               FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextSecondaryBrush}"
                                                Margin="0,2,0,0"/>
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top">
-                                    <TextBlock Text="Auto-detect" FontSize="12" FontFamily="Segoe UI"
+                                    <TextBlock Text="Auto-detect" FontSize="12" FontFamily="Segoe UI Variable, Segoe UI"
                                                Foreground="{DynamicResource TextSecondaryBrush}"
                                                VerticalAlignment="Center" Margin="0,0,8,0"/>
                                     <CheckBox IsChecked="{Binding IsAutoDetectLanguage, Mode=OneWay}"
@@ -1801,7 +1801,7 @@
                                                     BorderThickness="2" BorderBrush="Transparent">
                                                 <StackPanel Orientation="Horizontal">
                                                     <TextBlock Text="{Binding Flag}" FontSize="14" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                                    <TextBlock Text="{Binding DisplayName}" FontSize="12" FontFamily="Segoe UI"
+                                                    <TextBlock Text="{Binding DisplayName}" FontSize="12" FontFamily="Segoe UI Variable, Segoe UI"
                                                                Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
                                                 </StackPanel>
                                             </Border>
