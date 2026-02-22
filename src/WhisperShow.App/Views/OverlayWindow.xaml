@@ -102,6 +102,11 @@
                         <!-- Waveform visualization -->
                         <Canvas x:Name="WaveformCanvas" Width="70" Height="28"
                                 Margin="2,0,6,0" VerticalAlignment="Center"/>
+                        <!-- Recording timer -->
+                        <TextBlock Text="{Binding RecordingTimerText}"
+                                   Foreground="{StaticResource TextBrush}" FontSize="11"
+                                   FontFamily="Segoe UI" VerticalAlignment="Center"
+                                   Margin="2,0,8,0" Opacity="0.8"/>
                     </StackPanel>
                 </Border>
             </Grid>
@@ -136,20 +141,6 @@
                             <Button Content="Insert" Margin="0,0,4,0"
                                     Click="InsertButton_Click" Style="{x:Null}"
                                     Background="#FF4CAF50" Foreground="White"
-                                    Padding="8,3" Cursor="Hand"
-                                    BorderThickness="0" FontSize="11">
-                                <Button.Template>
-                                    <ControlTemplate TargetType="Button">
-                                        <Border Background="{TemplateBinding Background}"
-                                                CornerRadius="10" Padding="{TemplateBinding Padding}">
-                                            <ContentPresenter HorizontalAlignment="Center"/>
-                                        </Border>
-                                    </ControlTemplate>
-                                </Button.Template>
-                            </Button>
-                            <Button Content="Copy" Margin="0,0,4,0"
-                                    Click="CopyButton_Click" Style="{x:Null}"
-                                    Background="#FF555555" Foreground="White"
                                     Padding="8,3" Cursor="Hand"
                                     BorderThickness="0" FontSize="11">
                                 <Button.Template>

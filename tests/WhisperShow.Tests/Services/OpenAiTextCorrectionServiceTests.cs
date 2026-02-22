@@ -1,5 +1,7 @@
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
+using NSubstitute;
+using WhisperShow.Core.Models;
 using WhisperShow.Core.Services.TextCorrection;
 using WhisperShow.Tests.TestHelpers;
 
@@ -35,13 +37,14 @@ public class OpenAiTextCorrectionServiceTests
 
     private static OpenAiTextCorrectionService CreateService(string? apiKey)
     {
-        var options = OptionsHelper.Create(o =>
+        var options = OptionsHelper.CreateMonitor(o =>
         {
             o.OpenAI.ApiKey = apiKey;
-            o.TextCorrection.Enabled = true;
+            o.TextCorrection.Provider = TextCorrectionProvider.Cloud;
             o.TextCorrection.Model = "gpt-4o-mini";
         });
         return new OpenAiTextCorrectionService(
-            NullLogger<OpenAiTextCorrectionService>.Instance, options);
+            NullLogger<OpenAiTextCorrectionService>.Instance, options,
+            Substitute.For<IDictionaryService>());
     }
 }

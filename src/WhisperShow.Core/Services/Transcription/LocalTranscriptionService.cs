@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Whisper.net;
+using Whisper.net.LibraryLoader;
 using WhisperShow.Core.Configuration;
 using WhisperShow.Core.Models;
 
@@ -9,7 +10,7 @@ namespace WhisperShow.Core.Services.Transcription;
 public class LocalTranscriptionService : ITranscriptionService, IDisposable
 {
     private readonly ILogger<LocalTranscriptionService> _logger;
-    private readonly LocalWhisperOptions _options;
+    private readonly IOptionsMonitor<WhisperShowOptions> _optionsMonitor;
     private WhisperFactory? _factory;
     private string? _loadedModelPath;
     private bool _disposed;
@@ -20,17 +21,17 @@ public class LocalTranscriptionService : ITranscriptionService, IDisposable
     {
         get
         {
-            var modelPath = GetModelPath();
-            return modelPath is not null && File.Exists(modelPath);
+            var modelPath = GetModelPath(_optionsMonitor.CurrentValue.Local);
+            return modelPath is not null;
         }
     }
 
     public LocalTranscriptionService(
         ILogger<LocalTranscriptionService> logger,
-        IOptions<WhisperShowOptions> options)
+        IOptionsMonitor<WhisperShowOptions> optionsMonitor)
     {
         _logger = logger;
-        _options = options.Value.Local;
+        _optionsMonitor = optionsMonitor;
     }
 
     public async Task<TranscriptionResult> TranscribeAsync(
@@ -38,10 +39,12 @@ public class LocalTranscriptionService : ITranscriptionService, IDisposable
         string? language = null,
         CancellationToken cancellationToken = default)
     {
-        var modelPath = GetModelPath()
+        var localOpts = _optionsMonitor.CurrentValue.Local;
+
+        var modelPath = GetModelPath(localOpts)
             ?? throw new InvalidOperationException("No local Whisper model found. Please download a model first.");
 
-        EnsureFactoryLoaded(modelPath);
+        EnsureFactoryLoaded(modelPath, localOpts.GpuAcceleration);
 
         var builder = _factory!.CreateBuilder()
             .WithLanguage(language ?? "auto");
@@ -50,7 +53,7 @@ public class LocalTranscriptionService : ITranscriptionService, IDisposable
         using var stream = new MemoryStream(audioData);
 
         _logger.LogInformation("Processing audio locally ({Size} bytes, model: {Model})",
-            audioData.Length, _options.ModelName);
+            audioData.Length, localOpts.ModelName);
 
         var segments = new List<string>();
 
@@ -70,20 +73,36 @@ public class LocalTranscriptionService : ITranscriptionService, IDisposable
         };
     }
 
-    private string? GetModelPath()
+    public void Preload()
     {
-        var dir = _options.GetModelDirectory();
-        var path = Path.Combine(dir, _options.ModelName);
+        var localOpts = _optionsMonitor.CurrentValue.Local;
+        var modelPath = GetModelPath(localOpts);
+        if (modelPath is not null)
+            EnsureFactoryLoaded(modelPath, localOpts.GpuAcceleration);
+    }
+
+    private static string? GetModelPath(LocalWhisperOptions localOpts)
+    {
+        var dir = localOpts.GetModelDirectory();
+        var path = Path.Combine(dir, localOpts.ModelName);
         return File.Exists(path) ? path : null;
     }
 
-    private void EnsureFactoryLoaded(string modelPath)
+    private void EnsureFactoryLoaded(string modelPath, bool gpuAcceleration)
     {
         if (_factory is not null && _loadedModelPath == modelPath)
             return;
 
         _factory?.Dispose();
-        _logger.LogInformation("Loading Whisper model from {Path}", modelPath);
+
+        // Configure runtime order based on GPU setting
+        if (gpuAcceleration)
+            RuntimeOptions.RuntimeLibraryOrder = [RuntimeLibrary.Cuda, RuntimeLibrary.Cpu];
+        else
+            RuntimeOptions.RuntimeLibraryOrder = [RuntimeLibrary.Cpu];
+
+        _logger.LogInformation("Loading Whisper model from {Path} (GPU: {Gpu})",
+            modelPath, gpuAcceleration);
         _factory = WhisperFactory.FromPath(modelPath);
         _loadedModelPath = modelPath;
     }

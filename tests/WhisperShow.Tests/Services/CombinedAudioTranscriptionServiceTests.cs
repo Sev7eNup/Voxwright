@@ -15,7 +15,7 @@ public class CombinedAudioTranscriptionServiceTests
         string? apiKey = "sk-test",
         bool useCombinedModel = true)
     {
-        var options = OptionsHelper.Create(o =>
+        var options = OptionsHelper.CreateMonitor(o =>
         {
             o.OpenAI.ApiKey = apiKey;
             o.TextCorrection.UseCombinedAudioModel = useCombinedModel;
@@ -25,7 +25,8 @@ public class CombinedAudioTranscriptionServiceTests
         return new CombinedAudioTranscriptionService(
             NullLogger<CombinedAudioTranscriptionService>.Instance,
             options,
-            _audioCompressor);
+            _audioCompressor,
+            Substitute.For<IDictionaryService>());
     }
 
     [Fact]

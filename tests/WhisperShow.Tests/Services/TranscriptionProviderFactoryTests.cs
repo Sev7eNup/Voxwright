@@ -16,12 +16,12 @@ public class TranscriptionProviderFactoryTests
 
     public TranscriptionProviderFactoryTests()
     {
-        var optionsWithKey = OptionsHelper.Create(o => o.OpenAI.ApiKey = "sk-test");
+        var optionsWithKey = OptionsHelper.CreateMonitor(o => o.OpenAI.ApiKey = "sk-test");
         _openAiService = new OpenAiTranscriptionService(
             NullLogger<OpenAiTranscriptionService>.Instance, optionsWithKey,
             Substitute.For<IAudioCompressor>());
 
-        var optionsNoKey = OptionsHelper.Create();
+        var optionsNoKey = OptionsHelper.CreateMonitor();
         _localService = new LocalTranscriptionService(
             NullLogger<LocalTranscriptionService>.Instance, optionsNoKey);
 
@@ -64,7 +64,7 @@ public class TranscriptionProviderFactoryTests
     [Fact]
     public void GetAvailableProviders_NoneAvailable_ReturnsEmpty()
     {
-        var optionsNoKey = OptionsHelper.Create();
+        var optionsNoKey = OptionsHelper.CreateMonitor();
         var openAi = new OpenAiTranscriptionService(
             NullLogger<OpenAiTranscriptionService>.Instance, optionsNoKey,
             Substitute.For<IAudioCompressor>());

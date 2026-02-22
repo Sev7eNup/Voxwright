@@ -11,38 +11,53 @@ public class OpenAiTextCorrectionService : ITextCorrectionService
         """
         You are a verbatim speech-to-text post-processor.
         Your ONLY job is to fix punctuation, capitalization, and grammar.
+        ALWAYS keep the text in its original language — do NOT translate.
         Output the corrected text EXACTLY — do NOT answer questions,
         do NOT add commentary, do NOT interpret the content.
         Return ONLY the corrected transcription, nothing else.
         """;
 
     private readonly ILogger<OpenAiTextCorrectionService> _logger;
-    private readonly WhisperShowOptions _options;
+    private readonly IOptionsMonitor<WhisperShowOptions> _optionsMonitor;
+    private readonly IDictionaryService _dictionaryService;
     private ChatClient? _chatClient;
+    private string? _lastApiKey;
+    private string? _lastModel;
 
     public OpenAiTextCorrectionService(
         ILogger<OpenAiTextCorrectionService> logger,
-        IOptions<WhisperShowOptions> options)
+        IOptionsMonitor<WhisperShowOptions> optionsMonitor,
+        IDictionaryService dictionaryService)
     {
         _logger = logger;
-        _options = options.Value;
+        _optionsMonitor = optionsMonitor;
+        _dictionaryService = dictionaryService;
     }
 
     public async Task<string> CorrectAsync(string rawText, string? language, CancellationToken ct = default)
     {
         try
         {
-            _chatClient ??= new ChatClient(
-                model: _options.TextCorrection.Model,
-                apiKey: _options.OpenAI.ApiKey!);
+            var options = _optionsMonitor.CurrentValue;
 
-            var systemPrompt = _options.TextCorrection.SystemPrompt ?? DefaultSystemPrompt;
+            // Recreate client if API key or model changed
+            if (_chatClient is null || _lastApiKey != options.OpenAI.ApiKey || _lastModel != options.TextCorrection.Model)
+            {
+                _chatClient = new ChatClient(
+                    model: options.TextCorrection.Model,
+                    apiKey: options.OpenAI.ApiKey!);
+                _lastApiKey = options.OpenAI.ApiKey;
+                _lastModel = options.TextCorrection.Model;
+            }
+
+            var systemPrompt = options.TextCorrection.SystemPrompt ?? DefaultSystemPrompt;
+            systemPrompt += _dictionaryService.BuildPromptFragment();
 
             var languageHint = string.IsNullOrEmpty(language) ? "auto-detected" : language;
             var userMessage = $"[Language: {languageHint}]\n{rawText}";
 
             _logger.LogInformation("Sending text correction request ({Length} chars, model: {Model})",
-                rawText.Length, _options.TextCorrection.Model);
+                rawText.Length, options.TextCorrection.Model);
 
             var result = await _chatClient.CompleteChatAsync(
                 [

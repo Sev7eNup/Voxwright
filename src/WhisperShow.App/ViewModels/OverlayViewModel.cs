@@ -3,13 +3,13 @@ using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using WhisperShow.App.Services;
-using WhisperShow.Core.Configuration;
 using WhisperShow.Core.Models;
 using WhisperShow.Core.Services.Audio;
 using WhisperShow.Core.Services.TextCorrection;
 using WhisperShow.Core.Services.TextInsertion;
+using WhisperShow.Core.Services.History;
+using WhisperShow.Core.Services.Statistics;
 using WhisperShow.Core.Services.Transcription;
 
 
@@ -21,13 +21,17 @@ public partial class OverlayViewModel : ObservableObject
     private readonly IAudioMutingService _mutingService;
     private readonly TranscriptionProviderFactory _providerFactory;
     private readonly ITextInsertionService _textInsertionService;
-    private readonly ITextCorrectionService _textCorrectionService;
+    private readonly TextCorrectionProviderFactory _correctionFactory;
     private readonly ICombinedTranscriptionCorrectionService _combinedService;
     private readonly SoundEffectService _soundEffects;
+    private readonly IUsageStatsService _statsService;
+    private readonly ITranscriptionHistoryService _historyService;
     private readonly ILogger<OverlayViewModel> _logger;
-    private readonly WhisperShowOptions _options;
+    private readonly SettingsViewModel _settings;
     private IntPtr _previousForegroundWindow;
     private CancellationTokenSource? _autoDismissCts;
+    private DateTime _recordingStartTime;
+    private System.Timers.Timer? _recordingTimer;
 
     public bool MuteWhileDictating { get; set; }
     public bool IsOverlayAlwaysVisible { get; set; }
@@ -50,30 +54,36 @@ public partial class OverlayViewModel : ObservableObject
     [ObservableProperty]
     private string _currentProviderName = string.Empty;
 
+    [ObservableProperty]
+    private string _recordingTimerText = "0:00";
+
     public OverlayViewModel(
         IAudioRecordingService audioService,
         IAudioMutingService mutingService,
         TranscriptionProviderFactory providerFactory,
         ITextInsertionService textInsertionService,
-        ITextCorrectionService textCorrectionService,
+        TextCorrectionProviderFactory correctionFactory,
         ICombinedTranscriptionCorrectionService combinedService,
         SoundEffectService soundEffects,
+        IUsageStatsService statsService,
+        ITranscriptionHistoryService historyService,
         ILogger<OverlayViewModel> logger,
-        IOptions<WhisperShowOptions> options,
         SettingsViewModel settingsViewModel)
     {
         _audioService = audioService;
         _mutingService = mutingService;
         _providerFactory = providerFactory;
         _textInsertionService = textInsertionService;
-        _textCorrectionService = textCorrectionService;
+        _correctionFactory = correctionFactory;
         _combinedService = combinedService;
         _soundEffects = soundEffects;
+        _statsService = statsService;
+        _historyService = historyService;
         _logger = logger;
-        _options = options.Value;
+        _settings = settingsViewModel;
 
-        MuteWhileDictating = _options.Audio.MuteWhileDictating;
-        IsOverlayAlwaysVisible = _options.Overlay.AlwaysVisible;
+        MuteWhileDictating = _settings.MuteWhileDictating;
+        IsOverlayAlwaysVisible = _settings.OverlayAlwaysVisible;
 
         _audioService.AudioLevelChanged += (_, level) =>
             Application.Current.Dispatcher.Invoke(() => AudioLevel = level);
@@ -101,6 +111,10 @@ public partial class OverlayViewModel : ObservableObject
             case nameof(SettingsViewModel.SoundEffectsEnabled):
                 _soundEffects.Enabled = settings.SoundEffectsEnabled;
                 _logger.LogDebug("SoundEffects.Enabled updated to {Value}", _soundEffects.Enabled);
+                break;
+            case nameof(SettingsViewModel.Provider):
+                UpdateProviderName();
+                _logger.LogInformation("Transcription provider changed to {Provider}", settings.Provider);
                 break;
         }
     }
@@ -155,11 +169,13 @@ public partial class OverlayViewModel : ObservableObject
                 _mutingService.MuteOtherApplications();
             _soundEffects.PlayStartRecording();
             State = RecordingState.Recording;
+            StartRecordingTimer();
             _logger.LogInformation("State: Idle -> Recording");
             await _audioService.StartRecordingAsync();
         }
         catch (Exception ex)
         {
+            StopRecordingTimer();
             _logger.LogError(ex, "Failed to start recording");
             ErrorMessage = $"Recording failed: {ex.Message}";
             State = RecordingState.Error;
@@ -170,6 +186,7 @@ public partial class OverlayViewModel : ObservableObject
 
     private async Task StopAndTranscribeAsync()
     {
+        StopRecordingTimer();
         _logger.LogInformation("State: Recording -> Transcribing");
         if (MuteWhileDictating)
             _mutingService.UnmuteAll();
@@ -191,12 +208,12 @@ public partial class OverlayViewModel : ObservableObject
             string text;
 
             // Fast path: combined audio model (transcription + correction in one API call)
-            if (_options.TextCorrection.Enabled && _combinedService.IsAvailable)
+            if (_settings.UseCombinedAudioModel && _combinedService.IsAvailable)
             {
                 _logger.LogInformation("Using combined transcription+correction pipeline");
                 try
                 {
-                    text = await _combinedService.TranscribeAndCorrectAsync(audioData, _options.Language);
+                    text = await _combinedService.TranscribeAndCorrectAsync(audioData, _settings.SelectedLanguageCode);
                 }
                 catch (Exception ex)
                 {
@@ -206,7 +223,7 @@ public partial class OverlayViewModel : ObservableObject
             }
             else
             {
-                _logger.LogInformation("Using standard transcription pipeline (Provider: {Provider})", _options.Provider);
+                _logger.LogInformation("Using standard transcription pipeline (Provider: {Provider})", _settings.Provider);
                 text = await StandardTranscribeAsync(audioData);
             }
 
@@ -221,6 +238,12 @@ public partial class OverlayViewModel : ObservableObject
 
             _logger.LogInformation("Transcription result: {Length} chars", text.Length);
             TranscribedText = text;
+
+            // Record stats and history
+            var duration = (DateTime.UtcNow - _recordingStartTime).TotalSeconds;
+            _statsService.RecordTranscription(duration, audioData.Length, _settings.Provider.ToString());
+            _historyService.AddEntry(text, _settings.Provider.ToString(), duration);
+
             // Auto-insert into the previously focused window
             await InsertTextAsync();
             // Show result panel with transcribed text, auto-dismiss after configured timeout
@@ -230,6 +253,7 @@ public partial class OverlayViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            _statsService.RecordError();
             _logger.LogError(ex, "Transcription failed");
             ErrorMessage = $"Transcription failed: {ex.Message}";
             State = RecordingState.Error;
@@ -240,14 +264,16 @@ public partial class OverlayViewModel : ObservableObject
 
     private async Task<string> StandardTranscribeAsync(byte[] audioData)
     {
-        var provider = _providerFactory.GetProvider(_options.Provider);
-        var result = await provider.TranscribeAsync(audioData, _options.Language);
+        var provider = _providerFactory.GetProvider(_settings.Provider);
+        var result = await provider.TranscribeAsync(audioData, _settings.SelectedLanguageCode);
 
         var text = result.Text;
 
-        if (!string.IsNullOrWhiteSpace(text) && _options.TextCorrection.Enabled)
+        var corrector = _correctionFactory.GetProvider(_settings.CorrectionProvider);
+        _logger.LogInformation("Text correction: {Provider}", _settings.CorrectionProvider);
+        if (corrector is not null && !string.IsNullOrWhiteSpace(text))
         {
-            text = await _textCorrectionService.CorrectAsync(text, _options.Language);
+            text = await corrector.CorrectAsync(text, _settings.SelectedLanguageCode);
         }
 
         return text;
@@ -300,6 +326,27 @@ public partial class OverlayViewModel : ObservableObject
         _logger.LogDebug("Result dismissed (was {PreviousState})", previousState);
     }
 
+    private void StartRecordingTimer()
+    {
+        _recordingStartTime = DateTime.UtcNow;
+        RecordingTimerText = "0:00";
+        _recordingTimer = new System.Timers.Timer(1000);
+        _recordingTimer.Elapsed += (_, _) =>
+        {
+            var elapsed = DateTime.UtcNow - _recordingStartTime;
+            Application.Current?.Dispatcher.Invoke(() =>
+                RecordingTimerText = $"{(int)elapsed.TotalMinutes}:{elapsed.Seconds:D2}");
+        };
+        _recordingTimer.Start();
+    }
+
+    private void StopRecordingTimer()
+    {
+        _recordingTimer?.Stop();
+        _recordingTimer?.Dispose();
+        _recordingTimer = null;
+    }
+
     private async void StartAutoDismissTimer()
     {
         _autoDismissCts?.Cancel();
@@ -308,7 +355,7 @@ public partial class OverlayViewModel : ObservableObject
 
         try
         {
-            await Task.Delay(TimeSpan.FromSeconds(_options.Overlay.AutoDismissSeconds), token);
+            await Task.Delay(TimeSpan.FromSeconds(_settings.AutoDismissSeconds), token);
             if (State is RecordingState.Error or RecordingState.Result)
                 DismissResult();
         }
@@ -337,7 +384,7 @@ public partial class OverlayViewModel : ObservableObject
 
     public void UpdateProviderName()
     {
-        var provider = _providerFactory.GetProvider(_options.Provider);
+        var provider = _providerFactory.GetProvider(_settings.Provider);
         CurrentProviderName = provider.ProviderName;
     }
 }

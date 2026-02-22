@@ -8,7 +8,6 @@ public class SettingsPageTemplateSelector : DataTemplateSelector
 {
     public DataTemplate? GeneralTemplate { get; set; }
     public DataTemplate? SystemTemplate { get; set; }
-    public DataTemplate? TranscriptionTemplate { get; set; }
 
     public override DataTemplate? SelectTemplate(object? item, DependencyObject container)
     {
@@ -18,7 +17,6 @@ public class SettingsPageTemplateSelector : DataTemplateSelector
             {
                 SettingsPage.General => GeneralTemplate,
                 SettingsPage.System => SystemTemplate,
-                SettingsPage.Transcription => TranscriptionTemplate,
                 _ => base.SelectTemplate(item, container)
             };
         }

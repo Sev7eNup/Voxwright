@@ -8,6 +8,9 @@ using WhisperShow.Core.Configuration;
 using WhisperShow.Core.Models;
 using WhisperShow.Core.Services.Audio;
 using WhisperShow.Core.Services.Hotkey;
+using WhisperShow.Core.Services.History;
+using WhisperShow.Core.Services.ModelManagement;
+using WhisperShow.Core.Services.Statistics;
 using WhisperShow.Core.Services.TextCorrection;
 using WhisperShow.Core.Services.TextInsertion;
 using WhisperShow.Core.Services.Transcription;
@@ -64,18 +67,25 @@ public class OverlayViewModelTests : IDisposable
         var settingsVm = new SettingsViewModel(
             opts,
             Substitute.For<IGlobalHotkeyService>(),
+            Substitute.For<IDictionaryService>(),
+            Substitute.For<IUsageStatsService>(),
+            Substitute.For<IModelManager>(),
+            Substitute.For<ICorrectionModelManager>(),
             Microsoft.Extensions.Logging.Abstractions.NullLogger<SettingsViewModel>.Instance);
+
+        var correctionFactory = new TestCorrectionProviderFactory(_textCorrectionService);
 
         return new OverlayViewModel(
             _audioService,
             _mutingService,
             providerFactory,
             _textInsertionService,
-            _textCorrectionService,
+            correctionFactory,
             _combinedService,
             new SoundEffectService(Microsoft.Extensions.Logging.Abstractions.NullLogger<SoundEffectService>.Instance, false),
+            Substitute.For<IUsageStatsService>(),
+            Substitute.For<ITranscriptionHistoryService>(),
             Microsoft.Extensions.Logging.Abstractions.NullLogger<OverlayViewModel>.Instance,
-            opts,
             settingsVm);
     }
 
@@ -209,7 +219,7 @@ public class OverlayViewModelTests : IDisposable
         _textCorrectionService.CorrectAsync("raw text", Arg.Any<string?>(), Arg.Any<CancellationToken>())
             .Returns("Corrected text.");
 
-        var vm = CreateViewModel(o => o.TextCorrection.Enabled = true);
+        var vm = CreateViewModel(o => o.TextCorrection.Provider = TextCorrectionProvider.Cloud);
         await vm.ToggleRecordingCommand.ExecuteAsync(null);
         await vm.ToggleRecordingCommand.ExecuteAsync(null);
 
@@ -223,7 +233,7 @@ public class OverlayViewModelTests : IDisposable
         _transcriptionProvider.TranscribeAsync(Arg.Any<byte[]>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
             .Returns(new TranscriptionResult { Text = "raw text" });
 
-        var vm = CreateViewModel(o => o.TextCorrection.Enabled = false);
+        var vm = CreateViewModel(o => o.TextCorrection.Provider = TextCorrectionProvider.Off);
         await vm.ToggleRecordingCommand.ExecuteAsync(null);
         await vm.ToggleRecordingCommand.ExecuteAsync(null);
 
@@ -382,7 +392,7 @@ public class OverlayViewModelTests : IDisposable
 
         var vm = CreateViewModel(o =>
         {
-            o.TextCorrection.Enabled = true;
+            o.TextCorrection.Provider = TextCorrectionProvider.Cloud;
             o.TextCorrection.UseCombinedAudioModel = true;
         });
         await vm.ToggleRecordingCommand.ExecuteAsync(null); // → Recording
@@ -404,7 +414,7 @@ public class OverlayViewModelTests : IDisposable
 
         var vm = CreateViewModel(o =>
         {
-            o.TextCorrection.Enabled = true;
+            o.TextCorrection.Provider = TextCorrectionProvider.Cloud;
             o.TextCorrection.UseCombinedAudioModel = false;
         });
         await vm.ToggleRecordingCommand.ExecuteAsync(null);
@@ -428,7 +438,7 @@ public class OverlayViewModelTests : IDisposable
 
         var vm = CreateViewModel(o =>
         {
-            o.TextCorrection.Enabled = true;
+            o.TextCorrection.Provider = TextCorrectionProvider.Cloud;
             o.TextCorrection.UseCombinedAudioModel = true;
         });
         await vm.ToggleRecordingCommand.ExecuteAsync(null);
@@ -512,5 +522,22 @@ public class OverlayViewModelTests : IDisposable
         }
 
         public override ITranscriptionService GetProvider(TranscriptionProvider provider) => _provider;
+    }
+
+    /// <summary>
+    /// Custom correction factory that wraps a mock provider, bypassing the OfType constraint.
+    /// </summary>
+    private class TestCorrectionProviderFactory : TextCorrectionProviderFactory
+    {
+        private readonly ITextCorrectionService _provider;
+
+        public TestCorrectionProviderFactory(ITextCorrectionService provider)
+            : base([provider])
+        {
+            _provider = provider;
+        }
+
+        public override ITextCorrectionService? GetProvider(TextCorrectionProvider provider) =>
+            provider == TextCorrectionProvider.Off ? null : _provider;
     }
 }

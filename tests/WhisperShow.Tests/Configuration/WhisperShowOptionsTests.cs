@@ -59,7 +59,7 @@ public class WhisperShowOptionsTests
     {
         var options = new TextCorrectionOptions();
 
-        options.Enabled.Should().BeFalse();
+        options.Provider.Should().Be(TextCorrectionProvider.Off);
         options.Model.Should().Be("gpt-4o-mini");
         options.SystemPrompt.Should().BeNull();
     }
@@ -84,11 +84,9 @@ public class WhisperShowOptionsTests
     }
 
     [Fact]
-    public void GetModelDirectory_WithEmpty_ReturnsEmptyString()
+    public void GetModelDirectory_WithEmpty_ReturnsFallback()
     {
-        // Documents current behavior: empty string is truthy in null-coalescing,
-        // so GetModelDirectory returns "" instead of the AppData fallback.
         var options = new LocalWhisperOptions { ModelDirectory = "" };
-        options.GetModelDirectory().Should().BeEmpty();
+        options.GetModelDirectory().Should().Contain("WhisperShow");
     }
 }

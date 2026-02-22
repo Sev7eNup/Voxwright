@@ -9,7 +9,11 @@ using Microsoft.Extensions.Options;
 using NAudio.Wave;
 using WhisperShow.Core.Configuration;
 using WhisperShow.Core.Models;
+using Whisper.net.Ggml;
 using WhisperShow.Core.Services.Hotkey;
+using WhisperShow.Core.Services.ModelManagement;
+using WhisperShow.Core.Services.Statistics;
+using WhisperShow.Core.Services.TextCorrection;
 
 namespace WhisperShow.App.ViewModels;
 
@@ -17,7 +21,9 @@ public enum SettingsPage
 {
     General,
     System,
-    Transcription
+    Models,
+    Dictionary,
+    Statistics
 }
 
 public record MicrophoneInfo(int DeviceIndex, string Name);
@@ -27,6 +33,10 @@ public partial class SettingsViewModel : ObservableObject
 {
     private readonly ILogger<SettingsViewModel> _logger;
     private readonly IGlobalHotkeyService _hotkeyService;
+    private readonly IDictionaryService _dictionaryService;
+    private readonly IUsageStatsService _statsService;
+    private readonly IModelManager _modelManager;
+    private readonly ICorrectionModelManager _correctionModelManager;
     private CancellationTokenSource? _saveCts;
 
     // --- Page navigation ---
@@ -92,18 +102,24 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private bool _launchAtLogin;
     [ObservableProperty] private bool _overlayAlwaysVisible = true;
     [ObservableProperty] private bool _showInTaskbar;
+    [ObservableProperty] private bool _isDarkMode;
 
     // --- System: Sound ---
     [ObservableProperty] private bool _soundEffectsEnabled = true;
     [ObservableProperty] private bool _muteWhileDictating = true;
 
-    // --- System: Text Correction ---
-    [ObservableProperty] private bool _textCorrectionEnabled;
-
     // --- System: Audio Compression ---
     [ObservableProperty] private bool _audioCompressionEnabled = true;
 
-    // --- System: Combined Audio Model ---
+    // --- Models: Text Correction ---
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowCloudUsageHint))]
+    private TextCorrectionProvider _correctionProvider = TextCorrectionProvider.Off;
+    [ObservableProperty] private string _correctionCloudModel = "gpt-4o-mini";
+    [ObservableProperty] private bool _isEditingCorrectionModel;
+    [ObservableProperty] private bool _correctionGpuAcceleration = true;
+
+    // --- Models: Combined Audio Model ---
     [ObservableProperty] private bool _useCombinedAudioModel;
     [ObservableProperty] private string _combinedAudioModel = "gpt-4o-mini-audio-preview";
     [ObservableProperty] private bool _isEditingCombinedAudioModel;
@@ -117,7 +133,9 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private bool _isEditingMaxRecording;
 
     // --- Transcription: Provider ---
-    [ObservableProperty] private TranscriptionProvider _provider = TranscriptionProvider.OpenAI;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowCloudUsageHint))]
+    private TranscriptionProvider _provider = TranscriptionProvider.OpenAI;
     [ObservableProperty] private bool _isEditingProvider;
 
     // --- Transcription: API Key ---
@@ -128,9 +146,31 @@ public partial class SettingsViewModel : ObservableObject
     // --- Transcription: Model ---
     [ObservableProperty] private string _transcriptionModel = "whisper-1";
     [ObservableProperty] private bool _isEditingModel;
+    private string _openAiModelName = "whisper-1";
+    private string _localModelName = "ggml-small.bin";
 
     // --- Transcription: GPU ---
     [ObservableProperty] private bool _gpuAcceleration = true;
+
+    // --- Dictionary ---
+    public ObservableCollection<string> DictionaryEntries { get; } = [];
+    [ObservableProperty] private string _newDictionaryWord = "";
+
+    // --- Models ---
+    public ObservableCollection<ModelItemViewModel> ModelItems { get; } = [];
+    public ObservableCollection<CorrectionModelItemViewModel> CorrectionModelItems { get; } = [];
+
+    // --- Statistics ---
+    [ObservableProperty] private int _totalTranscriptions;
+    [ObservableProperty] private string _totalRecordingTimeDisplay = "0:00";
+    [ObservableProperty] private string _averageDurationDisplay = "0.0s";
+    [ObservableProperty] private string _estimatedCostDisplay = "$0.00";
+    [ObservableProperty] private int _errorCount;
+    [ObservableProperty] private string _providerBreakdownDisplay = "";
+
+    // --- Cloud usage hint ---
+    public bool ShowCloudUsageHint =>
+        Provider == TranscriptionProvider.Local && CorrectionProvider == TextCorrectionProvider.Cloud;
 
     // Version
     public string VersionText => $"WhisperShow v{GetType().Assembly.GetName().Version?.ToString(3) ?? "1.0.0"}";
@@ -138,10 +178,18 @@ public partial class SettingsViewModel : ObservableObject
     public SettingsViewModel(
         IOptions<WhisperShowOptions> options,
         IGlobalHotkeyService hotkeyService,
+        IDictionaryService dictionaryService,
+        IUsageStatsService statsService,
+        IModelManager modelManager,
+        ICorrectionModelManager correctionModelManager,
         ILogger<SettingsViewModel> logger)
     {
         _logger = logger;
         _hotkeyService = hotkeyService;
+        _dictionaryService = dictionaryService;
+        _statsService = statsService;
+        _modelManager = modelManager;
+        _correctionModelManager = correctionModelManager;
 
         var opts = options.Value;
 
@@ -158,14 +206,20 @@ public partial class SettingsViewModel : ObservableObject
         _launchAtLogin = opts.App.LaunchAtLogin;
         _overlayAlwaysVisible = opts.Overlay.AlwaysVisible;
         _showInTaskbar = opts.Overlay.ShowInTaskbar;
+        _isDarkMode = string.Equals(opts.App.Theme, "Dark", StringComparison.OrdinalIgnoreCase);
 
         // System: Sound
         _soundEffectsEnabled = opts.App.SoundEffects;
         _muteWhileDictating = opts.Audio.MuteWhileDictating;
 
-        // System: Transcription
-        _textCorrectionEnabled = opts.TextCorrection.Enabled;
+        // System: Audio
         _audioCompressionEnabled = opts.Audio.CompressBeforeUpload;
+
+        // Models: Text Correction
+        _correctionProvider = opts.TextCorrection.Provider;
+        _correctionCloudModel = opts.TextCorrection.Model;
+        _correctionGpuAcceleration = opts.TextCorrection.LocalGpuAcceleration;
+        _correctionLocalModelName = opts.TextCorrection.LocalModelName;
         _useCombinedAudioModel = opts.TextCorrection.UseCombinedAudioModel;
         _combinedAudioModel = opts.TextCorrection.CombinedAudioModel;
         _autoDismissSeconds = opts.Overlay.AutoDismissSeconds;
@@ -174,12 +228,15 @@ public partial class SettingsViewModel : ObservableObject
         // Transcription
         _provider = opts.Provider;
         _openAiApiKey = opts.OpenAI.ApiKey ?? "";
+        _openAiModelName = opts.OpenAI.Model;
+        _localModelName = opts.Local.ModelName;
         _transcriptionModel = opts.Provider == TranscriptionProvider.OpenAI
-            ? opts.OpenAI.Model
-            : opts.Local.ModelName;
+            ? _openAiModelName
+            : _localModelName;
         _gpuAcceleration = opts.Local.GpuAcceleration;
 
         LoadMicrophones();
+        LoadDictionaryEntries();
         UpdateDisplayTexts();
         UpdateToggleBadges();
         UpdatePttBadges();
@@ -251,7 +308,17 @@ public partial class SettingsViewModel : ObservableObject
     // --- Navigation ---
 
     [RelayCommand]
-    private void Navigate(SettingsPage page) => SelectedPage = page;
+    private void Navigate(SettingsPage page)
+    {
+        SelectedPage = page;
+        if (page == SettingsPage.Statistics)
+            RefreshStats();
+        else if (page == SettingsPage.Models)
+        {
+            RefreshModels();
+            RefreshCorrectionModels();
+        }
+    }
 
     // --- Dialog system ---
 
@@ -384,6 +451,9 @@ public partial class SettingsViewModel : ObservableObject
     [RelayCommand]
     private void ToggleShowInTaskbar() => ScheduleSave();
 
+    [RelayCommand]
+    private void ToggleDarkMode() => ScheduleSave();
+
     private void SetAutoStart(bool enable)
     {
         try
@@ -423,26 +493,10 @@ public partial class SettingsViewModel : ObservableObject
     [RelayCommand]
     private void ToggleMuteWhileDictating() => ScheduleSave();
 
-    // --- System: Transcription ---
-
-    [RelayCommand]
-    private void ToggleTextCorrection() => ScheduleSave();
+    // --- System: Audio ---
 
     [RelayCommand]
     private void ToggleAudioCompression() => ScheduleSave();
-
-    [RelayCommand]
-    private void ToggleCombinedAudioModel() => ScheduleSave();
-
-    [RelayCommand]
-    private void StartEditingCombinedAudioModel() => IsEditingCombinedAudioModel = true;
-
-    public void ApplyCombinedAudioModel(string model)
-    {
-        CombinedAudioModel = model;
-        IsEditingCombinedAudioModel = false;
-        ScheduleSave();
-    }
 
     [RelayCommand]
     private void StartEditingAutoDismiss() => IsEditingAutoDismiss = true;
@@ -471,10 +525,21 @@ public partial class SettingsViewModel : ObservableObject
 
     public void ApplyProvider(TranscriptionProvider provider)
     {
+        // Persist current model name before switching
+        if (Provider == TranscriptionProvider.OpenAI) _openAiModelName = TranscriptionModel;
+        else if (Provider == TranscriptionProvider.Local) _localModelName = TranscriptionModel;
+
         Provider = provider;
         IsEditingProvider = false;
-        TranscriptionModel = provider == TranscriptionProvider.OpenAI ? "whisper-1" : "ggml-small.bin";
+        TranscriptionModel = provider == TranscriptionProvider.OpenAI ? _openAiModelName : _localModelName;
         ScheduleSave();
+    }
+
+    [RelayCommand]
+    private void SelectProvider(string providerName)
+    {
+        if (Enum.TryParse<TranscriptionProvider>(providerName, out var provider))
+            ApplyProvider(provider);
     }
 
     [RelayCommand]
@@ -494,6 +559,8 @@ public partial class SettingsViewModel : ObservableObject
     public void ApplyModel(string model)
     {
         TranscriptionModel = model;
+        if (Provider == TranscriptionProvider.OpenAI) _openAiModelName = model;
+        else if (Provider == TranscriptionProvider.Local) _localModelName = model;
         IsEditingModel = false;
         ScheduleSave();
     }
@@ -504,6 +571,313 @@ public partial class SettingsViewModel : ObservableObject
         GpuAcceleration = !GpuAcceleration;
         ScheduleSave();
     }
+
+    // --- Text Correction ---
+
+    [RelayCommand]
+    private void SelectCorrectionProvider(string providerName)
+    {
+        if (Enum.TryParse<TextCorrectionProvider>(providerName, out var provider))
+        {
+            CorrectionProvider = provider;
+            _logger.LogInformation("Text correction provider changed to: {Provider}", provider);
+            ScheduleSave();
+        }
+    }
+
+    [RelayCommand]
+    private void StartEditingCorrectionModel() => IsEditingCorrectionModel = true;
+
+    public void ApplyCorrectionModel(string model)
+    {
+        CorrectionCloudModel = model;
+        IsEditingCorrectionModel = false;
+        ScheduleSave();
+    }
+
+    [RelayCommand]
+    private void ToggleCorrectionGpuAcceleration()
+    {
+        CorrectionGpuAcceleration = !CorrectionGpuAcceleration;
+        _logger.LogInformation("Correction GPU acceleration: {Enabled}", CorrectionGpuAcceleration);
+        ScheduleSave();
+    }
+
+    [RelayCommand]
+    private void ToggleCombinedAudioModel() => ScheduleSave();
+
+    [RelayCommand]
+    private void StartEditingCombinedAudioModel() => IsEditingCombinedAudioModel = true;
+
+    public void ApplyCombinedAudioModel(string model)
+    {
+        CombinedAudioModel = model;
+        IsEditingCombinedAudioModel = false;
+        ScheduleSave();
+    }
+
+    // --- Correction Models ---
+
+    [ObservableProperty] private string _correctionLocalModelName = "";
+
+    [RelayCommand]
+    private void RefreshCorrectionModels()
+    {
+        CorrectionModelItems.Clear();
+        foreach (var model in _correctionModelManager.GetAllModels())
+        {
+            var item = new CorrectionModelItemViewModel(model);
+            item.IsActive = model.FileName == CorrectionLocalModelName && model.IsDownloaded;
+            if (item.IsActive) item.StatusText = "Active";
+            CorrectionModelItems.Add(item);
+        }
+    }
+
+    [RelayCommand]
+    private async Task DownloadCorrectionModel(CorrectionModelItemViewModel item)
+    {
+        if (item.IsDownloading) return;
+
+        item.IsDownloading = true;
+        item.StatusText = "Downloading...";
+        item.DownloadProgress = 0;
+
+        try
+        {
+            var progress = new Progress<float>(p =>
+            {
+                System.Windows.Application.Current?.Dispatcher.Invoke(() =>
+                {
+                    item.DownloadProgress = p;
+                    item.StatusText = $"Downloading... {p * 100:F0}%";
+                });
+            });
+
+            await _correctionModelManager.DownloadModelAsync(item.FileName, progress);
+
+            item.IsDownloaded = true;
+            item.StatusText = "Downloaded";
+            _logger.LogInformation("Correction model {Name} downloaded successfully", item.Name);
+
+            // Auto-activate if no model is currently active
+            if (!CorrectionModelItems.Any(m => m.IsActive))
+                ActivateCorrectionModel(item);
+        }
+        catch (Exception ex)
+        {
+            item.StatusText = $"Error: {ex.Message}";
+            _logger.LogError(ex, "Failed to download correction model {Name}", item.Name);
+        }
+        finally
+        {
+            item.IsDownloading = false;
+        }
+    }
+
+    [RelayCommand]
+    private void ActivateCorrectionModel(CorrectionModelItemViewModel item)
+    {
+        if (!item.IsDownloaded) return;
+        foreach (var m in CorrectionModelItems)
+        {
+            m.IsActive = false;
+            if (m.IsDownloaded) m.StatusText = "Downloaded";
+        }
+        item.IsActive = true;
+        item.StatusText = "Active";
+        CorrectionLocalModelName = item.FileName;
+        ScheduleSave();
+    }
+
+    [RelayCommand]
+    private void DeleteCorrectionModel(CorrectionModelItemViewModel item)
+    {
+        try
+        {
+            var model = _correctionModelManager.GetAllModels().FirstOrDefault(m => m.FileName == item.FileName);
+            if (model is not null)
+            {
+                _correctionModelManager.DeleteModel(model);
+                item.IsDownloaded = false;
+                item.IsActive = false;
+                item.StatusText = "Not downloaded";
+                _logger.LogInformation("Correction model {Name} deleted", item.Name);
+            }
+        }
+        catch (Exception ex)
+        {
+            item.StatusText = $"Error: {ex.Message}";
+            _logger.LogError(ex, "Failed to delete correction model {Name}", item.Name);
+        }
+    }
+
+    // --- Dictionary ---
+
+    private void LoadDictionaryEntries()
+    {
+        DictionaryEntries.Clear();
+        foreach (var entry in _dictionaryService.GetEntries())
+            DictionaryEntries.Add(entry);
+    }
+
+    [RelayCommand]
+    private void AddDictionaryEntry()
+    {
+        if (string.IsNullOrWhiteSpace(NewDictionaryWord)) return;
+        var word = NewDictionaryWord.Trim();
+        _dictionaryService.AddEntry(word);
+        if (!DictionaryEntries.Contains(word, StringComparer.OrdinalIgnoreCase))
+            DictionaryEntries.Add(word);
+        NewDictionaryWord = "";
+    }
+
+    [RelayCommand]
+    private void RemoveDictionaryEntry(string word)
+    {
+        _dictionaryService.RemoveEntry(word);
+        DictionaryEntries.Remove(word);
+    }
+
+    // --- Statistics ---
+
+    [RelayCommand]
+    private void RefreshStats()
+    {
+        var stats = _statsService.GetStats();
+        TotalTranscriptions = stats.TotalTranscriptions;
+        ErrorCount = stats.ErrorCount;
+        TotalRecordingTimeDisplay = FormatDuration(stats.TotalRecordingSeconds);
+        AverageDurationDisplay = $"{stats.AverageRecordingSeconds:F1}s";
+        EstimatedCostDisplay = $"${stats.EstimatedApiCost:F4}";
+
+        if (stats.TranscriptionsByProvider.Count > 0)
+        {
+            ProviderBreakdownDisplay = string.Join(", ",
+                stats.TranscriptionsByProvider.Select(kv => $"{kv.Key}: {kv.Value}"));
+        }
+        else
+        {
+            ProviderBreakdownDisplay = "No data yet";
+        }
+    }
+
+    [RelayCommand]
+    private void ResetStats()
+    {
+        _statsService.Reset();
+        RefreshStats();
+    }
+
+    private static string FormatDuration(double totalSeconds)
+    {
+        var ts = TimeSpan.FromSeconds(totalSeconds);
+        return ts.TotalHours >= 1
+            ? $"{(int)ts.TotalHours}h {ts.Minutes}m"
+            : $"{ts.Minutes}m {ts.Seconds}s";
+    }
+
+    // --- Models ---
+
+    [RelayCommand]
+    private void RefreshModels()
+    {
+        ModelItems.Clear();
+        foreach (var model in _modelManager.GetAllModels())
+        {
+            var ggmlType = FileNameToGgmlType(model.FileName);
+            var item = new ModelItemViewModel(model, ggmlType);
+            item.IsActive = model.FileName == TranscriptionModel && model.IsDownloaded;
+            ModelItems.Add(item);
+        }
+    }
+
+    [RelayCommand]
+    private async Task DownloadModel(ModelItemViewModel item)
+    {
+        if (item.IsDownloading) return;
+
+        item.IsDownloading = true;
+        item.StatusText = "Downloading...";
+        item.DownloadProgress = 0;
+
+        try
+        {
+            var progress = new Progress<float>(p =>
+            {
+                System.Windows.Application.Current?.Dispatcher.Invoke(() =>
+                {
+                    item.DownloadProgress = p;
+                    item.StatusText = $"Downloading... {p * 100:F0}%";
+                });
+            });
+
+            await _modelManager.DownloadModelAsync(item.GgmlType, progress);
+
+            item.IsDownloaded = true;
+            item.StatusText = "Downloaded";
+            _logger.LogInformation("Model {Name} downloaded successfully", item.Name);
+
+            // Auto-activate if no model is currently active
+            if (!ModelItems.Any(m => m.IsActive))
+                ActivateModel(item);
+        }
+        catch (Exception ex)
+        {
+            item.StatusText = $"Error: {ex.Message}";
+            _logger.LogError(ex, "Failed to download model {Name}", item.Name);
+        }
+        finally
+        {
+            item.IsDownloading = false;
+        }
+    }
+
+    [RelayCommand]
+    private void ActivateModel(ModelItemViewModel item)
+    {
+        if (!item.IsDownloaded) return;
+        foreach (var m in ModelItems)
+        {
+            m.IsActive = false;
+            if (m.IsDownloaded) m.StatusText = "Downloaded";
+        }
+        item.IsActive = true;
+        item.StatusText = "Active";
+        TranscriptionModel = item.FileName;
+        _localModelName = item.FileName;
+        ScheduleSave();
+    }
+
+    [RelayCommand]
+    private void DeleteModel(ModelItemViewModel item)
+    {
+        try
+        {
+            var model = _modelManager.GetAllModels().FirstOrDefault(m => m.FileName == item.FileName);
+            if (model is not null)
+            {
+                _modelManager.DeleteModel(model);
+                item.IsDownloaded = false;
+                item.StatusText = "Not downloaded";
+                _logger.LogInformation("Model {Name} deleted", item.Name);
+            }
+        }
+        catch (Exception ex)
+        {
+            item.StatusText = $"Error: {ex.Message}";
+            _logger.LogError(ex, "Failed to delete model {Name}", item.Name);
+        }
+    }
+
+    private static GgmlType FileNameToGgmlType(string fileName) => fileName switch
+    {
+        "ggml-tiny.bin" => GgmlType.Tiny,
+        "ggml-base.bin" => GgmlType.Base,
+        "ggml-small.bin" => GgmlType.Small,
+        "ggml-medium.bin" => GgmlType.Medium,
+        "ggml-large-v3.bin" => GgmlType.LargeV3,
+        _ => throw new ArgumentException($"Unknown model: {fileName}")
+    };
 
     // --- Persistence ---
 
@@ -541,8 +915,8 @@ public partial class SettingsViewModel : ObservableObject
 
         section["Provider"] = Provider.ToString();
         section["OpenAI"]!["ApiKey"] = OpenAiApiKey;
-        section["OpenAI"]!["Model"] = Provider == TranscriptionProvider.OpenAI ? TranscriptionModel : "whisper-1";
-        section["Local"]!["ModelName"] = Provider == TranscriptionProvider.Local ? TranscriptionModel : "ggml-small.bin";
+        section["OpenAI"]!["Model"] = _openAiModelName;
+        section["Local"]!["ModelName"] = _localModelName;
         section["Local"]!["GpuAcceleration"] = GpuAcceleration;
         section["Language"] = SelectedLanguageCode;
         section["Hotkey"]!["Toggle"]!["Modifiers"] = ToggleModifiers;
@@ -551,6 +925,7 @@ public partial class SettingsViewModel : ObservableObject
         section["Hotkey"]!["PushToTalk"]!["Key"] = PttKey;
         section["App"]!["LaunchAtLogin"] = LaunchAtLogin;
         section["App"]!["SoundEffects"] = SoundEffectsEnabled;
+        section["App"]!["Theme"] = IsDarkMode ? "Dark" : "Light";
         section["Audio"]!["DeviceIndex"] = SelectedMicrophoneIndex;
         section["Audio"]!["MaxRecordingSeconds"] = MaxRecordingSeconds;
         section["Audio"]!["CompressBeforeUpload"] = AudioCompressionEnabled;
@@ -558,7 +933,10 @@ public partial class SettingsViewModel : ObservableObject
         section["Overlay"]!["AutoDismissSeconds"] = AutoDismissSeconds;
         section["Overlay"]!["AlwaysVisible"] = OverlayAlwaysVisible;
         section["Overlay"]!["ShowInTaskbar"] = ShowInTaskbar;
-        section["TextCorrection"]!["Enabled"] = TextCorrectionEnabled;
+        section["TextCorrection"]!["Provider"] = CorrectionProvider.ToString();
+        section["TextCorrection"]!["Model"] = CorrectionCloudModel;
+        section["TextCorrection"]!["LocalModelName"] = CorrectionLocalModelName;
+        section["TextCorrection"]!["LocalGpuAcceleration"] = CorrectionGpuAcceleration;
         section["TextCorrection"]!["UseCombinedAudioModel"] = UseCombinedAudioModel;
         section["TextCorrection"]!["CombinedAudioModel"] = CombinedAudioModel;
 
