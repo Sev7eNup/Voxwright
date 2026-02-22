@@ -49,6 +49,7 @@ public partial class OverlayWindow : Window
         _hotkeyService.ToggleHotkeyPressed += OnToggleHotkeyPressed;
         _hotkeyService.PushToTalkHotkeyPressed += OnPushToTalkHotkeyPressed;
         _hotkeyService.PushToTalkHotkeyReleased += OnPushToTalkHotkeyReleased;
+        _hotkeyService.EscapePressed += OnEscapePressed;
         _settingsViewModel.PropertyChanged += OnSettingsChanged;
 
         Loaded += OverlayWindow_Loaded;
@@ -123,6 +124,12 @@ public partial class OverlayWindow : Window
     {
         _logger.LogDebug("Visual state update: {State}", state);
 
+        // Register/unregister Escape hotkey based on state
+        if (state is RecordingState.Result or RecordingState.Error)
+            _hotkeyService.RegisterEscapeHotkey();
+        else
+            _hotkeyService.UnregisterEscapeHotkey();
+
         // Stop all animations
         _pulseStoryboard?.Stop(this);
         _spinStoryboard?.Stop(this);
@@ -192,6 +199,12 @@ public partial class OverlayWindow : Window
     {
         _logger.LogDebug("Push-to-Talk released event received in OverlayWindow");
         Dispatcher.Invoke(async () => await _viewModel.HotkeyStopRecordingAsync());
+    }
+
+    private void OnEscapePressed(object? sender, EventArgs e)
+    {
+        _logger.LogDebug("Escape hotkey event received in OverlayWindow");
+        Dispatcher.Invoke(() => _viewModel.DismissResultCommand.Execute(null));
     }
 
     private void OnSettingsChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)

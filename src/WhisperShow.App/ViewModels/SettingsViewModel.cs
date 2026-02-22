@@ -72,6 +72,11 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private string _selectedMicrophoneDisplay = "";
     public ObservableCollection<MicrophoneInfo> AvailableMicrophones { get; } = [];
 
+    // --- General: Mic test ---
+    [ObservableProperty] private bool _isMicTesting;
+    [ObservableProperty] private float _micTestLevel;
+    private WaveInEvent? _micTestWaveIn;
+
     // --- General: Language ---
     [ObservableProperty] private string? _selectedLanguageCode;
     [ObservableProperty] private string _selectedLanguageDisplay = "";
@@ -426,6 +431,80 @@ public partial class SettingsViewModel : ObservableObject
         UpdateDisplayTexts();
         CloseDialog();
         ScheduleSave();
+
+        // Restart mic test with new device if running
+        if (IsMicTesting)
+        {
+            StopMicTestInternal();
+            StartMicTestInternal();
+        }
+    }
+
+    [RelayCommand]
+    private void ToggleMicTest()
+    {
+        if (IsMicTesting)
+            StopMicTest();
+        else
+            StartMicTestInternal();
+    }
+
+    public void StopMicTest()
+    {
+        if (!IsMicTesting) return;
+        StopMicTestInternal();
+    }
+
+    private void StartMicTestInternal()
+    {
+        try
+        {
+            _micTestWaveIn = new WaveInEvent
+            {
+                DeviceNumber = SelectedMicrophoneIndex,
+                WaveFormat = new WaveFormat(16000, 16, 1),
+                BufferMilliseconds = 50
+            };
+            _micTestWaveIn.DataAvailable += OnMicTestDataAvailable;
+            _micTestWaveIn.StartRecording();
+            IsMicTesting = true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to start mic test");
+            StopMicTestInternal();
+        }
+    }
+
+    private void StopMicTestInternal()
+    {
+        if (_micTestWaveIn is not null)
+        {
+            _micTestWaveIn.DataAvailable -= OnMicTestDataAvailable;
+            try { _micTestWaveIn.StopRecording(); } catch { /* device may already be gone */ }
+            _micTestWaveIn.Dispose();
+            _micTestWaveIn = null;
+        }
+        IsMicTesting = false;
+        MicTestLevel = 0;
+    }
+
+    private void OnMicTestDataAvailable(object? sender, WaveInEventArgs e)
+    {
+        // Calculate RMS from 16-bit PCM samples
+        double sumOfSquares = 0;
+        int sampleCount = e.BytesRecorded / 2;
+        for (int i = 0; i < e.BytesRecorded; i += 2)
+        {
+            short sample = BitConverter.ToInt16(e.Buffer, i);
+            double normalized = sample / 32768.0;
+            sumOfSquares += normalized * normalized;
+        }
+
+        float rms = sampleCount > 0 ? (float)Math.Sqrt(sumOfSquares / sampleCount) : 0;
+        float level = Math.Min(rms * 3.5f, 1.0f);
+
+        System.Windows.Application.Current?.Dispatcher.Invoke(() => MicTestLevel = level);
     }
 
     // --- Language dialog ---
