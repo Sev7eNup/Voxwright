@@ -245,21 +245,36 @@ public partial class App : Application
 
     private static Icon CreateTrayIcon()
     {
-        // Create a simple microphone-style icon programmatically
-        var bitmap = new Bitmap(32, 32);
+        var bitmap = new Bitmap(64, 64);
         using var g = Graphics.FromImage(bitmap);
         g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
         g.Clear(Color.Transparent);
 
-        // Draw circle background
-        using var bgBrush = new SolidBrush(Color.FromArgb(45, 45, 45));
-        g.FillEllipse(bgBrush, 1, 1, 30, 30);
+        // Speech bubble body (rounded rectangle)
+        using var bubbleBrush = new SolidBrush(Color.FromArgb(108, 155, 242)); // #6C9BF2
+        using var bubblePath = new System.Drawing.Drawing2D.GraphicsPath();
+        var rect = new Rectangle(4, 2, 56, 42);
+        int r = 12;
+        bubblePath.AddArc(rect.X, rect.Y, r, r, 180, 90);
+        bubblePath.AddArc(rect.Right - r, rect.Y, r, r, 270, 90);
+        bubblePath.AddArc(rect.Right - r, rect.Bottom - r, r, r, 0, 90);
+        bubblePath.AddArc(rect.X, rect.Bottom - r, r, r, 90, 90);
+        bubblePath.CloseFigure();
+        g.FillPath(bubbleBrush, bubblePath);
 
-        // Draw microphone shape
-        using var micPen = new Pen(Color.White, 2);
-        g.DrawEllipse(micPen, 12, 6, 8, 12); // mic body
-        g.DrawArc(micPen, 9, 10, 14, 12, 0, 180); // mic cup
-        g.DrawLine(micPen, 16, 22, 16, 26); // mic stand
+        // Tail triangle (bottom-left)
+        g.FillPolygon(bubbleBrush, [new System.Drawing.Point(12, 43), new System.Drawing.Point(24, 43), new System.Drawing.Point(8, 58)]);
+
+        // Waveform bars (5 white bars, centered in bubble)
+        using var barBrush = new SolidBrush(Color.White);
+        int[] barHeights = [10, 22, 30, 18, 12];
+        int barWidth = 6, gap = 3, startX = 13, centerY = 23;
+        for (int i = 0; i < barHeights.Length; i++)
+        {
+            int x = startX + i * (barWidth + gap);
+            int h = barHeights[i];
+            g.FillRectangle(barBrush, x, centerY - h / 2, barWidth, h);
+        }
 
         return Icon.FromHandle(bitmap.GetHicon());
     }
