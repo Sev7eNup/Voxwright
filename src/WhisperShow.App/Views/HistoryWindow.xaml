@@ -123,19 +123,27 @@
                                             <RowDefinition Height="Auto"/>
                                         </Grid.RowDefinitions>
 
-                                        <!-- Text preview + time -->
+                                        <!-- Text preview + provider badge + time -->
                                         <Grid Grid.Row="0">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
                                             <TextBlock Text="{Binding Preview}" FontSize="12" FontFamily="Segoe UI"
                                                        Foreground="{StaticResource TextPrimaryBrush}"
                                                        TextWrapping="Wrap" TextTrimming="CharacterEllipsis"
                                                        MaxHeight="38"/>
-                                            <TextBlock Grid.Column="1" Text="{Binding TimeAgo}" FontSize="10"
+                                            <Border Grid.Column="1" Background="{StaticResource ButtonBgBrush}"
+                                                    CornerRadius="4" Padding="5,1" VerticalAlignment="Top"
+                                                    Margin="6,0,0,0">
+                                                <TextBlock Text="{Binding Provider}" FontSize="9"
+                                                           FontFamily="Segoe UI"
+                                                           Foreground="{StaticResource TextSecondaryBrush}"/>
+                                            </Border>
+                                            <TextBlock Grid.Column="2" Text="{Binding TimeAgo}" FontSize="10"
                                                        FontFamily="Segoe UI" Foreground="{StaticResource TextSecondaryBrush}"
-                                                       VerticalAlignment="Top" Margin="8,0,0,0"/>
+                                                       VerticalAlignment="Top" Margin="6,0,0,0"/>
                                         </Grid>
 
                                         <!-- Action buttons -->
