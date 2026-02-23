@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -434,6 +435,13 @@ public partial class OverlayWindow : Window
     private void RootGrid_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
         _dragStart = null;
+    }
+
+    private CustomPopupPlacement[] CenterAbovePlacement(Size popupSize, Size targetSize, Point offset)
+    {
+        var x = (targetSize.Width - popupSize.Width) / 2;
+        var y = -popupSize.Height - 4;
+        return [new CustomPopupPlacement(new Point(x, y), PopupPrimaryAxis.Horizontal)];
     }
 
     private void RecordButton_Click(object sender, RoutedEventArgs e)
