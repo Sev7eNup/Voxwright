@@ -16,7 +16,7 @@
     <Window.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/Themes/SettingsLightTheme.xaml"/>
+                <ResourceDictionary Source="/Themes/SettingsDarkTheme.xaml"/>
                 <ResourceDictionary Source="/Themes/SettingsStyles.xaml"/>
             </ResourceDictionary.MergedDictionaries>
 

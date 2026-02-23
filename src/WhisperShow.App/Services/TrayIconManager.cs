@@ -157,7 +157,7 @@ public class TrayIconManager : IDisposable
         g.Clear(Color.Transparent);
 
         // Speech bubble body (rounded rectangle)
-        using var bubbleBrush = new SolidBrush(Color.FromArgb(108, 155, 242)); // #6C9BF2
+        using var bubbleBrush = new SolidBrush(Color.FromArgb(45, 45, 45)); // #2D2D2D
         using var bubblePath = new System.Drawing.Drawing2D.GraphicsPath();
         var rect = new Rectangle(4, 2, 56, 42);
         int r = 12;
