@@ -145,7 +145,8 @@
                                 RenderTransformOrigin="0.5,0.5">
                             <Button.ToolTip>
                                 <ToolTip Style="{StaticResource DarkToolTipStyle}"
-                                         Content="{Binding PushToTalkHotkeyText}"/>
+                                         Content="{Binding PushToTalkHotkeyText}"
+                                         Placement="Top"/>
                             </Button.ToolTip>
                             <Button.RenderTransform>
                                 <ScaleTransform x:Name="IdleButtonScale" ScaleX="1" ScaleY="1"/>
