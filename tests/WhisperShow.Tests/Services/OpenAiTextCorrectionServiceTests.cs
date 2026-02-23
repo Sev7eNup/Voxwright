@@ -37,6 +37,28 @@ public class OpenAiTextCorrectionServiceTests
     }
 
     [Fact]
+    public async Task CorrectAsync_ReturnsRawText_WhenApiKeyMissing()
+    {
+        var service = CreateService(apiKey: null);
+        const string rawText = "Dies ist ein Test.";
+
+        var result = await service.CorrectAsync(rawText, "de");
+
+        result.Should().Be(rawText);
+    }
+
+    [Fact]
+    public async Task CorrectAsync_ReturnsRawText_WhenApiKeyEmpty()
+    {
+        var service = CreateService(apiKey: "");
+        const string rawText = "Another test sentence.";
+
+        var result = await service.CorrectAsync(rawText, "en");
+
+        result.Should().Be(rawText);
+    }
+
+    [Fact]
     public void Dispose_DoesNotThrow()
     {
         var service = CreateService(apiKey: "sk-test");

@@ -73,6 +73,29 @@ public class OpenAiClientFactoryTests
     }
 
     [Fact]
+    public void GetClient_ThrowsInvalidOperation_WhenApiKeyNull()
+    {
+        var monitor = OptionsHelper.CreateMonitor(o => o.OpenAI.ApiKey = null);
+        var factory = new OpenAiClientFactory(monitor);
+
+        var act = () => factory.GetClient();
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*API key*not configured*");
+    }
+
+    [Fact]
+    public void GetClient_ThrowsInvalidOperation_WhenApiKeyEmpty()
+    {
+        var monitor = OptionsHelper.CreateMonitor(o => o.OpenAI.ApiKey = "");
+        var factory = new OpenAiClientFactory(monitor);
+
+        var act = () => factory.GetClient();
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
     public void GetAudioClient_ReturnsNonNull()
     {
         var monitor = OptionsHelper.CreateMonitor(o => o.OpenAI.ApiKey = TestApiKey);

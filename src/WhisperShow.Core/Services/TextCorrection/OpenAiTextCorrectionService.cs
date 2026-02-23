@@ -34,6 +34,12 @@ public class OpenAiTextCorrectionService : ITextCorrectionService
         {
             var options = _optionsMonitor.CurrentValue;
 
+            if (string.IsNullOrWhiteSpace(options.OpenAI.ApiKey))
+            {
+                _logger.LogWarning("OpenAI API key not configured, skipping text correction");
+                return rawText;
+            }
+
             var chatClient = _clientFactory.GetChatClient(options.TextCorrection.Model);
 
             var systemPrompt = options.TextCorrection.SystemPrompt ?? TextCorrectionDefaults.CorrectionSystemPrompt;
