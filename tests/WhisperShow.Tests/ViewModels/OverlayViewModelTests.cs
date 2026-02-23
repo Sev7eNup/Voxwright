@@ -5,6 +5,7 @@ using WhisperShow.App.ViewModels;
 using WhisperShow.Core.Configuration;
 using WhisperShow.Core.Models;
 using WhisperShow.Core.Services.Audio;
+using WhisperShow.Core.Services.Configuration;
 using WhisperShow.Core.Services.History;
 using WhisperShow.Core.Services.Snippets;
 using WhisperShow.Core.Services.Statistics;
@@ -72,6 +73,8 @@ public class OverlayViewModelTests : IDisposable
             Substitute.For<IUsageStatsService>(),
             Substitute.For<ITranscriptionHistoryService>(),
             Substitute.For<IWindowFocusService>(),
+            new SynchronousDispatcherService(),
+            Substitute.For<ISettingsPersistenceService>(),
             Microsoft.Extensions.Logging.Abstractions.NullLogger<OverlayViewModel>.Instance,
             optionsMonitor);
     }

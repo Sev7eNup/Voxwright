@@ -1,12 +1,13 @@
-using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using WhisperShow.Core.Configuration;
 using WhisperShow.Core.Models;
+using WhisperShow.Core.Services;
 using WhisperShow.Core.Services.Audio;
 using WhisperShow.Core.Services.Snippets;
+using WhisperShow.Core.Services.Configuration;
 using WhisperShow.Core.Services.TextCorrection;
 using WhisperShow.Core.Services.TextInsertion;
 using WhisperShow.Core.Services.History;
@@ -29,6 +30,8 @@ public partial class OverlayViewModel : ObservableObject
     private readonly IUsageStatsService _statsService;
     private readonly ITranscriptionHistoryService _historyService;
     private readonly IWindowFocusService _windowFocusService;
+    private readonly IDispatcherService _dispatcher;
+    private readonly ISettingsPersistenceService _persistenceService;
     private readonly ILogger<OverlayViewModel> _logger;
     private readonly IOptionsMonitor<WhisperShowOptions> _optionsMonitor;
     private IntPtr _previousForegroundWindow;
@@ -62,6 +65,10 @@ public partial class OverlayViewModel : ObservableObject
     [ObservableProperty]
     private string _recordingTimerText = "0:00";
 
+    // --- Overlay position ---
+    public double PositionX { get; private set; }
+    public double PositionY { get; private set; }
+
     public OverlayViewModel(
         IAudioRecordingService audioService,
         IAudioMutingService mutingService,
@@ -74,6 +81,8 @@ public partial class OverlayViewModel : ObservableObject
         IUsageStatsService statsService,
         ITranscriptionHistoryService historyService,
         IWindowFocusService windowFocusService,
+        IDispatcherService dispatcher,
+        ISettingsPersistenceService persistenceService,
         ILogger<OverlayViewModel> logger,
         IOptionsMonitor<WhisperShowOptions> optionsMonitor)
     {
@@ -88,13 +97,16 @@ public partial class OverlayViewModel : ObservableObject
         _statsService = statsService;
         _historyService = historyService;
         _windowFocusService = windowFocusService;
+        _dispatcher = dispatcher;
+        _persistenceService = persistenceService;
         _logger = logger;
         _optionsMonitor = optionsMonitor;
 
-        _soundEffects.Enabled = Options.App.SoundEffects;
+        PositionX = optionsMonitor.CurrentValue.Overlay.PositionX;
+        PositionY = optionsMonitor.CurrentValue.Overlay.PositionY;
 
         _audioService.AudioLevelChanged += (_, level) =>
-            Application.Current.Dispatcher.Invoke(() => AudioLevel = level);
+            _dispatcher.Invoke(() => AudioLevel = level);
 
         _optionsMonitor.OnChange(OnOptionsChanged);
 
@@ -103,7 +115,6 @@ public partial class OverlayViewModel : ObservableObject
 
     private void OnOptionsChanged(WhisperShowOptions options, string? name)
     {
-        _soundEffects.Enabled = options.App.SoundEffects;
         UpdateProviderName();
         OnPropertyChanged(nameof(MuteWhileDictating));
         OnPropertyChanged(nameof(IsOverlayAlwaysVisible));
@@ -289,7 +300,7 @@ public partial class OverlayViewModel : ObservableObject
     private void CopyText()
     {
         if (string.IsNullOrEmpty(TranscribedText)) return;
-        Application.Current.Dispatcher.Invoke(() => Clipboard.SetText(TranscribedText));
+        _dispatcher.Invoke(() => System.Windows.Clipboard.SetText(TranscribedText));
     }
 
     [RelayCommand]
@@ -311,7 +322,7 @@ public partial class OverlayViewModel : ObservableObject
         _recordingTimer.Elapsed += (_, _) =>
         {
             var elapsed = DateTime.UtcNow - _recordingStartTime;
-            Application.Current?.Dispatcher.Invoke(() =>
+            _dispatcher.Invoke(() =>
                 RecordingTimerText = $"{(int)elapsed.TotalMinutes}:{elapsed.Seconds:D2}");
         };
         _recordingTimer.Start();
@@ -359,6 +370,17 @@ public partial class OverlayViewModel : ObservableObject
     public void ClearWaveform()
     {
         Array.Clear(_waveformLevels);
+    }
+
+    public void UpdatePosition(double x, double y)
+    {
+        PositionX = x;
+        PositionY = y;
+        _persistenceService.ScheduleUpdate(section =>
+        {
+            section["Overlay"]!["PositionX"] = x;
+            section["Overlay"]!["PositionY"] = y;
+        });
     }
 
     public void UpdateProviderName()

@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
 using Whisper.net.Ggml;
 using WhisperShow.Core.Models;
+using WhisperShow.Core.Services;
 using WhisperShow.Core.Services.ModelManagement;
 
 namespace WhisperShow.App.ViewModels.Settings;
@@ -14,6 +15,7 @@ public partial class ModelManagementViewModel : ObservableObject
     private readonly ICorrectionModelManager _correctionModelManager;
     private readonly IModelPreloadService _preloadService;
     private readonly ILogger _logger;
+    private readonly IDispatcherService _dispatcher;
     private readonly Action _scheduleSave;
 
     // Shared state with parent - these get read/written by the parent SettingsViewModel
@@ -30,6 +32,7 @@ public partial class ModelManagementViewModel : ObservableObject
         ICorrectionModelManager correctionModelManager,
         IModelPreloadService preloadService,
         ILogger logger,
+        IDispatcherService dispatcher,
         Action scheduleSave,
         Func<string> getTranscriptionModel,
         Action<string> setTranscriptionModel,
@@ -40,6 +43,7 @@ public partial class ModelManagementViewModel : ObservableObject
         _correctionModelManager = correctionModelManager;
         _preloadService = preloadService;
         _logger = logger;
+        _dispatcher = dispatcher;
         _scheduleSave = scheduleSave;
         _getTranscriptionModel = getTranscriptionModel;
         _setTranscriptionModel = setTranscriptionModel;
@@ -75,7 +79,7 @@ public partial class ModelManagementViewModel : ObservableObject
         {
             var progress = new Progress<float>(p =>
             {
-                System.Windows.Application.Current?.Dispatcher.Invoke(() =>
+                _dispatcher.Invoke(() =>
                 {
                     item.DownloadProgress = p;
                     item.StatusText = $"Downloading... {p * 100:F0}%";
@@ -167,7 +171,7 @@ public partial class ModelManagementViewModel : ObservableObject
         {
             var progress = new Progress<float>(p =>
             {
-                System.Windows.Application.Current?.Dispatcher.Invoke(() =>
+                _dispatcher.Invoke(() =>
                 {
                     item.DownloadProgress = p;
                     item.StatusText = $"Downloading... {p * 100:F0}%";

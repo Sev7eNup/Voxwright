@@ -2,6 +2,7 @@ using System.Text.Json.Nodes;
 using FluentAssertions;
 using NSubstitute;
 using WhisperShow.App.ViewModels.Settings;
+using WhisperShow.Core.Configuration;
 using WhisperShow.Core.Services.Configuration;
 
 namespace WhisperShow.Tests.ViewModels;
@@ -11,25 +12,15 @@ public class SystemSettingsViewModelTests
     private readonly IAutoStartService _autoStartService = Substitute.For<IAutoStartService>();
     private bool _saveCalled;
 
-    private SystemSettingsViewModel CreateViewModel(
-        bool launchAtLogin = false,
-        bool overlayAlwaysVisible = true,
-        bool showInTaskbar = false,
-        bool isDarkMode = false,
-        bool soundEffectsEnabled = true,
-        bool muteWhileDictating = true,
-        bool audioCompressionEnabled = true,
-        double overlayScale = 1.0,
-        int autoDismissSeconds = 10,
-        int maxRecordingSeconds = 300)
+    private SystemSettingsViewModel CreateViewModel(Action<WhisperShowOptions>? configure = null)
     {
         _saveCalled = false;
+        var options = new WhisperShowOptions();
+        configure?.Invoke(options);
         return new SystemSettingsViewModel(
             _autoStartService,
             () => _saveCalled = true,
-            launchAtLogin, overlayAlwaysVisible, showInTaskbar, isDarkMode,
-            soundEffectsEnabled, muteWhileDictating, audioCompressionEnabled,
-            overlayScale, autoDismissSeconds, maxRecordingSeconds);
+            options);
     }
 
     // --- Initialization ---
@@ -37,17 +28,19 @@ public class SystemSettingsViewModelTests
     [Fact]
     public void Constructor_SetsAllProperties()
     {
-        var vm = CreateViewModel(
-            launchAtLogin: true,
-            overlayAlwaysVisible: false,
-            showInTaskbar: true,
-            isDarkMode: true,
-            soundEffectsEnabled: false,
-            muteWhileDictating: false,
-            audioCompressionEnabled: false,
-            overlayScale: 1.5,
-            autoDismissSeconds: 20,
-            maxRecordingSeconds: 600);
+        var vm = CreateViewModel(o =>
+        {
+            o.App.LaunchAtLogin = true;
+            o.Overlay.AlwaysVisible = false;
+            o.Overlay.ShowInTaskbar = true;
+            o.App.Theme = "Dark";
+            o.App.SoundEffects = false;
+            o.Audio.MuteWhileDictating = false;
+            o.Audio.CompressBeforeUpload = false;
+            o.Overlay.Scale = 1.5;
+            o.Overlay.AutoDismissSeconds = 20;
+            o.Audio.MaxRecordingSeconds = 600;
+        });
 
         vm.LaunchAtLogin.Should().BeTrue();
         vm.OverlayAlwaysVisible.Should().BeFalse();
@@ -66,7 +59,7 @@ public class SystemSettingsViewModelTests
     [Fact]
     public void ToggleLaunchAtLogin_CallsAutoStartAndSave()
     {
-        var vm = CreateViewModel(launchAtLogin: true);
+        var vm = CreateViewModel(o => o.App.LaunchAtLogin = true);
 
         vm.ToggleLaunchAtLoginCommand.Execute(null);
 
@@ -93,7 +86,7 @@ public class SystemSettingsViewModelTests
     [Fact]
     public void OverlayScaleChanged_TriggersSave()
     {
-        var vm = CreateViewModel(overlayScale: 1.0);
+        var vm = CreateViewModel();
         vm.OverlayScale = 1.5;
         _saveCalled.Should().BeTrue();
     }
@@ -133,17 +126,19 @@ public class SystemSettingsViewModelTests
     [Fact]
     public void WriteSettings_WritesAllProperties()
     {
-        var vm = CreateViewModel(
-            launchAtLogin: true,
-            isDarkMode: true,
-            soundEffectsEnabled: false,
-            muteWhileDictating: false,
-            audioCompressionEnabled: false,
-            overlayAlwaysVisible: false,
-            showInTaskbar: true,
-            overlayScale: 1.5,
-            autoDismissSeconds: 15,
-            maxRecordingSeconds: 600);
+        var vm = CreateViewModel(o =>
+        {
+            o.App.LaunchAtLogin = true;
+            o.App.Theme = "Dark";
+            o.App.SoundEffects = false;
+            o.Audio.MuteWhileDictating = false;
+            o.Audio.CompressBeforeUpload = false;
+            o.Overlay.AlwaysVisible = false;
+            o.Overlay.ShowInTaskbar = true;
+            o.Overlay.Scale = 1.5;
+            o.Overlay.AutoDismissSeconds = 15;
+            o.Audio.MaxRecordingSeconds = 600;
+        });
 
         var json = JsonNode.Parse("""
         {
@@ -170,7 +165,7 @@ public class SystemSettingsViewModelTests
     [Fact]
     public void WriteSettings_LightTheme_WritesLight()
     {
-        var vm = CreateViewModel(isDarkMode: false);
+        var vm = CreateViewModel();
 
         var json = JsonNode.Parse("""
         {

@@ -4,6 +4,7 @@ using WhisperShow.App.ViewModels;
 using WhisperShow.Core.Models;
 using WhisperShow.Core.Services.History;
 using WhisperShow.Core.Services.TextInsertion;
+using WhisperShow.Tests.TestHelpers;
 
 namespace WhisperShow.Tests.ViewModels;
 
@@ -14,7 +15,7 @@ public class HistoryViewModelTests
 
     private HistoryViewModel CreateViewModel()
     {
-        return new HistoryViewModel(_historyService, _textInsertionService);
+        return new HistoryViewModel(_historyService, _textInsertionService, new SynchronousDispatcherService());
     }
 
     private static TranscriptionHistoryEntry MakeEntry(string text) => new()

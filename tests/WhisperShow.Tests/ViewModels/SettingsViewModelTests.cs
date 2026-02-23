@@ -66,6 +66,8 @@ public class SettingsViewModelTests
             Substitute.For<ICorrectionModelManager>(),
             _preloadService,
             Substitute.For<IAutoStartService>(),
+            new SynchronousDispatcherService(),
+            Substitute.For<ISettingsPersistenceService>(),
             NullLogger<SettingsViewModel>.Instance);
     }
 

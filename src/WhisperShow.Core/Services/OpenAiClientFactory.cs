@@ -10,6 +10,7 @@ namespace WhisperShow.Core.Services;
 public class OpenAiClientFactory
 {
     private readonly IOptionsMonitor<WhisperShowOptions> _optionsMonitor;
+    private readonly Lock _lock = new();
     private OpenAIClient? _client;
     private string? _lastApiKey;
     private string? _lastEndpoint;
@@ -21,22 +22,25 @@ public class OpenAiClientFactory
 
     public OpenAIClient GetClient()
     {
-        var opts = _optionsMonitor.CurrentValue.OpenAI;
-
-        if (_client is null || _lastApiKey != opts.ApiKey || _lastEndpoint != opts.Endpoint)
+        lock (_lock)
         {
-            var clientOptions = new OpenAIClientOptions();
-            if (!string.IsNullOrEmpty(opts.Endpoint))
-                clientOptions.Endpoint = new Uri(opts.Endpoint);
+            var opts = _optionsMonitor.CurrentValue.OpenAI;
 
-            _client = new OpenAIClient(
-                credential: new ApiKeyCredential(opts.ApiKey!),
-                options: clientOptions);
-            _lastApiKey = opts.ApiKey;
-            _lastEndpoint = opts.Endpoint;
+            if (_client is null || _lastApiKey != opts.ApiKey || _lastEndpoint != opts.Endpoint)
+            {
+                var clientOptions = new OpenAIClientOptions();
+                if (!string.IsNullOrEmpty(opts.Endpoint))
+                    clientOptions.Endpoint = new Uri(opts.Endpoint);
+
+                _client = new OpenAIClient(
+                    credential: new ApiKeyCredential(opts.ApiKey!),
+                    options: clientOptions);
+                _lastApiKey = opts.ApiKey;
+                _lastEndpoint = opts.Endpoint;
+            }
+
+            return _client;
         }
-
-        return _client;
     }
 
     public AudioClient GetAudioClient(string model) => GetClient().GetAudioClient(model);

@@ -3,7 +3,9 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using WhisperShow.App.ViewModels.Settings;
+using WhisperShow.Core.Configuration;
 using WhisperShow.Core.Services.Hotkey;
+using WhisperShow.Tests.TestHelpers;
 
 namespace WhisperShow.Tests.ViewModels;
 
@@ -12,23 +14,17 @@ public class GeneralSettingsViewModelTests
     private readonly IGlobalHotkeyService _hotkeyService = Substitute.For<IGlobalHotkeyService>();
     private bool _saveCalled;
 
-    private GeneralSettingsViewModel CreateViewModel(
-        string toggleModifiers = "Control, Shift",
-        string toggleKey = "Space",
-        string pttModifiers = "Control",
-        string pttKey = "Space",
-        int selectedMicrophoneIndex = 0,
-        string? selectedLanguageCode = "de")
+    private GeneralSettingsViewModel CreateViewModel(Action<WhisperShowOptions>? configure = null)
     {
         _saveCalled = false;
+        var options = new WhisperShowOptions { Language = "de" };
+        configure?.Invoke(options);
         return new GeneralSettingsViewModel(
             _hotkeyService,
             NullLogger<GeneralSettingsViewModel>.Instance,
+            new SynchronousDispatcherService(),
             () => _saveCalled = true,
-            toggleModifiers, toggleKey,
-            pttModifiers, pttKey,
-            selectedMicrophoneIndex,
-            selectedLanguageCode);
+            options);
     }
 
     // --- WriteSettings ---
@@ -36,7 +32,7 @@ public class GeneralSettingsViewModelTests
     [Fact]
     public void WriteSettings_WritesAllProperties()
     {
-        var vm = CreateViewModel(selectedLanguageCode: "en");
+        var vm = CreateViewModel(o => o.Language = "en");
         vm.General_OpenLanguageDialogForTest();
 
         var json = JsonNode.Parse("""
@@ -60,7 +56,7 @@ public class GeneralSettingsViewModelTests
     [Fact]
     public void WriteSettings_NullLanguage_WritesNull()
     {
-        var vm = CreateViewModel(selectedLanguageCode: null);
+        var vm = CreateViewModel(o => o.Language = null);
 
         var json = JsonNode.Parse("""
         {

@@ -1,5 +1,7 @@
 using System.Media;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using WhisperShow.Core.Configuration;
 using WhisperShow.Core.Services.Audio;
 
 namespace WhisperShow.App.Services;
@@ -7,13 +9,15 @@ namespace WhisperShow.App.Services;
 public class SoundEffectService : ISoundEffectService
 {
     private readonly ILogger<SoundEffectService> _logger;
+    private readonly IOptionsMonitor<WhisperShowOptions> _optionsMonitor;
 
-    public bool Enabled { get; set; }
+    private bool Enabled => _optionsMonitor.CurrentValue.App.SoundEffects;
 
-    public SoundEffectService(ILogger<SoundEffectService> logger, bool enabled)
+    public SoundEffectService(ILogger<SoundEffectService> logger,
+                              IOptionsMonitor<WhisperShowOptions> optionsMonitor)
     {
         _logger = logger;
-        Enabled = enabled;
+        _optionsMonitor = optionsMonitor;
     }
 
     public void PlayStartRecording()

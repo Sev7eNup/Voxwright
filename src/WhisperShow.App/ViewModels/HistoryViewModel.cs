@@ -1,8 +1,8 @@
 using System.Collections.ObjectModel;
-using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using WhisperShow.Core.Models;
+using WhisperShow.Core.Services;
 using WhisperShow.Core.Services.History;
 using WhisperShow.Core.Services.TextInsertion;
 
@@ -12,6 +12,7 @@ public partial class HistoryViewModel : ObservableObject
 {
     private readonly ITranscriptionHistoryService _historyService;
     private readonly ITextInsertionService _textInsertionService;
+    private readonly IDispatcherService _dispatcher;
     private List<TranscriptionHistoryEntry> _allEntries = [];
 
     public ObservableCollection<TranscriptionHistoryEntry> Entries { get; } = [];
@@ -31,10 +32,12 @@ public partial class HistoryViewModel : ObservableObject
 
     public HistoryViewModel(
         ITranscriptionHistoryService historyService,
-        ITextInsertionService textInsertionService)
+        ITextInsertionService textInsertionService,
+        IDispatcherService dispatcher)
     {
         _historyService = historyService;
         _textInsertionService = textInsertionService;
+        _dispatcher = dispatcher;
     }
 
     partial void OnSearchQueryChanged(string value)
@@ -65,7 +68,7 @@ public partial class HistoryViewModel : ObservableObject
     [RelayCommand]
     private void CopyEntry(TranscriptionHistoryEntry entry)
     {
-        Application.Current.Dispatcher.Invoke(() => Clipboard.SetText(entry.Text));
+        _dispatcher.Invoke(() => System.Windows.Clipboard.SetText(entry.Text));
     }
 
     [RelayCommand]
