@@ -13,6 +13,6 @@
     <SolidColorBrush x:Key="SelectedBorderBrush" Color="#9B7DFF"/>
     <SolidColorBrush x:Key="BadgeBgBrush" Color="#2D2D2D"/>
     <SolidColorBrush x:Key="BadgeBorderBrush" Color="#444444"/>
-    <SolidColorBrush x:Key="DialogBgBrush" Color="#2A2A2A"/>
+    <SolidColorBrush x:Key="DialogBgBrush" Color="#222222"/>
     <SolidColorBrush x:Key="OverlayBrush" Color="#80000000"/>
 </ResourceDictionary>
