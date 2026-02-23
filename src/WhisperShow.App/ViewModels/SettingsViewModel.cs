@@ -1,6 +1,3 @@
-using System.IO;
-using System.Text.Json;
-using System.Text.Json.Nodes;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
@@ -29,8 +26,7 @@ public enum SettingsPage
 
 public partial class SettingsViewModel : ObservableObject
 {
-    private readonly ILogger<SettingsViewModel> _logger;
-    private readonly DebouncedSaveHelper _saveHelper;
+    private readonly ISettingsPersistenceService _persistenceService;
 
     // --- Sub-ViewModels ---
     public GeneralSettingsViewModel General { get; }
@@ -56,49 +52,22 @@ public partial class SettingsViewModel : ObservableObject
         ICorrectionModelManager correctionModelManager,
         IModelPreloadService preloadService,
         IAutoStartService autoStartService,
+        IDispatcherService dispatcher,
+        ISettingsPersistenceService persistenceService,
         ILogger<SettingsViewModel> logger)
     {
-        _logger = logger;
-        _saveHelper = new DebouncedSaveHelper(SaveSettingsAsync, logger, 300);
+        _persistenceService = persistenceService;
 
         var opts = options.Value;
 
         General = new GeneralSettingsViewModel(
-            hotkeyService, logger, ScheduleSave,
-            opts.Hotkey.Toggle.Modifiers,
-            opts.Hotkey.Toggle.Key,
-            opts.Hotkey.PushToTalk.Modifiers,
-            opts.Hotkey.PushToTalk.Key,
-            opts.Audio.DeviceIndex,
-            opts.Language);
+            hotkeyService, logger, dispatcher, ScheduleSave, opts);
 
         System = new SystemSettingsViewModel(
-            autoStartService, ScheduleSave,
-            opts.App.LaunchAtLogin,
-            opts.Overlay.AlwaysVisible,
-            opts.Overlay.ShowInTaskbar,
-            string.Equals(opts.App.Theme, "Dark", StringComparison.OrdinalIgnoreCase),
-            opts.App.SoundEffects,
-            opts.Audio.MuteWhileDictating,
-            opts.Audio.CompressBeforeUpload,
-            opts.Overlay.Scale,
-            opts.Overlay.AutoDismissSeconds,
-            opts.Audio.MaxRecordingSeconds);
+            autoStartService, ScheduleSave, opts);
 
         Transcription = new TranscriptionSettingsViewModel(
-            modelManager, correctionModelManager, preloadService, logger, ScheduleSave,
-            opts.Provider,
-            opts.OpenAI.Endpoint ?? "",
-            opts.OpenAI.ApiKey ?? "",
-            opts.OpenAI.Model,
-            opts.Local.ModelName,
-            opts.Local.GpuAcceleration,
-            opts.TextCorrection.Provider,
-            opts.TextCorrection.Model,
-            opts.TextCorrection.LocalGpuAcceleration,
-            opts.TextCorrection.LocalModelName,
-            opts.TextCorrection.UseCombinedAudioModel,
-            opts.TextCorrection.CombinedAudioModel);
+            modelManager, correctionModelManager, preloadService, logger, dispatcher, ScheduleSave, opts);
 
         Statistics = new StatisticsViewModel(statsService);
         DictionarySnippets = new DictionarySnippetsViewModel(dictionaryService, snippetService);
@@ -118,26 +87,13 @@ public partial class SettingsViewModel : ObservableObject
 
     // --- Persistence ---
 
-    private void ScheduleSave() => _saveHelper.Schedule();
-
-    private async Task SaveSettingsAsync()
+    private void ScheduleSave()
     {
-        var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "appsettings.json");
-        var json = await File.ReadAllTextAsync(path);
-        var doc = JsonNode.Parse(json, documentOptions: new JsonDocumentOptions
+        _persistenceService.ScheduleUpdate(section =>
         {
-            CommentHandling = JsonCommentHandling.Skip
-        })!;
-
-        var section = doc["WhisperShow"]!;
-
-        General.WriteSettings(section);
-        System.WriteSettings(section);
-        Transcription.WriteSettings(section);
-
-        var jsonOptions = new JsonSerializerOptions { WriteIndented = true };
-        await File.WriteAllTextAsync(path, doc.ToJsonString(jsonOptions));
-
-        _logger.LogInformation("Settings saved to appsettings.json");
+            General.WriteSettings(section);
+            System.WriteSettings(section);
+            Transcription.WriteSettings(section);
+        });
     }
 }

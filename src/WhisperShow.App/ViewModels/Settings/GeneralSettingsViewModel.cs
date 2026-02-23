@@ -4,6 +4,8 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
 using NAudio.Wave;
+using WhisperShow.Core.Configuration;
+using WhisperShow.Core.Services;
 using WhisperShow.Core.Services.Hotkey;
 
 namespace WhisperShow.App.ViewModels.Settings;
@@ -15,6 +17,7 @@ public partial class GeneralSettingsViewModel : ObservableObject
 {
     private readonly IGlobalHotkeyService _hotkeyService;
     private readonly ILogger _logger;
+    private readonly IDispatcherService _dispatcher;
     private readonly Action _scheduleSave;
 
     // --- Dialog system ---
@@ -80,25 +83,22 @@ public partial class GeneralSettingsViewModel : ObservableObject
     public GeneralSettingsViewModel(
         IGlobalHotkeyService hotkeyService,
         ILogger logger,
+        IDispatcherService dispatcher,
         Action scheduleSave,
-        string toggleModifiers,
-        string toggleKey,
-        string pttModifiers,
-        string pttKey,
-        int selectedMicrophoneIndex,
-        string? selectedLanguageCode)
+        WhisperShowOptions options)
     {
         _hotkeyService = hotkeyService;
         _logger = logger;
+        _dispatcher = dispatcher;
         _scheduleSave = scheduleSave;
 
-        _toggleModifiers = toggleModifiers;
-        _toggleKey = toggleKey;
-        _pttModifiers = pttModifiers;
-        _pttKey = pttKey;
-        _selectedMicrophoneIndex = selectedMicrophoneIndex;
-        _selectedLanguageCode = selectedLanguageCode;
-        _isAutoDetectLanguage = selectedLanguageCode == null;
+        _toggleModifiers = options.Hotkey.Toggle.Modifiers;
+        _toggleKey = options.Hotkey.Toggle.Key;
+        _pttModifiers = options.Hotkey.PushToTalk.Modifiers;
+        _pttKey = options.Hotkey.PushToTalk.Key;
+        _selectedMicrophoneIndex = options.Audio.DeviceIndex;
+        _selectedLanguageCode = options.Language;
+        _isAutoDetectLanguage = options.Language == null;
 
         LoadMicrophones();
         UpdateDisplayTexts();
@@ -319,7 +319,7 @@ public partial class GeneralSettingsViewModel : ObservableObject
         float rms = sampleCount > 0 ? (float)Math.Sqrt(sumOfSquares / sampleCount) : 0;
         float level = Math.Min(rms * 3.5f, 1.0f);
 
-        System.Windows.Application.Current?.Dispatcher.Invoke(() => MicTestLevel = level);
+        _dispatcher.Invoke(() => MicTestLevel = level);
     }
 
     // --- Language dialog ---

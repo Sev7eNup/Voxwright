@@ -1,7 +1,4 @@
 using System.ComponentModel;
-using System.IO;
-using System.Text.Json;
-using System.Text.Json.Nodes;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -30,7 +27,6 @@ public partial class OverlayWindow : Window
     private const int WaveformBarCount = 16;
     private const int ViewModelWaveformCount = 20;
     private readonly Rectangle[] _waveformBars = new Rectangle[WaveformBarCount];
-    private WhisperShow.Core.Services.DebouncedSaveHelper? _positionSaveHelper;
 
     // Cached brushes for state changes
     private Brush? _idleGradient;
@@ -42,7 +38,8 @@ public partial class OverlayWindow : Window
 
     public OverlayWindow(OverlayViewModel viewModel,
         IGlobalHotkeyService hotkeyService,
-        IOptionsMonitor<WhisperShowOptions> optionsMonitor, ILogger<OverlayWindow> logger)
+        IOptionsMonitor<WhisperShowOptions> optionsMonitor,
+        ILogger<OverlayWindow> logger)
     {
         InitializeComponent();
 
@@ -75,7 +72,6 @@ public partial class OverlayWindow : Window
         _hotkeyService.PushToTalkHotkeyPressed -= OnPushToTalkHotkeyPressed;
         _hotkeyService.PushToTalkHotkeyReleased -= OnPushToTalkHotkeyReleased;
         _hotkeyService.EscapePressed -= OnEscapePressed;
-        _positionSaveHelper?.Dispose();
     }
 
     private void OnOptionsChanged(WhisperShowOptions options, string? name)
@@ -431,9 +427,7 @@ public partial class OverlayWindow : Window
             if (Mouse.Captured is UIElement captured)
                 captured.ReleaseMouseCapture();
             DragMove();
-            _options.Overlay.PositionX = Left;
-            _options.Overlay.PositionY = Top;
-            SavePositionAsync();
+            _viewModel.UpdatePosition(Left, Top);
         }
     }
 
@@ -464,10 +458,10 @@ public partial class OverlayWindow : Window
 
     private void RestorePosition()
     {
-        if (_options.Overlay.PositionX >= 0 && _options.Overlay.PositionY >= 0)
+        if (_viewModel.PositionX >= 0 && _viewModel.PositionY >= 0)
         {
-            Left = _options.Overlay.PositionX;
-            Top = _options.Overlay.PositionY;
+            Left = _viewModel.PositionX;
+            Top = _viewModel.PositionY;
         }
         else
         {
@@ -475,32 +469,6 @@ public partial class OverlayWindow : Window
             Left = (workArea.Width - ActualWidth) / 2 + workArea.Left;
             Top = workArea.Bottom - ActualHeight - 10;
         }
-    }
-
-    private void SavePositionAsync()
-    {
-        _positionSaveHelper ??= new WhisperShow.Core.Services.DebouncedSaveHelper(
-            SavePositionToFileAsync, _logger, 300);
-        _positionSaveHelper.Schedule();
-    }
-
-    private async Task SavePositionToFileAsync()
-    {
-        var left = _options.Overlay.PositionX;
-        var top = _options.Overlay.PositionY;
-
-        var path = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "appsettings.json");
-        var json = await File.ReadAllTextAsync(path);
-        var doc = JsonNode.Parse(json, documentOptions: new JsonDocumentOptions
-        {
-            CommentHandling = JsonCommentHandling.Skip
-        })!;
-
-        doc["WhisperShow"]!["Overlay"]!["PositionX"] = left;
-        doc["WhisperShow"]!["Overlay"]!["PositionY"] = top;
-
-        var options = new JsonSerializerOptions { WriteIndented = true };
-        await File.WriteAllTextAsync(path, doc.ToJsonString(options));
     }
 
     protected override void OnClosing(CancelEventArgs e)

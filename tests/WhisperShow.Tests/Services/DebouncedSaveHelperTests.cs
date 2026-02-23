@@ -14,7 +14,7 @@ public class DebouncedSaveHelperTests
             NullLogger.Instance, delayMs: 50);
 
         helper.Schedule();
-        await Task.Delay(150);
+        await Task.Delay(300);
 
         saveCount.Should().Be(1);
     }

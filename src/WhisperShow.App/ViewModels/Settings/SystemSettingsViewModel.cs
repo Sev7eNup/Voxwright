@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using WhisperShow.Core.Configuration;
 using WhisperShow.Core.Services.Configuration;
 
 namespace WhisperShow.App.ViewModels.Settings;
@@ -37,30 +38,21 @@ public partial class SystemSettingsViewModel : ObservableObject
     public SystemSettingsViewModel(
         IAutoStartService autoStartService,
         Action scheduleSave,
-        bool launchAtLogin,
-        bool overlayAlwaysVisible,
-        bool showInTaskbar,
-        bool isDarkMode,
-        bool soundEffectsEnabled,
-        bool muteWhileDictating,
-        bool audioCompressionEnabled,
-        double overlayScale,
-        int autoDismissSeconds,
-        int maxRecordingSeconds)
+        WhisperShowOptions options)
     {
         _autoStartService = autoStartService;
         _scheduleSave = scheduleSave;
 
-        _launchAtLogin = launchAtLogin;
-        _overlayAlwaysVisible = overlayAlwaysVisible;
-        _showInTaskbar = showInTaskbar;
-        _isDarkMode = isDarkMode;
-        _soundEffectsEnabled = soundEffectsEnabled;
-        _muteWhileDictating = muteWhileDictating;
-        _audioCompressionEnabled = audioCompressionEnabled;
-        _overlayScale = overlayScale;
-        _autoDismissSeconds = autoDismissSeconds;
-        _maxRecordingSeconds = maxRecordingSeconds;
+        _launchAtLogin = options.App.LaunchAtLogin;
+        _overlayAlwaysVisible = options.Overlay.AlwaysVisible;
+        _showInTaskbar = options.Overlay.ShowInTaskbar;
+        _isDarkMode = string.Equals(options.App.Theme, "Dark", StringComparison.OrdinalIgnoreCase);
+        _soundEffectsEnabled = options.App.SoundEffects;
+        _muteWhileDictating = options.Audio.MuteWhileDictating;
+        _audioCompressionEnabled = options.Audio.CompressBeforeUpload;
+        _overlayScale = options.Overlay.Scale;
+        _autoDismissSeconds = options.Overlay.AutoDismissSeconds;
+        _maxRecordingSeconds = options.Audio.MaxRecordingSeconds;
     }
 
     // --- App settings ---

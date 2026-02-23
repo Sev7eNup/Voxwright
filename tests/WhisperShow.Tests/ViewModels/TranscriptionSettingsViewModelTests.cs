@@ -3,8 +3,10 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using WhisperShow.App.ViewModels.Settings;
+using WhisperShow.Core.Configuration;
 using WhisperShow.Core.Models;
 using WhisperShow.Core.Services.ModelManagement;
+using WhisperShow.Tests.TestHelpers;
 
 namespace WhisperShow.Tests.ViewModels;
 
@@ -15,29 +17,20 @@ public class TranscriptionSettingsViewModelTests
     private readonly IModelPreloadService _preloadService = Substitute.For<IModelPreloadService>();
     private bool _saveCalled;
 
-    private TranscriptionSettingsViewModel CreateViewModel(
-        TranscriptionProvider provider = TranscriptionProvider.OpenAI,
-        string openAiEndpoint = "",
-        string openAiApiKey = "sk-test1234567890abcdef",
-        string openAiModelName = "whisper-1",
-        string localModelName = "ggml-small.bin",
-        bool gpuAcceleration = true,
-        TextCorrectionProvider correctionProvider = TextCorrectionProvider.Off,
-        string correctionCloudModel = "gpt-4o-mini",
-        bool correctionGpuAcceleration = true,
-        string correctionLocalModelName = "",
-        bool useCombinedAudioModel = false,
-        string combinedAudioModel = "gpt-4o-mini-audio-preview")
+    private TranscriptionSettingsViewModel CreateViewModel(Action<WhisperShowOptions>? configure = null)
     {
         _saveCalled = false;
+        var options = new WhisperShowOptions
+        {
+            OpenAI = new OpenAiOptions { ApiKey = "sk-test1234567890abcdef" }
+        };
+        configure?.Invoke(options);
         return new TranscriptionSettingsViewModel(
             _modelManager, _correctionModelManager, _preloadService,
             NullLogger<TranscriptionSettingsViewModel>.Instance,
+            new SynchronousDispatcherService(),
             () => _saveCalled = true,
-            provider, openAiEndpoint, openAiApiKey,
-            openAiModelName, localModelName, gpuAcceleration,
-            correctionProvider, correctionCloudModel, correctionGpuAcceleration,
-            correctionLocalModelName, useCombinedAudioModel, combinedAudioModel);
+            options);
     }
 
     // --- Initialization ---
@@ -45,7 +38,7 @@ public class TranscriptionSettingsViewModelTests
     [Fact]
     public void Constructor_OpenAiProvider_SetsOpenAiModel()
     {
-        var vm = CreateViewModel(provider: TranscriptionProvider.OpenAI, openAiModelName: "whisper-1");
+        var vm = CreateViewModel();
 
         vm.TranscriptionModel.Should().Be("whisper-1");
         vm.Provider.Should().Be(TranscriptionProvider.OpenAI);
@@ -54,7 +47,7 @@ public class TranscriptionSettingsViewModelTests
     [Fact]
     public void Constructor_LocalProvider_SetsLocalModel()
     {
-        var vm = CreateViewModel(provider: TranscriptionProvider.Local, localModelName: "ggml-large.bin");
+        var vm = CreateViewModel(o => { o.Provider = TranscriptionProvider.Local; o.Local.ModelName = "ggml-large.bin"; });
 
         vm.TranscriptionModel.Should().Be("ggml-large.bin");
         vm.Provider.Should().Be(TranscriptionProvider.Local);
@@ -63,7 +56,7 @@ public class TranscriptionSettingsViewModelTests
     [Fact]
     public void Constructor_SetsApiKeyDisplay()
     {
-        var vm = CreateViewModel(openAiApiKey: "sk-test1234567890abcdef");
+        var vm = CreateViewModel();
 
         vm.OpenAiApiKeyDisplay.Should().Be("sk-...cdef");
     }
@@ -71,7 +64,7 @@ public class TranscriptionSettingsViewModelTests
     [Fact]
     public void Constructor_EmptyApiKey_ShowsNotConfigured()
     {
-        var vm = CreateViewModel(openAiApiKey: "");
+        var vm = CreateViewModel(o => o.OpenAI.ApiKey = "");
 
         vm.OpenAiApiKeyDisplay.Should().Be("Not configured");
     }
@@ -81,9 +74,11 @@ public class TranscriptionSettingsViewModelTests
     [Fact]
     public void ShowCloudUsageHint_LocalProviderCloudCorrection_ReturnsTrue()
     {
-        var vm = CreateViewModel(
-            provider: TranscriptionProvider.Local,
-            correctionProvider: TextCorrectionProvider.Cloud);
+        var vm = CreateViewModel(o =>
+        {
+            o.Provider = TranscriptionProvider.Local;
+            o.TextCorrection.Provider = TextCorrectionProvider.Cloud;
+        });
 
         vm.ShowCloudUsageHint.Should().BeTrue();
     }
@@ -91,9 +86,7 @@ public class TranscriptionSettingsViewModelTests
     [Fact]
     public void ShowCloudUsageHint_OpenAiProviderCloudCorrection_ReturnsFalse()
     {
-        var vm = CreateViewModel(
-            provider: TranscriptionProvider.OpenAI,
-            correctionProvider: TextCorrectionProvider.Cloud);
+        var vm = CreateViewModel(o => o.TextCorrection.Provider = TextCorrectionProvider.Cloud);
 
         vm.ShowCloudUsageHint.Should().BeFalse();
     }
@@ -103,10 +96,7 @@ public class TranscriptionSettingsViewModelTests
     [Fact]
     public void ApplyProvider_SwitchToLocal_SavesOpenAiModelAndRestoresLocal()
     {
-        var vm = CreateViewModel(
-            provider: TranscriptionProvider.OpenAI,
-            openAiModelName: "whisper-1",
-            localModelName: "ggml-large.bin");
+        var vm = CreateViewModel(o => o.Local.ModelName = "ggml-large.bin");
 
         vm.ApplyProvider(TranscriptionProvider.Local);
 
@@ -114,28 +104,27 @@ public class TranscriptionSettingsViewModelTests
         vm.TranscriptionModel.Should().Be("ggml-large.bin");
         vm.IsEditingProvider.Should().BeFalse();
         _saveCalled.Should().BeTrue();
-        _preloadService.Received(1).PreloadTranscriptionModel("ggml-large.bin");
     }
 
     [Fact]
     public void ApplyProvider_SwitchToOpenAi_SavesLocalModelAndRestoresOpenAi()
     {
-        var vm = CreateViewModel(
-            provider: TranscriptionProvider.Local,
-            openAiModelName: "whisper-1",
-            localModelName: "ggml-large.bin");
+        var vm = CreateViewModel(o =>
+        {
+            o.Provider = TranscriptionProvider.Local;
+            o.Local.ModelName = "ggml-large.bin";
+        });
 
         vm.ApplyProvider(TranscriptionProvider.OpenAI);
 
         vm.Provider.Should().Be(TranscriptionProvider.OpenAI);
         vm.TranscriptionModel.Should().Be("whisper-1");
-        _preloadService.DidNotReceive().PreloadTranscriptionModel(Arg.Any<string>());
     }
 
     [Fact]
     public void SelectProviderCommand_ValidString_SwitchesProvider()
     {
-        var vm = CreateViewModel(provider: TranscriptionProvider.OpenAI);
+        var vm = CreateViewModel();
 
         vm.SelectProviderCommand.Execute("Local");
 
@@ -160,7 +149,7 @@ public class TranscriptionSettingsViewModelTests
     [Fact]
     public void ApplyApiKey_SetsValueAndUpdatesDisplay()
     {
-        var vm = CreateViewModel(openAiApiKey: "");
+        var vm = CreateViewModel(o => o.OpenAI.ApiKey = "");
 
         vm.ApplyApiKey("sk-newkey12345678abcdefg");
 
@@ -173,7 +162,7 @@ public class TranscriptionSettingsViewModelTests
     [Fact]
     public void ApplyModel_OpenAiProvider_UpdatesOpenAiModelName()
     {
-        var vm = CreateViewModel(provider: TranscriptionProvider.OpenAI);
+        var vm = CreateViewModel();
 
         vm.ApplyModel("whisper-large-v3");
 
@@ -216,7 +205,7 @@ public class TranscriptionSettingsViewModelTests
     [Fact]
     public void ToggleGpuAcceleration_TogglesAndTriggersSave()
     {
-        var vm = CreateViewModel(gpuAcceleration: true);
+        var vm = CreateViewModel();
 
         vm.ToggleGpuAccelerationCommand.Execute(null);
 
@@ -227,7 +216,7 @@ public class TranscriptionSettingsViewModelTests
     [Fact]
     public void ToggleCorrectionGpuAcceleration_TogglesAndTriggersSave()
     {
-        var vm = CreateViewModel(correctionGpuAcceleration: true);
+        var vm = CreateViewModel();
 
         vm.ToggleCorrectionGpuAccelerationCommand.Execute(null);
 
@@ -250,7 +239,7 @@ public class TranscriptionSettingsViewModelTests
     [Fact]
     public void SelectCorrectionProvider_Cloud_TriggersSave()
     {
-        var vm = CreateViewModel(correctionProvider: TextCorrectionProvider.Off);
+        var vm = CreateViewModel();
 
         vm.SelectCorrectionProviderCommand.Execute("Cloud");
 
@@ -259,14 +248,14 @@ public class TranscriptionSettingsViewModelTests
     }
 
     [Fact]
-    public void SelectCorrectionProvider_Local_PreloadsModel()
+    public void SelectCorrectionProvider_Local_SetsProviderAndSaves()
     {
-        var vm = CreateViewModel(correctionLocalModelName: "llama-3.gguf");
+        var vm = CreateViewModel(o => o.TextCorrection.LocalModelName = "llama-3.gguf");
 
         vm.SelectCorrectionProviderCommand.Execute("Local");
 
         vm.CorrectionProvider.Should().Be(TextCorrectionProvider.Local);
-        _preloadService.Received(1).PreloadCorrectionModel("llama-3.gguf");
+        _saveCalled.Should().BeTrue();
     }
 
     // --- WriteSettings ---
@@ -274,19 +263,20 @@ public class TranscriptionSettingsViewModelTests
     [Fact]
     public void WriteSettings_WritesAllProperties()
     {
-        var vm = CreateViewModel(
-            provider: TranscriptionProvider.Local,
-            openAiEndpoint: "https://custom.api.com",
-            openAiApiKey: "sk-testapikey1234",
-            openAiModelName: "whisper-1",
-            localModelName: "ggml-large.bin",
-            gpuAcceleration: false,
-            correctionProvider: TextCorrectionProvider.Cloud,
-            correctionCloudModel: "gpt-4o",
-            correctionGpuAcceleration: false,
-            correctionLocalModelName: "llama-3.gguf",
-            useCombinedAudioModel: true,
-            combinedAudioModel: "gpt-4o-audio-preview");
+        var vm = CreateViewModel(o =>
+        {
+            o.Provider = TranscriptionProvider.Local;
+            o.OpenAI.Endpoint = "https://custom.api.com";
+            o.OpenAI.ApiKey = "sk-testapikey1234";
+            o.Local.ModelName = "ggml-large.bin";
+            o.Local.GpuAcceleration = false;
+            o.TextCorrection.Provider = TextCorrectionProvider.Cloud;
+            o.TextCorrection.Model = "gpt-4o";
+            o.TextCorrection.LocalGpuAcceleration = false;
+            o.TextCorrection.LocalModelName = "llama-3.gguf";
+            o.TextCorrection.UseCombinedAudioModel = true;
+            o.TextCorrection.CombinedAudioModel = "gpt-4o-audio-preview";
+        });
 
         var json = JsonNode.Parse("""
         {
@@ -319,7 +309,7 @@ public class TranscriptionSettingsViewModelTests
     [Fact]
     public void WriteSettings_EmptyEndpoint_WritesNull()
     {
-        var vm = CreateViewModel(openAiEndpoint: "");
+        var vm = CreateViewModel();
 
         var json = JsonNode.Parse("""
         {

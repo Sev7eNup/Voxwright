@@ -6,6 +6,7 @@ namespace WhisperShow.Core.Services.Audio;
 public class AudioMutingService : IAudioMutingService
 {
     private readonly ILogger<AudioMutingService> _logger;
+    private readonly Lock _lock = new();
     private readonly List<AudioSessionControl> _mutedSessions = new();
     private readonly int _ownProcessId = Environment.ProcessId;
 
@@ -16,56 +17,62 @@ public class AudioMutingService : IAudioMutingService
 
     public void MuteOtherApplications()
     {
-        try
+        lock (_lock)
         {
-            using var enumerator = new MMDeviceEnumerator();
-            var device = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
-            var sessions = device.AudioSessionManager.Sessions;
-
-            for (int i = 0; i < sessions.Count; i++)
+            try
             {
-                try
-                {
-                    var session = sessions[i];
-                    var processId = (int)session.GetProcessID;
+                using var enumerator = new MMDeviceEnumerator();
+                var device = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
+                var sessions = device.AudioSessionManager.Sessions;
 
-                    if (processId != _ownProcessId
-                        && processId != 0
-                        && !session.SimpleAudioVolume.Mute)
+                for (int i = 0; i < sessions.Count; i++)
+                {
+                    try
                     {
-                        session.SimpleAudioVolume.Mute = true;
-                        _mutedSessions.Add(session);
+                        var session = sessions[i];
+                        var processId = (int)session.GetProcessID;
+
+                        if (processId != _ownProcessId
+                            && processId != 0
+                            && !session.SimpleAudioVolume.Mute)
+                        {
+                            session.SimpleAudioVolume.Mute = true;
+                            _mutedSessions.Add(session);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogDebug(ex, "Could not mute audio session {Index}", i);
                     }
                 }
-                catch (Exception ex)
-                {
-                    _logger.LogDebug(ex, "Could not mute audio session {Index}", i);
-                }
-            }
 
-            _logger.LogInformation("Muted {Count} audio sessions", _mutedSessions.Count);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to mute other applications");
+                _logger.LogInformation("Muted {Count} audio sessions", _mutedSessions.Count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to mute other applications");
+            }
         }
     }
 
     public void UnmuteAll()
     {
-        foreach (var session in _mutedSessions)
+        lock (_lock)
         {
-            try
+            foreach (var session in _mutedSessions)
             {
-                session.SimpleAudioVolume.Mute = false;
+                try
+                {
+                    session.SimpleAudioVolume.Mute = false;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogDebug(ex, "Could not unmute audio session");
+                }
             }
-            catch (Exception ex)
-            {
-                _logger.LogDebug(ex, "Could not unmute audio session");
-            }
-        }
 
-        _logger.LogInformation("Unmuted {Count} audio sessions", _mutedSessions.Count);
-        _mutedSessions.Clear();
+            _logger.LogInformation("Unmuted {Count} audio sessions", _mutedSessions.Count);
+            _mutedSessions.Clear();
+        }
     }
 }

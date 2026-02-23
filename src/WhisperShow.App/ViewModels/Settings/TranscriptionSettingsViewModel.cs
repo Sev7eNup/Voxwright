@@ -2,7 +2,9 @@ using System.Text.Json.Nodes;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
+using WhisperShow.Core.Configuration;
 using WhisperShow.Core.Models;
+using WhisperShow.Core.Services;
 using WhisperShow.Core.Services.ModelManagement;
 
 namespace WhisperShow.App.ViewModels.Settings;
@@ -65,42 +67,32 @@ public partial class TranscriptionSettingsViewModel : ObservableObject
         ICorrectionModelManager correctionModelManager,
         IModelPreloadService preloadService,
         ILogger logger,
+        IDispatcherService dispatcher,
         Action scheduleSave,
-        TranscriptionProvider provider,
-        string openAiEndpoint,
-        string openAiApiKey,
-        string openAiModelName,
-        string localModelName,
-        bool gpuAcceleration,
-        TextCorrectionProvider correctionProvider,
-        string correctionCloudModel,
-        bool correctionGpuAcceleration,
-        string correctionLocalModelName,
-        bool useCombinedAudioModel,
-        string combinedAudioModel)
+        WhisperShowOptions options)
     {
         _preloadService = preloadService;
         _logger = logger;
         _scheduleSave = scheduleSave;
 
-        _provider = provider;
-        _openAiEndpoint = openAiEndpoint;
-        _openAiApiKey = openAiApiKey;
-        _openAiModelName = openAiModelName;
-        _localModelName = localModelName;
-        _transcriptionModel = provider == TranscriptionProvider.OpenAI ? openAiModelName : localModelName;
-        _gpuAcceleration = gpuAcceleration;
-        _correctionProvider = correctionProvider;
-        _correctionCloudModel = correctionCloudModel;
-        _correctionGpuAcceleration = correctionGpuAcceleration;
-        _correctionLocalModelName = correctionLocalModelName;
-        _useCombinedAudioModel = useCombinedAudioModel;
-        _combinedAudioModel = combinedAudioModel;
+        _provider = options.Provider;
+        _openAiEndpoint = options.OpenAI.Endpoint ?? "";
+        _openAiApiKey = options.OpenAI.ApiKey ?? "";
+        _openAiModelName = options.OpenAI.Model;
+        _localModelName = options.Local.ModelName;
+        _transcriptionModel = options.Provider == TranscriptionProvider.OpenAI ? options.OpenAI.Model : options.Local.ModelName;
+        _gpuAcceleration = options.Local.GpuAcceleration;
+        _correctionProvider = options.TextCorrection.Provider;
+        _correctionCloudModel = options.TextCorrection.Model;
+        _correctionGpuAcceleration = options.TextCorrection.LocalGpuAcceleration;
+        _correctionLocalModelName = options.TextCorrection.LocalModelName;
+        _useCombinedAudioModel = options.TextCorrection.UseCombinedAudioModel;
+        _combinedAudioModel = options.TextCorrection.CombinedAudioModel;
 
         UpdateApiKeyDisplay();
 
         Models = new ModelManagementViewModel(
-            modelManager, correctionModelManager, preloadService, logger, scheduleSave,
+            modelManager, correctionModelManager, preloadService, logger, dispatcher, scheduleSave,
             () => TranscriptionModel,
             name => { TranscriptionModel = name; _localModelName = name; },
             () => CorrectionLocalModelName,

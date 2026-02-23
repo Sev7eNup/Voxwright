@@ -5,6 +5,7 @@ using WhisperShow.App.ViewModels;
 using WhisperShow.App.ViewModels.Settings;
 using WhisperShow.Core.Models;
 using WhisperShow.Core.Services.ModelManagement;
+using WhisperShow.Tests.TestHelpers;
 
 namespace WhisperShow.Tests.ViewModels;
 
@@ -37,6 +38,7 @@ public class ModelManagementViewModelTests
             _correctionModelManager,
             _preloadService,
             NullLogger.Instance,
+            new SynchronousDispatcherService(),
             _scheduleSave,
             () => _transcriptionModel,
             value => _transcriptionModel = value,
