@@ -99,5 +99,5 @@ public class AppOptions
     public bool LaunchAtLogin { get; set; }
     public bool SoundEffects { get; set; } = true;
     public int MaxHistoryEntries { get; set; } = 20;
-    public string Theme { get; set; } = "Light";
+    public string Theme { get; set; } = "Dark";
 }

@@ -165,7 +165,7 @@ public class SystemSettingsViewModelTests
     [Fact]
     public void WriteSettings_LightTheme_WritesLight()
     {
-        var vm = CreateViewModel();
+        var vm = CreateViewModel(o => o.App.Theme = "Light");
 
         var json = JsonNode.Parse("""
         {
