@@ -260,7 +260,7 @@ public class TrayIconManager : IDisposable
         var panel = new StackPanel { Orientation = Orientation.Horizontal };
         panel.Children.Add(new Image
         {
-            Source = new BitmapImage(new Uri(flagPath, UriKind.Relative)),
+            Source = new BitmapImage(new Uri($"pack://application:,,,{flagPath}", UriKind.Absolute)),
             Width = 18,
             Height = 12,
             Margin = new Thickness(0, 0, 8, 0),
