@@ -49,7 +49,7 @@
                 <Grid Grid.Row="0" Height="40" Background="{DynamicResource SidebarBgBrush}"
                       MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
                     <TextBlock Text="WhisperShow.net" FontSize="13" FontWeight="SemiBold"
-                               FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"
+                               FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource SelectedBorderBrush}"
                                HorizontalAlignment="Left" VerticalAlignment="Center" Margin="16,0,0,0"/>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center"
                                 Margin="0,0,8,0">
