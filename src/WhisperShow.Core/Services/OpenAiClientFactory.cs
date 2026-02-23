@@ -26,6 +26,9 @@ public class OpenAiClientFactory
         {
             var opts = _optionsMonitor.CurrentValue.OpenAI;
 
+            if (string.IsNullOrWhiteSpace(opts.ApiKey))
+                throw new InvalidOperationException("OpenAI API key is not configured.");
+
             if (_client is null || _lastApiKey != opts.ApiKey || _lastEndpoint != opts.Endpoint)
             {
                 var clientOptions = new OpenAIClientOptions();
@@ -33,7 +36,7 @@ public class OpenAiClientFactory
                     clientOptions.Endpoint = new Uri(opts.Endpoint);
 
                 _client = new OpenAIClient(
-                    credential: new ApiKeyCredential(opts.ApiKey!),
+                    credential: new ApiKeyCredential(opts.ApiKey),
                     options: clientOptions);
                 _lastApiKey = opts.ApiKey;
                 _lastEndpoint = opts.Endpoint;
