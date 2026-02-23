@@ -199,7 +199,7 @@
                                                       Opacity="0.5" Direction="270"
                                                       Color="#000000"/>
                                 </Border.Effect>
-                                <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="360">
+                                <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="600">
                                     <StackPanel IsItemsHost="True"/>
                                 </ScrollViewer>
                             </Border>
