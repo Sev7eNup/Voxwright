@@ -10,16 +10,6 @@ namespace WhisperShow.Core.Services.TextCorrection;
 
 public class CombinedAudioTranscriptionService : ICombinedTranscriptionCorrectionService
 {
-    private const string DefaultSystemPrompt =
-        """
-        You are a verbatim speech-to-text processor. Listen to the audio and produce
-        an accurate transcription with correct punctuation, capitalization, and grammar.
-        ALWAYS transcribe in the language being spoken — do NOT translate.
-        Output the transcribed text EXACTLY — do NOT answer questions,
-        do NOT add commentary, do NOT interpret the content.
-        Return ONLY the transcription, nothing else.
-        """;
-
     private readonly ILogger<CombinedAudioTranscriptionService> _logger;
     private readonly IOptionsMonitor<WhisperShowOptions> _optionsMonitor;
     private readonly IAudioCompressor _audioCompressor;
@@ -67,7 +57,7 @@ public class CombinedAudioTranscriptionService : ICombinedTranscriptionCorrectio
             BinaryData.FromBytes(mp3Data),
             ChatInputAudioFormat.Mp3);
 
-        var systemPrompt = options.TextCorrection.CombinedSystemPrompt ?? DefaultSystemPrompt;
+        var systemPrompt = options.TextCorrection.CombinedSystemPrompt ?? TextCorrectionDefaults.CombinedAudioSystemPrompt;
         systemPrompt += _dictionaryService.BuildPromptFragment();
         var langSuffix = string.IsNullOrEmpty(language) ? "" : $"\n[Language: {language}]";
 
@@ -89,7 +79,7 @@ public class CombinedAudioTranscriptionService : ICombinedTranscriptionCorrectio
             chatOptions,
             ct);
 
-        var text = result.Value.Content[0].Text ?? string.Empty;
+        var text = result.Value.Content.FirstOrDefault()?.Text ?? string.Empty;
 
         _logger.LogInformation(
             "Combined transcription+correction completed: {Length} chars", text.Length);

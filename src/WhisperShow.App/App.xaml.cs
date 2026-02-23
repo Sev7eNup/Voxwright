@@ -88,6 +88,8 @@ public partial class App : Application
                 services.AddSingleton<TextCorrectionProviderFactory>();
                 services.AddSingleton<ICombinedTranscriptionCorrectionService, CombinedAudioTranscriptionService>();
                 services.AddSingleton<IGlobalHotkeyService, GlobalHotkeyService>();
+                services.AddHttpClient();
+                services.AddSingleton<ModelDownloadHelper>();
                 services.AddSingleton<IModelManager, ModelManager>();
                 services.AddSingleton<ICorrectionModelManager, CorrectionModelManager>();
                 services.AddSingleton<IModelPreloadService, ModelPreloadService>();
@@ -344,6 +346,9 @@ public partial class App : Application
 
         if (_host is not null)
         {
+            _host.Services.GetService<OverlayWindow>()?.Cleanup();
+            _host.Services.GetService<SettingsWindow>()?.Cleanup();
+
             var hotkeyService = _host.Services.GetService<IGlobalHotkeyService>();
             hotkeyService?.Dispose();
 

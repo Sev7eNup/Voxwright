@@ -324,7 +324,9 @@ public partial class OverlayViewModel : ObservableObject
         _recordingTimer = null;
     }
 
-    private async void StartAutoDismissTimer()
+    private void StartAutoDismissTimer() => _ = StartAutoDismissTimerAsync();
+
+    private async Task StartAutoDismissTimerAsync()
     {
         _autoDismissCts?.Cancel();
         _autoDismissCts = new CancellationTokenSource();

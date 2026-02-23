@@ -11,16 +11,6 @@ namespace WhisperShow.Core.Services.TextCorrection;
 
 public class LocalTextCorrectionService : ITextCorrectionService, IDisposable
 {
-    private const string DefaultSystemPrompt =
-        """
-        You are a verbatim speech-to-text post-processor.
-        Your ONLY job is to fix punctuation, capitalization, and grammar.
-        ALWAYS keep the text in its original language — do NOT translate.
-        Output the corrected text EXACTLY — do NOT answer questions,
-        do NOT add commentary, do NOT interpret the content.
-        Return ONLY the corrected transcription, nothing else.
-        """;
-
     private readonly ILogger<LocalTextCorrectionService> _logger;
     private readonly IOptionsMonitor<WhisperShowOptions> _optionsMonitor;
     private readonly IDictionaryService _dictionaryService;
@@ -57,7 +47,7 @@ public class LocalTextCorrectionService : ITextCorrectionService, IDisposable
 
             EnsureModelLoaded(modelPath, correctionOpts.LocalGpuAcceleration);
 
-            var systemPrompt = correctionOpts.SystemPrompt ?? DefaultSystemPrompt;
+            var systemPrompt = correctionOpts.SystemPrompt ?? TextCorrectionDefaults.CorrectionSystemPrompt;
             systemPrompt += _dictionaryService.BuildPromptFragment();
 
             var languageHint = string.IsNullOrEmpty(language) ? "auto-detected" : language;

@@ -54,7 +54,7 @@ public partial class OverlayWindow : Window
         DataContext = _viewModel;
 
         _viewModel.PropertyChanged += ViewModel_PropertyChanged;
-        _viewModel.WaveformUpdated += (_, _) => Dispatcher.Invoke(UpdateWaveformBars);
+        _viewModel.WaveformUpdated += OnWaveformUpdated;
         _hotkeyService.ToggleHotkeyPressed += OnToggleHotkeyPressed;
         _hotkeyService.PushToTalkHotkeyPressed += OnPushToTalkHotkeyPressed;
         _hotkeyService.PushToTalkHotkeyReleased += OnPushToTalkHotkeyReleased;
@@ -63,6 +63,19 @@ public partial class OverlayWindow : Window
         _optionsMonitor.OnChange(OnOptionsChanged);
 
         Loaded += OverlayWindow_Loaded;
+    }
+
+    private void OnWaveformUpdated(object? sender, EventArgs e) => Dispatcher.Invoke(UpdateWaveformBars);
+
+    public void Cleanup()
+    {
+        _viewModel.PropertyChanged -= ViewModel_PropertyChanged;
+        _viewModel.WaveformUpdated -= OnWaveformUpdated;
+        _hotkeyService.ToggleHotkeyPressed -= OnToggleHotkeyPressed;
+        _hotkeyService.PushToTalkHotkeyPressed -= OnPushToTalkHotkeyPressed;
+        _hotkeyService.PushToTalkHotkeyReleased -= OnPushToTalkHotkeyReleased;
+        _hotkeyService.EscapePressed -= OnEscapePressed;
+        _positionSaveHelper?.Dispose();
     }
 
     private void OnOptionsChanged(WhisperShowOptions options, string? name)

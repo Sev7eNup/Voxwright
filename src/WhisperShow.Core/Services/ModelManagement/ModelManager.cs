@@ -10,6 +10,7 @@ public class ModelManager : IModelManager
 {
     private readonly ILogger<ModelManager> _logger;
     private readonly LocalWhisperOptions _localOptions;
+    private readonly ModelDownloadHelper _downloadHelper;
 
     private static readonly (GgmlType Type, string Name, string FileName, long SizeBytes)[] KnownModels =
     [
@@ -24,10 +25,12 @@ public class ModelManager : IModelManager
 
     public ModelManager(
         ILogger<ModelManager> logger,
-        IOptions<WhisperShowOptions> options)
+        IOptions<WhisperShowOptions> options,
+        ModelDownloadHelper downloadHelper)
     {
         _logger = logger;
         _localOptions = options.Value.Local;
+        _downloadHelper = downloadHelper;
     }
 
     public IReadOnlyList<WhisperModel> GetAllModels()
@@ -64,23 +67,13 @@ public class ModelManager : IModelManager
 
         _logger.LogInformation("Downloading model {Name} to {Path}", modelInfo.Name, targetPath);
 
-        using var httpClient = new HttpClient();
+        using var httpClient = _downloadHelper.CreateClient();
         var downloader = new WhisperGgmlDownloader(httpClient);
         using var modelStream = await downloader.GetGgmlModelAsync(type, cancellationToken: cancellationToken);
-        using var fileStream = File.Create(targetPath);
 
-        var buffer = new byte[81920];
-        long totalRead = 0;
-        int bytesRead;
+        await _downloadHelper.DownloadToFileAsync(modelStream, targetPath, modelInfo.SizeBytes, progress, cancellationToken);
 
-        while ((bytesRead = await modelStream.ReadAsync(buffer, cancellationToken)) > 0)
-        {
-            await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead), cancellationToken);
-            totalRead += bytesRead;
-            progress?.Report((float)totalRead / modelInfo.SizeBytes);
-        }
-
-        _logger.LogInformation("Model {Name} downloaded successfully ({Size} bytes)", modelInfo.Name, totalRead);
+        _logger.LogInformation("Model {Name} downloaded successfully", modelInfo.Name);
     }
 
     public void DeleteModel(WhisperModel model)

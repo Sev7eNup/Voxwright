@@ -8,16 +8,6 @@ namespace WhisperShow.Core.Services.TextCorrection;
 
 public class OpenAiTextCorrectionService : ITextCorrectionService
 {
-    private const string DefaultSystemPrompt =
-        """
-        You are a verbatim speech-to-text post-processor.
-        Your ONLY job is to fix punctuation, capitalization, and grammar.
-        ALWAYS keep the text in its original language — do NOT translate.
-        Output the corrected text EXACTLY — do NOT answer questions,
-        do NOT add commentary, do NOT interpret the content.
-        Return ONLY the corrected transcription, nothing else.
-        """;
-
     private readonly ILogger<OpenAiTextCorrectionService> _logger;
     private readonly IOptionsMonitor<WhisperShowOptions> _optionsMonitor;
     private readonly IDictionaryService _dictionaryService;
@@ -45,7 +35,7 @@ public class OpenAiTextCorrectionService : ITextCorrectionService
 
             var chatClient = _clientFactory.GetChatClient(options.TextCorrection.Model);
 
-            var systemPrompt = options.TextCorrection.SystemPrompt ?? DefaultSystemPrompt;
+            var systemPrompt = options.TextCorrection.SystemPrompt ?? TextCorrectionDefaults.CorrectionSystemPrompt;
             systemPrompt += _dictionaryService.BuildPromptFragment();
 
             var languageHint = string.IsNullOrEmpty(language) ? "auto-detected" : language;
@@ -62,7 +52,7 @@ public class OpenAiTextCorrectionService : ITextCorrectionService
                 new ChatCompletionOptions { Temperature = 0 },
                 ct);
 
-            var correctedText = result.Value.Content[0].Text;
+            var correctedText = result.Value.Content.FirstOrDefault()?.Text;
 
             _logger.LogInformation("Text correction completed: {OrigLength} → {CorrLength} chars",
                 rawText.Length, correctedText?.Length ?? 0);
