@@ -9,6 +9,7 @@ public class CorrectionModelManager : ICorrectionModelManager
 {
     private readonly ILogger<CorrectionModelManager> _logger;
     private readonly TextCorrectionOptions _options;
+    private readonly ModelDownloadHelper _downloadHelper;
 
     private static readonly (string Name, string FileName, long SizeBytes, string DownloadUrl)[] KnownModels =
     [
@@ -36,10 +37,12 @@ public class CorrectionModelManager : ICorrectionModelManager
 
     public CorrectionModelManager(
         ILogger<CorrectionModelManager> logger,
-        IOptions<WhisperShowOptions> options)
+        IOptions<WhisperShowOptions> options,
+        ModelDownloadHelper downloadHelper)
     {
         _logger = logger;
         _options = options.Value.TextCorrection;
+        _downloadHelper = downloadHelper;
     }
 
     public IReadOnlyList<CorrectionModelInfo> GetAllModels()
@@ -72,27 +75,16 @@ public class CorrectionModelManager : ICorrectionModelManager
 
         _logger.LogInformation("Downloading correction model {Name} to {Path}", modelInfo.Name, targetPath);
 
-        using var httpClient = new HttpClient();
-        httpClient.Timeout = TimeSpan.FromHours(2);
+        using var httpClient = _downloadHelper.CreateClient(TimeSpan.FromHours(2));
         using var response = await httpClient.GetAsync(modelInfo.DownloadUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
         response.EnsureSuccessStatusCode();
 
         var contentLength = response.Content.Headers.ContentLength ?? modelInfo.SizeBytes;
         await using var downloadStream = await response.Content.ReadAsStreamAsync(cancellationToken);
-        await using var fileStream = File.Create(targetPath);
 
-        var buffer = new byte[81920];
-        long totalRead = 0;
-        int bytesRead;
+        await _downloadHelper.DownloadToFileAsync(downloadStream, targetPath, contentLength, progress, cancellationToken);
 
-        while ((bytesRead = await downloadStream.ReadAsync(buffer, cancellationToken)) > 0)
-        {
-            await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead), cancellationToken);
-            totalRead += bytesRead;
-            progress?.Report((float)totalRead / contentLength);
-        }
-
-        _logger.LogInformation("Correction model {Name} downloaded successfully ({Size} bytes)", modelInfo.Name, totalRead);
+        _logger.LogInformation("Correction model {Name} downloaded successfully", modelInfo.Name);
     }
 
     public void DeleteModel(CorrectionModelInfo model)

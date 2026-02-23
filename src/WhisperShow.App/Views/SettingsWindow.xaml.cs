@@ -18,16 +18,30 @@ public partial class SettingsWindow : Window
         _viewModel = viewModel;
         DataContext = viewModel;
 
-        ClipBorder.SizeChanged += (_, e) =>
-        {
-            ClipBorder.Clip = new RectangleGeometry(
-                new Rect(0, 0, e.NewSize.Width, e.NewSize.Height), 12, 12);
-        };
+        ClipBorder.SizeChanged += OnClipBorderSizeChanged;
         _viewModel.PropertyChanged += ViewModel_PropertyChanged;
-        IsVisibleChanged += (_, _) => { if (!IsVisible) _viewModel.StopMicTest(); };
+        IsVisibleChanged += OnIsVisibleChanged;
 
         // Apply initial theme
         ApplyTheme(_viewModel.IsDarkMode);
+    }
+
+    private void OnClipBorderSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        ClipBorder.Clip = new RectangleGeometry(
+            new Rect(0, 0, e.NewSize.Width, e.NewSize.Height), 12, 12);
+    }
+
+    private void OnIsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (!IsVisible) _viewModel.StopMicTest();
+    }
+
+    public void Cleanup()
+    {
+        ClipBorder.SizeChanged -= OnClipBorderSizeChanged;
+        _viewModel.PropertyChanged -= ViewModel_PropertyChanged;
+        IsVisibleChanged -= OnIsVisibleChanged;
     }
 
     private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
