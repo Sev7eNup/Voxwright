@@ -23,4 +23,10 @@ public interface IModelPreloadService
     /// If null, reads current model name from configuration.
     /// </param>
     void PreloadCorrectionModel(string? modelName = null);
+
+    /// <summary>
+    /// Unload the local text correction model to free VRAM.
+    /// Called when switching away from the Local correction provider.
+    /// </summary>
+    void UnloadCorrectionModel();
 }

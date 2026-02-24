@@ -73,4 +73,9 @@ public class ModelPreloadService : IModelPreloadService
             }
         });
     }
+
+    public void UnloadCorrectionModel()
+    {
+        _localCorrection?.UnloadModel();
+    }
 }
