@@ -68,43 +68,6 @@ public class IDEDetectionServiceTests
     }
 
     [Fact]
-    public void ResolveWorkspacePath_WithValidStorageJson_FindsWorkspace()
-    {
-        var tempDir = Path.Combine(Path.GetTempPath(), $"WriteSpeechTest_{Guid.NewGuid():N}");
-        var fakeAppData = Path.Combine(tempDir, "AppData");
-        var fakeIDEDir = Path.Combine(fakeAppData, "Code");
-        var fakeWorkspace = Path.Combine(tempDir, "myproject");
-        Directory.CreateDirectory(fakeIDEDir);
-        Directory.CreateDirectory(fakeWorkspace);
-
-        try
-        {
-            var storageJson = $$"""
-                {
-                    "openedPathsList": {
-                        "entries": [
-                            { "folderUri": "file:///{{fakeWorkspace.Replace("\\", "/")}}" }
-                        ]
-                    }
-                }
-                """;
-            File.WriteAllText(Path.Combine(fakeIDEDir, "storage.json"), storageJson);
-
-            // ResolveWorkspacePath reads from %APPDATA%\{processName}\storage.json
-            // We can't easily override %APPDATA%, so we test the parsing logic directly
-            // by calling it with the temp path. This is an integration-style test.
-
-            // For now, test that null folderName returns null
-            var result = IDEDetectionService.ResolveWorkspacePath("Code", null);
-            result.Should().BeNull();
-        }
-        finally
-        {
-            Directory.Delete(tempDir, true);
-        }
-    }
-
-    [Fact]
     public void ResolveWorkspacePath_NullFolderName_ReturnsNull()
     {
         IDEDetectionService.ResolveWorkspacePath("Code", null).Should().BeNull();
@@ -122,5 +85,253 @@ public class IDEDetectionServiceTests
         // "NonexistentIDE" won't have a storage.json
         IDEDetectionService.ResolveWorkspacePath("NonexistentIDE_12345", "myproject")
             .Should().BeNull();
+    }
+
+    [Fact]
+    public void ResolveWorkspacePath_LegacyFormat_FindsFolder()
+    {
+        using var env = new TempStorageEnv("Code");
+        var storageJson = $$"""
+            {
+                "openedPathsList": {
+                    "entries": [
+                        { "folderUri": "file:///{{env.WorkspacePath.Replace("\\", "/")}}" }
+                    ]
+                }
+            }
+            """;
+        File.WriteAllText(
+            Path.Combine(env.AppDataPath, "Code", "storage.json"),
+            storageJson);
+
+        var result = IDEDetectionService.ResolveWorkspacePath("Code", "myproject", env.AppDataPath);
+        result.Should().NotBeNull();
+        result.Should().Contain("myproject");
+    }
+
+    [Fact]
+    public void ResolveWorkspacePath_NewGlobalStorageFormat_FindsFolder()
+    {
+        using var env = new TempStorageEnv("Code", useGlobalStorage: true);
+        var storageJson = $$"""
+            {
+                "backupWorkspaces": {
+                    "folders": [
+                        "file:///{{env.WorkspacePath.Replace("\\", "/")}}"
+                    ]
+                }
+            }
+            """;
+        File.WriteAllText(env.StorageJsonPath, storageJson);
+
+        var result = IDEDetectionService.ResolveWorkspacePath("Code", "myproject", env.AppDataPath);
+        result.Should().NotBeNull();
+        result.Should().Contain("myproject");
+    }
+
+    [Fact]
+    public void ResolveWorkspacePath_BackupWorkspacesObjectEntries_FindsFolder()
+    {
+        using var env = new TempStorageEnv("Code", useGlobalStorage: true);
+        var storageJson = $$"""
+            {
+                "backupWorkspaces": {
+                    "folders": [
+                        { "folderUri": "file:///{{env.WorkspacePath.Replace("\\", "/")}}" }
+                    ]
+                }
+            }
+            """;
+        File.WriteAllText(env.StorageJsonPath, storageJson);
+
+        var result = IDEDetectionService.ResolveWorkspacePath("Code", "myproject", env.AppDataPath);
+        result.Should().NotBeNull();
+        result.Should().Contain("myproject");
+    }
+
+    [Fact]
+    public void ResolveWorkspacePath_WindowsStateLastActiveWindow_FindsFolder()
+    {
+        using var env = new TempStorageEnv("Code", useGlobalStorage: true);
+        var storageJson = $$"""
+            {
+                "windowsState": {
+                    "lastActiveWindow": {
+                        "folder": "file:///{{env.WorkspacePath.Replace("\\", "/")}}"
+                    }
+                }
+            }
+            """;
+        File.WriteAllText(env.StorageJsonPath, storageJson);
+
+        var result = IDEDetectionService.ResolveWorkspacePath("Code", "myproject", env.AppDataPath);
+        result.Should().NotBeNull();
+        result.Should().Contain("myproject");
+    }
+
+    [Fact]
+    public void ResolveWorkspacePath_WindowsStateOpenedWindows_FindsFolder()
+    {
+        using var env = new TempStorageEnv("Code", useGlobalStorage: true);
+        var storageJson = $$"""
+            {
+                "windowsState": {
+                    "openedWindows": [
+                        { "folder": "file:///{{env.WorkspacePath.Replace("\\", "/")}}" }
+                    ]
+                }
+            }
+            """;
+        File.WriteAllText(env.StorageJsonPath, storageJson);
+
+        var result = IDEDetectionService.ResolveWorkspacePath("Code", "myproject", env.AppDataPath);
+        result.Should().NotBeNull();
+        result.Should().Contain("myproject");
+    }
+
+    [Fact]
+    public void ResolveWorkspacePath_PrefersNewLocationOverLegacy()
+    {
+        using var env = new TempStorageEnv("Code", useGlobalStorage: true);
+
+        // Also create legacy storage.json with a DIFFERENT workspace
+        var legacyDir = Path.Combine(env.TempDir, "legacyws");
+        Directory.CreateDirectory(legacyDir);
+        var legacyStoragePath = Path.Combine(env.AppDataPath, "Code", "storage.json");
+        File.WriteAllText(legacyStoragePath, $$"""
+            {
+                "openedPathsList": {
+                    "entries": [
+                        { "folderUri": "file:///{{legacyDir.Replace("\\", "/")}}" }
+                    ]
+                }
+            }
+            """);
+
+        // New location has the target workspace
+        var storageJson = $$"""
+            {
+                "backupWorkspaces": {
+                    "folders": [
+                        "file:///{{env.WorkspacePath.Replace("\\", "/")}}"
+                    ]
+                }
+            }
+            """;
+        File.WriteAllText(env.StorageJsonPath, storageJson);
+
+        var result = IDEDetectionService.ResolveWorkspacePath("Code", "myproject", env.AppDataPath);
+        result.Should().NotBeNull();
+        result.Should().Contain("myproject");
+    }
+
+    [Fact]
+    public void ResolveWorkspacePath_FallsBackToLegacy_WhenNewLocationMissing()
+    {
+        using var env = new TempStorageEnv("Code"); // legacy only
+        var storageJson = $$"""
+            {
+                "openedPathsList": {
+                    "entries": [
+                        { "folderUri": "file:///{{env.WorkspacePath.Replace("\\", "/")}}" }
+                    ]
+                }
+            }
+            """;
+        File.WriteAllText(
+            Path.Combine(env.AppDataPath, "Code", "storage.json"),
+            storageJson);
+
+        var result = IDEDetectionService.ResolveWorkspacePath("Code", "myproject", env.AppDataPath);
+        result.Should().NotBeNull();
+        result.Should().Contain("myproject");
+    }
+
+    [Fact]
+    public void ResolveWorkspacePath_NoMatchingFolder_ReturnsNull()
+    {
+        using var env = new TempStorageEnv("Code", useGlobalStorage: true);
+        var storageJson = $$"""
+            {
+                "backupWorkspaces": {
+                    "folders": [
+                        "file:///{{env.WorkspacePath.Replace("\\", "/")}}"
+                    ]
+                }
+            }
+            """;
+        File.WriteAllText(env.StorageJsonPath, storageJson);
+
+        var result = IDEDetectionService.ResolveWorkspacePath("Code", "nonexistent", env.AppDataPath);
+        result.Should().BeNull();
+    }
+
+    [Fact]
+    public void MatchFolderUri_ValidUri_ReturnsPath()
+    {
+        // Use an existing directory for the match
+        var tempDir = Path.GetTempPath().TrimEnd('\\', '/');
+        var dirName = Path.GetFileName(tempDir);
+
+        var uri = "file:///" + tempDir.Replace("\\", "/");
+        IDEDetectionService.MatchFolderUri(uri, dirName).Should().NotBeNull();
+    }
+
+    [Fact]
+    public void MatchFolderUri_Null_ReturnsNull()
+    {
+        IDEDetectionService.MatchFolderUri(null, "test").Should().BeNull();
+    }
+
+    [Fact]
+    public void MatchFolderUri_NonFileUri_ReturnsNull()
+    {
+        IDEDetectionService.MatchFolderUri("https://example.com/test", "test").Should().BeNull();
+    }
+
+    [Fact]
+    public void MatchFolderUri_WrongFolderName_ReturnsNull()
+    {
+        var tempDir = Path.GetTempPath().TrimEnd('\\', '/');
+        var uri = "file:///" + tempDir.Replace("\\", "/");
+        IDEDetectionService.MatchFolderUri(uri, "nonexistent_folder_xyz").Should().BeNull();
+    }
+
+    /// <summary>
+    /// Helper that creates a temp directory with fake AppData structure for testing.
+    /// </summary>
+    private sealed class TempStorageEnv : IDisposable
+    {
+        public string TempDir { get; }
+        public string AppDataPath { get; }
+        public string WorkspacePath { get; }
+        public string StorageJsonPath { get; }
+
+        public TempStorageEnv(string processName, bool useGlobalStorage = false)
+        {
+            TempDir = Path.Combine(Path.GetTempPath(), $"WriteSpeechTest_{Guid.NewGuid():N}");
+            AppDataPath = Path.Combine(TempDir, "AppData");
+            WorkspacePath = Path.Combine(TempDir, "myproject");
+            Directory.CreateDirectory(WorkspacePath);
+
+            if (useGlobalStorage)
+            {
+                var globalStorageDir = Path.Combine(AppDataPath, processName, "User", "globalStorage");
+                Directory.CreateDirectory(globalStorageDir);
+                StorageJsonPath = Path.Combine(globalStorageDir, "storage.json");
+            }
+            else
+            {
+                var ideDir = Path.Combine(AppDataPath, processName);
+                Directory.CreateDirectory(ideDir);
+                StorageJsonPath = Path.Combine(ideDir, "storage.json");
+            }
+        }
+
+        public void Dispose()
+        {
+            try { Directory.Delete(TempDir, true); }
+            catch { /* best effort cleanup */ }
+        }
     }
 }

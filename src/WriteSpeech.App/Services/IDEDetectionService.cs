@@ -60,7 +60,7 @@ public class IDEDetectionService : IIDEDetectionService
             if (workspacePath is not null)
                 _logger.LogInformation("IDE workspace resolved: {Path}", workspacePath);
             else
-                _logger.LogDebug("Could not resolve workspace path for folder: {Folder}", folderName);
+                _logger.LogWarning("Could not resolve workspace path for folder: {Folder}", folderName);
 
             return new IDEInfo(processName, workspacePath, currentFile);
         }
@@ -120,44 +120,124 @@ public class IDEDetectionService : IIDEDetectionService
 
     internal static string? ResolveWorkspacePath(string processName, string? folderName)
     {
+        var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        return ResolveWorkspacePath(processName, folderName, appData);
+    }
+
+    internal static string? ResolveWorkspacePath(string processName, string? folderName, string appDataPath)
+    {
         if (string.IsNullOrEmpty(folderName)) return null;
 
         try
         {
-            var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            var storagePath = Path.Combine(appData, processName, "storage.json");
-
-            if (!File.Exists(storagePath)) return null;
-
-            var json = File.ReadAllText(storagePath);
-            using var doc = JsonDocument.Parse(json);
-
-            // Navigate to openedPathsList.entries
-            if (!doc.RootElement.TryGetProperty("openedPathsList", out var pathsList)) return null;
-            if (!pathsList.TryGetProperty("entries", out var entries)) return null;
-
-            foreach (var entry in entries.EnumerateArray())
+            var storagePaths = new[]
             {
-                var folderUri = GetFolderUri(entry);
-                if (folderUri is null) continue;
+                Path.Combine(appDataPath, processName, "User", "globalStorage", "storage.json"),
+                Path.Combine(appDataPath, processName, "storage.json"),
+            };
 
-                // Parse file:///path URI to local path
-                if (!Uri.TryCreate(folderUri, UriKind.Absolute, out var uri)) continue;
-                if (!uri.IsFile) continue;
+            foreach (var storagePath in storagePaths)
+            {
+                if (!File.Exists(storagePath)) continue;
 
-                var localPath = uri.LocalPath;
-                var dirName = Path.GetFileName(localPath.TrimEnd('/', '\\'));
+                var json = File.ReadAllText(storagePath);
+                using var doc = JsonDocument.Parse(json);
 
-                if (string.Equals(dirName, folderName, StringComparison.OrdinalIgnoreCase)
-                    && Directory.Exists(localPath))
-                {
-                    return localPath;
-                }
+                // Try legacy format: openedPathsList.entries[].folderUri
+                var result = FindInOpenedPathsList(doc, folderName);
+                if (result is not null) return result;
+
+                // Try new format: backupWorkspaces.folders[].folderUri
+                result = FindInBackupWorkspaces(doc, folderName);
+                if (result is not null) return result;
+
+                // Try windowsState.lastActiveWindow.folder + openedWindows[].folder
+                result = FindInWindowsState(doc, folderName);
+                if (result is not null) return result;
             }
         }
         catch
         {
             // storage.json might be malformed or inaccessible
+        }
+
+        return null;
+    }
+
+    private static string? FindInOpenedPathsList(JsonDocument doc, string folderName)
+    {
+        if (!doc.RootElement.TryGetProperty("openedPathsList", out var pathsList)) return null;
+        if (!pathsList.TryGetProperty("entries", out var entries)) return null;
+
+        foreach (var entry in entries.EnumerateArray())
+        {
+            var folderUri = GetFolderUri(entry);
+            var match = MatchFolderUri(folderUri, folderName);
+            if (match is not null) return match;
+        }
+
+        return null;
+    }
+
+    private static string? FindInBackupWorkspaces(JsonDocument doc, string folderName)
+    {
+        if (!doc.RootElement.TryGetProperty("backupWorkspaces", out var backupWorkspaces)) return null;
+        if (!backupWorkspaces.TryGetProperty("folders", out var folders)) return null;
+
+        foreach (var entry in folders.EnumerateArray())
+        {
+            // folders[] can be strings (URI directly) or objects with folderUri
+            string? folderUri = entry.ValueKind == JsonValueKind.String
+                ? entry.GetString()
+                : GetFolderUri(entry);
+            var match = MatchFolderUri(folderUri, folderName);
+            if (match is not null) return match;
+        }
+
+        return null;
+    }
+
+    private static string? FindInWindowsState(JsonDocument doc, string folderName)
+    {
+        if (!doc.RootElement.TryGetProperty("windowsState", out var windowsState)) return null;
+
+        // Check lastActiveWindow.folder
+        if (windowsState.TryGetProperty("lastActiveWindow", out var lastActive)
+            && lastActive.TryGetProperty("folder", out var lastFolder))
+        {
+            var match = MatchFolderUri(lastFolder.GetString(), folderName);
+            if (match is not null) return match;
+        }
+
+        // Check openedWindows[].folder
+        if (windowsState.TryGetProperty("openedWindows", out var openedWindows))
+        {
+            foreach (var window in openedWindows.EnumerateArray())
+            {
+                if (window.TryGetProperty("folder", out var folder))
+                {
+                    var match = MatchFolderUri(folder.GetString(), folderName);
+                    if (match is not null) return match;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    internal static string? MatchFolderUri(string? folderUri, string folderName)
+    {
+        if (folderUri is null) return null;
+        if (!Uri.TryCreate(folderUri, UriKind.Absolute, out var uri)) return null;
+        if (!uri.IsFile) return null;
+
+        var localPath = uri.LocalPath;
+        var dirName = Path.GetFileName(localPath.TrimEnd('/', '\\'));
+
+        if (string.Equals(dirName, folderName, StringComparison.OrdinalIgnoreCase)
+            && Directory.Exists(localPath))
+        {
+            return localPath;
         }
 
         return null;
