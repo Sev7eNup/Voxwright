@@ -119,4 +119,166 @@ public class StatisticsViewModelTests
 
         result.Should().Be("2h 3m");
     }
+
+    [Fact]
+    public void Refresh_PopulatesWordsTranscribedDisplay()
+    {
+        _statsService.GetStats().Returns(new UsageStats
+        {
+            TotalTranscriptions = 10,
+            TotalWordsTranscribed = 1234
+        });
+
+        _vm.RefreshCommand.Execute(null);
+
+        _vm.WordsTranscribedDisplay.Should().Be(1234.ToString("N0"));
+    }
+
+    [Fact]
+    public void Refresh_PopulatesTimeSavedDisplay()
+    {
+        _statsService.GetStats().Returns(new UsageStats
+        {
+            TotalTranscriptions = 10,
+            TotalWordsTranscribed = 1200 // 1200/40 = 30 min
+        });
+
+        _vm.RefreshCommand.Execute(null);
+
+        _vm.TimeSavedDisplay.Should().Be("30 min");
+    }
+
+    [Fact]
+    public void Refresh_PopulatesSuccessRateDisplay()
+    {
+        _statsService.GetStats().Returns(new UsageStats
+        {
+            TotalTranscriptions = 9,
+            ErrorCount = 1 // 90%
+        });
+
+        _vm.RefreshCommand.Execute(null);
+
+        _vm.SuccessRateDisplay.Should().Be($"{90.0:F1}%");
+    }
+
+    [Fact]
+    public void Refresh_ShowsDash_WhenNoDataForSuccessRate()
+    {
+        _statsService.GetStats().Returns(new UsageStats
+        {
+            TotalTranscriptions = 0,
+            ErrorCount = 0
+        });
+
+        _vm.RefreshCommand.Execute(null);
+
+        _vm.SuccessRateDisplay.Should().Be("—");
+    }
+
+    [Fact]
+    public void Refresh_PopulatesLongestRecordingDisplay()
+    {
+        _statsService.GetStats().Returns(new UsageStats
+        {
+            TotalTranscriptions = 5,
+            LongestRecordingSeconds = 45.2
+        });
+
+        _vm.RefreshCommand.Execute(null);
+
+        _vm.LongestRecordingDisplay.Should().Be($"{45.2:F1}s");
+    }
+
+    [Fact]
+    public void Refresh_PopulatesShortestRecordingDisplay()
+    {
+        _statsService.GetStats().Returns(new UsageStats
+        {
+            TotalTranscriptions = 5,
+            ShortestRecordingSeconds = 3.1
+        });
+
+        _vm.RefreshCommand.Execute(null);
+
+        _vm.ShortestRecordingDisplay.Should().Be($"{3.1:F1}s");
+    }
+
+    [Fact]
+    public void Refresh_ShowsDash_WhenNoShortestRecording()
+    {
+        _statsService.GetStats().Returns(new UsageStats
+        {
+            TotalTranscriptions = 0,
+            ShortestRecordingSeconds = null
+        });
+
+        _vm.RefreshCommand.Execute(null);
+
+        _vm.ShortestRecordingDisplay.Should().Be("—");
+    }
+
+    [Fact]
+    public void Refresh_ShowsDash_ForLongestRecording_WhenNoTranscriptions()
+    {
+        _statsService.GetStats().Returns(new UsageStats
+        {
+            TotalTranscriptions = 0
+        });
+
+        _vm.RefreshCommand.Execute(null);
+
+        _vm.LongestRecordingDisplay.Should().Be("—");
+    }
+
+    [Fact]
+    public void Refresh_PopulatesCorrectionBreakdownDisplay()
+    {
+        _statsService.GetStats().Returns(new UsageStats
+        {
+            TotalTranscriptions = 10,
+            CorrectionsByProvider = new Dictionary<string, int>
+            {
+                ["Cloud"] = 7,
+                ["Off"] = 3
+            }
+        });
+
+        _vm.RefreshCommand.Execute(null);
+
+        _vm.CorrectionBreakdownDisplay.Should().Contain("Cloud: 7");
+        _vm.CorrectionBreakdownDisplay.Should().Contain("Off: 3");
+    }
+
+    [Fact]
+    public void Refresh_ShowsNoDataYet_WhenNoCorrectionData()
+    {
+        _statsService.GetStats().Returns(new UsageStats
+        {
+            TotalTranscriptions = 0,
+            CorrectionsByProvider = new Dictionary<string, int>()
+        });
+
+        _vm.RefreshCommand.Execute(null);
+
+        _vm.CorrectionBreakdownDisplay.Should().Be("No data yet");
+    }
+
+    [Fact]
+    public void FormatTimeSaved_ReturnsMinutes_WhenUnderOneHour()
+    {
+        StatisticsViewModel.FormatTimeSaved(30.85).Should().Be("31 min");
+    }
+
+    [Fact]
+    public void FormatTimeSaved_ReturnsHours_WhenOverOneHour()
+    {
+        StatisticsViewModel.FormatTimeSaved(90.0).Should().Be($"{1.5:F1}h");
+    }
+
+    [Fact]
+    public void FormatTimeSaved_ReturnsZero_WhenNoWords()
+    {
+        StatisticsViewModel.FormatTimeSaved(0).Should().Be("0 min");
+    }
 }

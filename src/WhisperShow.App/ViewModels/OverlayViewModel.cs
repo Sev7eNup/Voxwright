@@ -221,6 +221,7 @@ public partial class OverlayViewModel : ObservableObject, IDisposable
             }
 
             string text;
+            string correctionProvider;
 
             // Fast path: combined audio model (transcription + correction in one API call)
             if (Options.TextCorrection.UseCombinedAudioModel && _combinedService.IsAvailable)
@@ -230,17 +231,20 @@ public partial class OverlayViewModel : ObservableObject, IDisposable
                 try
                 {
                     text = await _combinedService.TranscribeAndCorrectAsync(audioData, Options.Language);
+                    correctionProvider = "Combined";
                 }
                 catch (Exception ex)
                 {
                     _logger.LogWarning(ex, "Combined audio model failed, falling back to standard pipeline");
                     text = await StandardTranscribeAsync(audioData);
+                    correctionProvider = Options.TextCorrection.Provider.ToString();
                 }
             }
             else
             {
                 _logger.LogInformation("Using standard transcription pipeline (Provider: {Provider})", Options.Provider);
                 text = await StandardTranscribeAsync(audioData);
+                correctionProvider = Options.TextCorrection.Provider.ToString();
             }
 
             // Apply snippet expansions after transcription + correction
@@ -260,7 +264,8 @@ public partial class OverlayViewModel : ObservableObject, IDisposable
 
             // Record stats and history
             var duration = (DateTime.UtcNow - _recordingStartTime).TotalSeconds;
-            _statsService.RecordTranscription(duration, audioData.Length, Options.Provider.ToString());
+            var wordCount = text.Split(default(char[]), StringSplitOptions.RemoveEmptyEntries).Length;
+            _statsService.RecordTranscription(duration, audioData.Length, Options.Provider.ToString(), wordCount, correctionProvider);
             _historyService.AddEntry(text, Options.Provider.ToString(), duration);
 
             // Auto-insert into the previously focused window
