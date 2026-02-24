@@ -56,9 +56,8 @@ public class LocalTextCorrectionService : ITextCorrectionService, IDisposable
             systemPrompt += _dictionaryService.BuildPromptFragment();
             systemPrompt += _ideContextService.BuildPromptFragment();
 
-            // Note: VocabExtractionInstruction is NOT appended for local models —
-            // small models (e.g. Gemma 1B) can't follow complex multi-part instructions
-            // and produce meta-commentary, translations, or hallucinated vocab instead.
+            if (correctionOpts.AutoAddToDictionary)
+                systemPrompt += TextCorrectionDefaults.VocabExtractionInstruction;
 
             var languageHint = string.IsNullOrEmpty(language)
                 ? "Keep the SAME language as the input — do NOT translate"
@@ -94,13 +93,20 @@ public class LocalTextCorrectionService : ITextCorrectionService, IDisposable
                 result.Append(token);
             }
 
-            var corrected = result.ToString().Trim();
+            var corrected = StripMetaCommentary(result.ToString().Trim());
 
             _logger.LogInformation("Local text correction completed: {OrigLength} → {CorrLength} chars",
                 rawText.Length, corrected.Length);
 
             if (string.IsNullOrWhiteSpace(corrected))
                 return rawText;
+
+            if (correctionOpts.AutoAddToDictionary)
+            {
+                var (cleanText, vocab) = VocabResponseParser.Parse(corrected);
+                VocabResponseParser.AddExtractedVocabulary(vocab, _dictionaryService, _logger);
+                return string.IsNullOrWhiteSpace(cleanText) ? rawText : cleanText;
+            }
 
             return corrected;
         }
@@ -126,6 +132,29 @@ public class LocalTextCorrectionService : ITextCorrectionService, IDisposable
         var path = Path.Combine(dir, modelName);
         if (File.Exists(path))
             EnsureModelLoaded(path, correctionOpts.LocalGpuAcceleration);
+    }
+
+    internal static string StripMetaCommentary(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+            return text;
+
+        var lines = text.Split('\n');
+        var cleaned = new List<string>();
+        foreach (var line in lines)
+        {
+            var trimmed = line.TrimStart();
+            if (trimmed.StartsWith("Here is", StringComparison.OrdinalIgnoreCase) ||
+                trimmed.StartsWith("Here's", StringComparison.OrdinalIgnoreCase) ||
+                trimmed.StartsWith("Translation:", StringComparison.OrdinalIgnoreCase) ||
+                trimmed.StartsWith("Corrected text:", StringComparison.OrdinalIgnoreCase) ||
+                trimmed.StartsWith("The corrected", StringComparison.OrdinalIgnoreCase) ||
+                trimmed.StartsWith("Note:", StringComparison.OrdinalIgnoreCase) ||
+                trimmed.StartsWith("Output:", StringComparison.OrdinalIgnoreCase))
+                break;
+            cleaned.Add(line);
+        }
+        return string.Join("\n", cleaned).Trim();
     }
 
     private static string? GetModelPath(TextCorrectionOptions correctionOpts)

@@ -1,6 +1,8 @@
 using System.Collections.ObjectModel;
+using System.Text.Json.Nodes;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using WriteSpeech.Core.Configuration;
 using WriteSpeech.Core.Services.Snippets;
 using WriteSpeech.Core.Services.TextCorrection;
 
@@ -10,6 +12,10 @@ public partial class DictionarySnippetsViewModel : ObservableObject
 {
     private readonly IDictionaryService _dictionaryService;
     private readonly ISnippetService _snippetService;
+    private readonly Action _scheduleSave;
+
+    // --- Dictionary settings ---
+    [ObservableProperty] private bool _autoAddToDictionary = true;
 
     public ObservableCollection<string> DictionaryEntries { get; } = [];
     [ObservableProperty] private string _newDictionaryWord = "";
@@ -20,13 +26,29 @@ public partial class DictionarySnippetsViewModel : ObservableObject
     [ObservableProperty] private bool _isEditingSnippet;
     private SnippetEntry? _editingSnippet;
 
-    public DictionarySnippetsViewModel(IDictionaryService dictionaryService, ISnippetService snippetService)
+    public DictionarySnippetsViewModel(
+        IDictionaryService dictionaryService,
+        ISnippetService snippetService,
+        Action scheduleSave,
+        WriteSpeechOptions options)
     {
         _dictionaryService = dictionaryService;
         _snippetService = snippetService;
+        _scheduleSave = scheduleSave;
+
+        _autoAddToDictionary = options.TextCorrection.AutoAddToDictionary;
 
         RefreshEntries();
         LoadSnippets();
+    }
+
+    [RelayCommand]
+    private void ToggleAutoAddToDictionary() => _scheduleSave();
+
+    public void WriteSettings(JsonNode section)
+    {
+        var correction = SettingsViewModel.EnsureObject(section, "TextCorrection");
+        correction["AutoAddToDictionary"] = AutoAddToDictionary;
     }
 
     public void RefreshEntries()
