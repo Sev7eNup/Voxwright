@@ -18,7 +18,8 @@ public class IntegrationsSettingsViewModelTests
             Integration = new IntegrationOptions
             {
                 VariableRecognition = false,
-                FileTagging = true
+                FileTagging = true,
+                IncludeForLocalModels = true
             }
         };
 
@@ -26,6 +27,7 @@ public class IntegrationsSettingsViewModelTests
 
         vm.VariableRecognition.Should().BeFalse();
         vm.FileTagging.Should().BeTrue();
+        vm.IncludeForLocalModels.Should().BeTrue();
     }
 
     [Fact]
@@ -33,9 +35,10 @@ public class IntegrationsSettingsViewModelTests
     {
         var vm = new IntegrationsSettingsViewModel(() => { }, DefaultOptions());
 
-        // Defaults from IntegrationOptions: both true
+        // Defaults from IntegrationOptions: both true, IncludeForLocalModels false
         vm.VariableRecognition.Should().BeTrue();
         vm.FileTagging.Should().BeTrue();
+        vm.IncludeForLocalModels.Should().BeFalse();
     }
 
     [Fact]
@@ -61,9 +64,24 @@ public class IntegrationsSettingsViewModelTests
     }
 
     [Fact]
+    public void ToggleIncludeForLocalModelsCommand_SchedulesSave()
+    {
+        var saveCount = 0;
+        var vm = new IntegrationsSettingsViewModel(() => saveCount++, DefaultOptions());
+
+        vm.ToggleIncludeForLocalModelsCommand.Execute(null);
+
+        saveCount.Should().Be(1);
+    }
+
+    [Fact]
     public void WriteSettings_PersistsCorrectly()
     {
-        var vm = new IntegrationsSettingsViewModel(() => { }, DefaultOptions());
+        var options = new WriteSpeechOptions
+        {
+            Integration = new IntegrationOptions { IncludeForLocalModels = true }
+        };
+        var vm = new IntegrationsSettingsViewModel(() => { }, options);
         vm.VariableRecognition = false;
         vm.FileTagging = true;
 
@@ -73,6 +91,7 @@ public class IntegrationsSettingsViewModelTests
         var integration = root["Integration"]!.AsObject();
         integration["VariableRecognition"]!.GetValue<bool>().Should().BeFalse();
         integration["FileTagging"]!.GetValue<bool>().Should().BeTrue();
+        integration["IncludeForLocalModels"]!.GetValue<bool>().Should().BeTrue();
     }
 
     [Fact]

@@ -48,6 +48,25 @@
                                   IsChecked="{Binding FileTagging}"
                                   Command="{Binding ToggleFileTaggingCommand}" VerticalAlignment="Center"/>
                 </Grid>
+                <Border Height="1" Background="{DynamicResource DividerBrush}" Margin="20,0"/>
+                <!-- Include for local models -->
+                <Grid Margin="20,14,20,14">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="Include for local models" FontSize="13"
+                                   FontFamily="Segoe UI Variable, Segoe UI"
+                                   Foreground="{DynamicResource TextPrimaryBrush}"/>
+                        <TextBlock Text="Also inject IDE context when using a local correction model."
+                                   FontSize="11" FontFamily="Segoe UI Variable, Segoe UI"
+                                   Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,3,0,0"/>
+                    </StackPanel>
+                    <ToggleButton Grid.Column="1" Style="{StaticResource ToggleSwitchStyle}"
+                                  IsChecked="{Binding IncludeForLocalModels}"
+                                  Command="{Binding ToggleIncludeForLocalModelsCommand}" VerticalAlignment="Center"/>
+                </Grid>
             </StackPanel>
         </Border>
 
