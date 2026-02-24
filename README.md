@@ -1,4 +1,4 @@
-# WriteSpeech.NET
+# ✍️ WriteSpeech.NET
 
 Windows desktop speech-to-text overlay inspired by [Wispr Flow](https://wisprflow.com). Record speech via microphone, transcribe it using OpenAI Whisper or a local model, optionally correct it with AI, and auto-insert the text at the cursor position in any application.
 
@@ -9,29 +9,29 @@ Windows desktop speech-to-text overlay inspired by [Wispr Flow](https://wisprflo
 
 <!-- TODO: Add screenshot of overlay + settings window -->
 
-## Features
+## ✨ Features
 
-- **Speech-to-Text Overlay** — Transparent, always-on-top speech bubble with real-time waveform visualization and recording timer
-- **Cloud Transcription** — OpenAI Whisper API with configurable model and custom endpoint support (Azure, LM Studio, etc.)
-- **Local Transcription** — Offline via Whisper.net (GGML models, 5 sizes from 75 MB to 3 GB) with optional CUDA GPU acceleration
-- **AI Text Correction** — Post-process transcriptions with GPT-4o-mini (cloud) or LLamaSharp (local GGUF models, 4 models available)
-- **Combined Audio Model** — Direct audio-to-text via GPT-4o audio input (single API call for transcription + correction)
-- **Auto-Insert** — Automatically pastes transcribed text at the cursor position in any app via clipboard + Win32 SendInput
-- **Global Hotkeys** — Toggle recording (Ctrl+Shift+Space), Push-to-Talk (Ctrl+Space), Escape to dismiss — all fully configurable
-- **Audio Muting** — Optionally mutes other applications while recording
-- **WAV-to-MP3 Compression** — Compresses audio before cloud upload (64 kbps) to reduce API costs
-- **Custom Dictionary** — Add domain-specific terms injected into correction prompts
-- **Snippet Expansion** — Define trigger-to-replacement text pairs with word-boundary matching
-- **Transcription History** — Browse, search, copy, and re-insert recent transcriptions
-- **Usage Statistics** — Track transcription counts, recording time, audio bytes, and per-provider breakdown
-- **Settings UI** — 6-page settings window: General, System, Models, Dictionary, Snippets, Statistics
-- **20 Languages** — German, English, French, Spanish, Italian, Portuguese, Dutch, Polish, Russian, Ukrainian, Chinese, Japanese, Korean, Arabic, Turkish, Swedish, Danish, Norwegian, Finnish, Czech — plus auto-detect
-- **Dark & Light Themes** — Switchable via settings
-- **System Tray** — Left-click toggles overlay, right-click for context menu (Settings, History, Exit)
-- **Live Settings** — All changes take effect immediately without restart
-- **Single Instance** — Enforced via named Mutex
+- 🎙️ **Speech-to-Text Overlay** — Transparent, always-on-top speech bubble with real-time waveform visualization and recording timer
+- ☁️ **Cloud Transcription** — OpenAI Whisper API with configurable model and custom endpoint support (Azure, LM Studio, etc.)
+- 💻 **Local Transcription** — Offline via Whisper.net (GGML models, 5 sizes from 75 MB to 3 GB) with optional CUDA GPU acceleration
+- 🤖 **AI Text Correction** — Post-process transcriptions with GPT-4o-mini (cloud) or LLamaSharp (local GGUF models, 4 models available)
+- 🎧 **Combined Audio Model** — Direct audio-to-text via GPT-4o audio input (single API call for transcription + correction)
+- 📋 **Auto-Insert** — Automatically pastes transcribed text at the cursor position in any app via clipboard + Win32 SendInput
+- ⌨️ **Global Hotkeys** — Toggle recording (Ctrl+Shift+Space), Push-to-Talk (Ctrl+Space), Escape to dismiss — all fully configurable
+- 🔇 **Audio Muting** — Optionally mutes other applications while recording
+- 🗜️ **WAV-to-MP3 Compression** — Compresses audio before cloud upload (64 kbps) to reduce API costs
+- 📖 **Custom Dictionary** — Add domain-specific terms injected into correction prompts
+- 🔄 **Snippet Expansion** — Define trigger-to-replacement text pairs with word-boundary matching
+- 📜 **Transcription History** — Browse, search, copy, and re-insert recent transcriptions
+- 📊 **Usage Statistics** — Track transcription counts, recording time, audio bytes, and per-provider breakdown
+- ⚙️ **Settings UI** — 6-page settings window: General, System, Models, Dictionary, Snippets, Statistics
+- 🌍 **20 Languages** — German, English, French, Spanish, Italian, Portuguese, Dutch, Polish, Russian, Ukrainian, Chinese, Japanese, Korean, Arabic, Turkish, Swedish, Danish, Norwegian, Finnish, Czech — plus auto-detect
+- 🎨 **Dark & Light Themes** — Switchable via settings
+- 🔔 **System Tray** — Left-click toggles overlay, right-click for context menu (Settings, History, Exit)
+- ⚡ **Live Settings** — All changes take effect immediately without restart
+- 🔒 **Single Instance** — Enforced via named Mutex
 
-## Prerequisites
+## 📋 Prerequisites
 
 | Requirement | Notes |
 |---|---|
@@ -40,7 +40,7 @@ Windows desktop speech-to-text overlay inspired by [Wispr Flow](https://wisprflo
 | **OpenAI API Key** | Required for cloud transcription/correction (optional if using local models only) |
 | **NVIDIA GPU + CUDA 13.x** | Optional — for local GPU acceleration (Whisper.net + LLamaSharp) |
 
-## Build & Run
+## 🚀 Build & Run
 
 ```bash
 dotnet build WriteSpeech.slnx
@@ -52,7 +52,7 @@ dotnet run --project src/WriteSpeech.App
 > taskkill /F /IM WriteSpeech.App.exe
 > ```
 
-## Quick Start
+## 🏁 Quick Start
 
 1. **Build and run** the app (see above)
 2. A transparent speech-bubble overlay appears on screen, and a tray icon shows in the system tray
@@ -64,7 +64,7 @@ dotnet run --project src/WriteSpeech.App
 
 For cloud transcription, enter your OpenAI API key in Settings > Transcription. For offline use, switch to Local provider and download a Whisper model in Settings > Models.
 
-## Configuration
+## 🔧 Configuration
 
 All settings live in `src/WriteSpeech.App/appsettings.json` under the `"WriteSpeech"` section. They can also be modified via the Settings UI (right-click tray icon > Settings).
 
@@ -133,7 +133,7 @@ All settings live in `src/WriteSpeech.App/appsettings.json` under the `"WriteSpe
 | `App.MaxHistoryEntries` | int | `20` | Maximum transcription history entries |
 | `App.Theme` | string | `"Dark"` | `"Light"` or `"Dark"` |
 
-### Environment Variables
+### 🌐 Environment Variables
 
 Environment variables prefixed with `WRITESPEECH_` override config file values. Use double underscores for nested keys:
 
@@ -142,9 +142,9 @@ WRITESPEECH_OPENAI__APIKEY=sk-...
 WRITESPEECH_PROVIDER=Local
 ```
 
-> **Security:** `appsettings.json` is git-tracked. For local development, use `appsettings.Local.json` (gitignored) to store your API key.
+> **🔑 Security:** `appsettings.json` is git-tracked. For local development, use `appsettings.Local.json` (gitignored) to store your API key.
 
-## Available Models
+## 🧠 Available Models
 
 ### Whisper Models (Local Transcription)
 
@@ -167,7 +167,7 @@ WRITESPEECH_PROVIDER=Local
 
 All models can be downloaded directly from the Settings UI (Settings > Models). They are stored in `%APPDATA%/WriteSpeech/models/` and `%APPDATA%/WriteSpeech/correction-models/` respectively.
 
-## Project Structure
+## 📁 Project Structure
 
 ```
 WriteSpeech.slnx
@@ -210,7 +210,7 @@ tests/
     TestHelpers/                 #   WpfTestHelper, SynchronousDispatcherService
 ```
 
-## Architecture
+## 🏗️ Architecture
 
 ### DI Container
 
@@ -251,7 +251,7 @@ Idle → [Hotkey/Click] → Recording → [Stop] → Transcribing → [Done] →
 2. Generic `CUDA_PATH`
 3. Filesystem: `C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v13.*`
 
-## Testing
+## 🧪 Testing
 
 ```bash
 dotnet test tests/WriteSpeech.Tests
@@ -267,39 +267,39 @@ dotnet test tests/WriteSpeech.Tests
 dotnet test tests/WriteSpeech.Tests --collect:"XPlat Code Coverage"
 ```
 
-## Data Files
+## 💾 Data Files
 
 All user data is stored in `%APPDATA%/WriteSpeech/`:
 
 | Path | Content |
 |---|---|
-| `logs/log-YYYYMMDD.txt` | Serilog rolling logs (7-day retention) |
-| `models/` | Whisper GGML model files |
-| `correction-models/` | GGUF correction model files |
-| `custom-dictionary.json` | Custom vocabulary words |
-| `snippets.json` | Snippet trigger→replacement entries |
-| `transcription-history.json` | Recent transcription history |
-| `usage-stats.json` | Usage statistics |
+| `logs/log-YYYYMMDD.txt` | 📝 Serilog rolling logs (7-day retention) |
+| `models/` | 🧠 Whisper GGML model files |
+| `correction-models/` | 🤖 GGUF correction model files |
+| `custom-dictionary.json` | 📖 Custom vocabulary words |
+| `snippets.json` | 🔄 Snippet trigger→replacement entries |
+| `transcription-history.json` | 📜 Recent transcription history |
+| `usage-stats.json` | 📊 Usage statistics |
 
-## Key Dependencies
+## 📦 Key Dependencies
 
 | Package | Version | Purpose |
 |---|---|---|
-| NAudio | 2.2.1 | Audio recording + muting (CoreAudioApi) |
-| NAudio.Lame | 2.1.0 | WAV → MP3 compression |
-| OpenAI | 2.8.0 | Cloud transcription (Whisper) + text correction (ChatCompletions) |
-| Whisper.net | 1.9.0 | Local transcription via GGML models |
-| Whisper.net.Runtime.Cuda | 1.9.0 | Whisper CUDA GPU runtime |
-| LLamaSharp | 0.26.0 | Local text correction via GGUF models |
-| LLamaSharp.Backend.Cuda12 | 0.26.0 | CUDA backend for LLamaSharp |
-| CommunityToolkit.Mvvm | 8.4.0 | MVVM source generators |
-| H.NotifyIcon.Wpf | 2.4.1 | System tray icon |
-| Microsoft.Extensions.Hosting | 10.0.3 | DI, configuration, hosted services |
-| Serilog | — | Structured file logging |
+| NAudio | 2.2.1 | 🎙️ Audio recording + muting (CoreAudioApi) |
+| NAudio.Lame | 2.1.0 | 🗜️ WAV → MP3 compression |
+| OpenAI | 2.8.0 | ☁️ Cloud transcription (Whisper) + text correction (ChatCompletions) |
+| Whisper.net | 1.9.0 | 💻 Local transcription via GGML models |
+| Whisper.net.Runtime.Cuda | 1.9.0 | ⚡ Whisper CUDA GPU runtime |
+| LLamaSharp | 0.26.0 | 🤖 Local text correction via GGUF models |
+| LLamaSharp.Backend.Cuda12 | 0.26.0 | ⚡ CUDA backend for LLamaSharp |
+| CommunityToolkit.Mvvm | 8.4.0 | 🏗️ MVVM source generators |
+| H.NotifyIcon.Wpf | 2.4.1 | 🔔 System tray icon |
+| Microsoft.Extensions.Hosting | 10.0.3 | ⚙️ DI, configuration, hosted services |
+| Serilog | — | 📝 Structured file logging |
 
-## Troubleshooting
+## ❓ Troubleshooting
 
-### Build fails with "file is locked"
+### 🔨 Build fails with "file is locked"
 
 The app is still running. Kill it before rebuilding:
 
@@ -307,35 +307,35 @@ The app is still running. Kill it before rebuilding:
 taskkill /F /IM WriteSpeech.App.exe
 ```
 
-### CUDA not detected / local model falls back to CPU
+### 🖥️ CUDA not detected / local model falls back to CPU
 
 - Ensure CUDA 13.x is installed (not just CUDA 12 or older)
 - Check that `CUDA_PATH` or `CUDA_PATH_V13_*` environment variables point to the correct installation
 - The app auto-scans `C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v13.*` as a fallback
 - Verify GPU acceleration is enabled in Settings > Transcription / Text Correction
 
-### API key not working
+### 🔑 API key not working
 
 - Ensure the key is entered in Settings > Transcription > API Key
 - For custom endpoints (Azure, LM Studio), also set the Endpoint field
 - Check `%APPDATA%/WriteSpeech/logs/` for detailed error messages
 
-### Overlay does not appear
+### 👻 Overlay does not appear
 
 - Check if the app is running (look for tray icon)
 - If "Always visible" is disabled, the overlay only shows during recording/result
 - Try right-clicking the tray icon > Show
 
-### Text not inserted into target application
+### 📋 Text not inserted into target application
 
 - Some applications block clipboard paste via SendInput (e.g., certain remote desktop clients)
 - The app must capture the foreground window before recording starts — ensure the target app is focused when you press the hotkey
 
-### Second instance shows error
+### 🔒 Second instance shows error
 
 WriteSpeech.NET enforces single-instance via a named Mutex. Close the existing instance first, or use the tray icon.
 
-## Contributing
+## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/my-feature`)
@@ -353,10 +353,10 @@ WriteSpeech.NET enforces single-instance via a named Mutex. Close the existing i
 - Factory methods (`GetProvider`) must stay `virtual` for test isolation
 - UI language is English, user communication in German
 
-## License
+## 📄 License
 
 MIT
 
-## Author
+## 👤 Author
 
 [Sev7eNup](https://github.com/Sev7eNup)
