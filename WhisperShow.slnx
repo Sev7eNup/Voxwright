@@ -1,9 +1,0 @@
-<Solution>
-  <Folder Name="/src/">
-    <Project Path="src/WhisperShow.App/WhisperShow.App.csproj" />
-    <Project Path="src/WhisperShow.Core/WhisperShow.Core.csproj" />
-  </Folder>
-  <Folder Name="/tests/">
-    <Project Path="tests/WhisperShow.Tests/WhisperShow.Tests.csproj" />
-  </Folder>
-</Solution>
