@@ -62,9 +62,10 @@ public class OpenAiTranscriptionService : ITranscriptionService
 
         using var stream = new MemoryStream(uploadData);
 
+        var isWhisperModel = openAi.Model.StartsWith("whisper", StringComparison.OrdinalIgnoreCase);
         var transcriptionOptions = new AudioTranscriptionOptions
         {
-            ResponseFormat = AudioTranscriptionFormat.Verbose,
+            ResponseFormat = isWhisperModel ? AudioTranscriptionFormat.Verbose : AudioTranscriptionFormat.Simple,
             Language = language
         };
 
