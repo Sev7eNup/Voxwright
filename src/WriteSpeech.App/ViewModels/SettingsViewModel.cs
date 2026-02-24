@@ -89,6 +89,8 @@ public partial class SettingsViewModel : ObservableObject
             Statistics.Refresh();
         else if (page is SettingsPage.Models or SettingsPage.Intelligence)
             Transcription.RefreshModels();
+        else if (page == SettingsPage.Dictionary)
+            DictionarySnippets.RefreshEntries();
     }
 
     // --- Persistence ---
