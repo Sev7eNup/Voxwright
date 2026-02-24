@@ -10,6 +10,7 @@ using WriteSpeech.Core.Services.Configuration;
 using WriteSpeech.Core.Services.Hotkey;
 using WriteSpeech.Core.Services.ModelManagement;
 using WriteSpeech.Core.Services.Snippets;
+using WriteSpeech.Core.Services.Modes;
 using WriteSpeech.Core.Services.Statistics;
 using WriteSpeech.Core.Services.TextCorrection;
 using WriteSpeech.Tests.TestHelpers;
@@ -68,6 +69,7 @@ public class SettingsViewModelTests
             _preloadService,
             Substitute.For<IAutoStartService>(),
             new SynchronousDispatcherService(),
+            Substitute.For<IModeService>(),
             Substitute.For<ISettingsPersistenceService>(),
             NullLogger<SettingsViewModel>.Instance);
     }

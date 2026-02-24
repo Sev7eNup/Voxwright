@@ -45,6 +45,25 @@ public sealed class DebouncedSaveHelper : IDisposable
         }, token);
     }
 
+    public async Task FlushAsync()
+    {
+        lock (_lock)
+        {
+            _cts?.Cancel();
+            _cts?.Dispose();
+            _cts = null;
+        }
+
+        try
+        {
+            await _saveAction().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Final flush save failed");
+        }
+    }
+
     public void Dispose()
     {
         lock (_lock)

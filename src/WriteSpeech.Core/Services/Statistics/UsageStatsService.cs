@@ -1,11 +1,14 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using WriteSpeech.Core.Configuration;
 using WriteSpeech.Core.Models;
 
 namespace WriteSpeech.Core.Services.Statistics;
 
 public class UsageStatsService : IUsageStatsService
 {
+    private static readonly JsonSerializerOptions s_jsonOptions = new() { WriteIndented = true };
+
     private readonly ILogger<UsageStatsService> _logger;
     private readonly string _filePath;
     private UsageStats _stats = new();
@@ -18,7 +21,7 @@ public class UsageStatsService : IUsageStatsService
         _logger = logger;
         _filePath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "WriteSpeech", "usage-stats.json");
+            WriteSpeechOptions.AppDataFolderName, "usage-stats.json");
         _saveHelper = new DebouncedSaveHelper(SaveAsync, logger);
     }
 
@@ -106,7 +109,7 @@ public class UsageStatsService : IUsageStatsService
             UsageStats snapshot;
             lock (_lock) snapshot = Clone(_stats);
 
-            var json = JsonSerializer.Serialize(snapshot, new JsonSerializerOptions { WriteIndented = true });
+            var json = JsonSerializer.Serialize(snapshot, s_jsonOptions);
             await File.WriteAllTextAsync(_filePath, json).ConfigureAwait(false);
         }
         catch (Exception ex)
@@ -115,7 +118,11 @@ public class UsageStatsService : IUsageStatsService
         }
     }
 
-    public void Dispose() => _saveHelper.Dispose();
+    public void Dispose()
+    {
+        _saveHelper.FlushAsync().GetAwaiter().GetResult();
+        _saveHelper.Dispose();
+    }
 
     private void ScheduleSave() => _saveHelper.Schedule();
 

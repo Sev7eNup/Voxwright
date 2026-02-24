@@ -9,6 +9,8 @@ namespace WriteSpeech.App.Services;
 
 public class SettingsPersistenceService : ISettingsPersistenceService, IDisposable
 {
+    private static readonly JsonSerializerOptions s_jsonOptions = new() { WriteIndented = true };
+
     private readonly ILogger<SettingsPersistenceService> _logger;
     private readonly string _filePath;
     private readonly Lock _mutatorLock = new();
@@ -57,13 +59,24 @@ public class SettingsPersistenceService : ISettingsPersistenceService, IDisposab
             var doc = JsonNode.Parse(json, documentOptions: new JsonDocumentOptions
             {
                 CommentHandling = JsonCommentHandling.Skip
-            })!;
+            });
 
-            var section = doc["WriteSpeech"]!;
+            if (doc is null)
+            {
+                _logger.LogError("Failed to parse appsettings.json — skipping save");
+                return;
+            }
+
+            var section = doc["WriteSpeech"];
+            if (section is null)
+            {
+                _logger.LogError("appsettings.json is missing the 'WriteSpeech' section — skipping save");
+                return;
+            }
+
             mutator(section);
 
-            var options = new JsonSerializerOptions { WriteIndented = true };
-            await File.WriteAllTextAsync(_filePath, doc.ToJsonString(options));
+            await File.WriteAllTextAsync(_filePath, doc.ToJsonString(s_jsonOptions));
             _logger.LogInformation("Settings saved to appsettings.json");
         }
         finally
@@ -74,6 +87,7 @@ public class SettingsPersistenceService : ISettingsPersistenceService, IDisposab
 
     public void Dispose()
     {
+        _saveHelper.FlushAsync().GetAwaiter().GetResult();
         _saveHelper.Dispose();
         _flushSemaphore.Dispose();
     }

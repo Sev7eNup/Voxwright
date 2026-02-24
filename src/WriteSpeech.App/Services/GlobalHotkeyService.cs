@@ -34,11 +34,11 @@ public class GlobalHotkeyService : IGlobalHotkeyService
 
     public GlobalHotkeyService(
         ILogger<GlobalHotkeyService> logger,
-        IOptions<WriteSpeechOptions> options)
+        IOptionsMonitor<WriteSpeechOptions> optionsMonitor)
     {
         _logger = logger;
-        _toggleBinding = options.Value.Hotkey.Toggle;
-        _pttBinding = options.Value.Hotkey.PushToTalk;
+        _toggleBinding = optionsMonitor.CurrentValue.Hotkey.Toggle;
+        _pttBinding = optionsMonitor.CurrentValue.Hotkey.PushToTalk;
     }
 
     public void Register(IntPtr windowHandle)

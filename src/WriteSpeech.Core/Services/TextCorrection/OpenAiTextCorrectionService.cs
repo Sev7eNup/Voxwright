@@ -32,7 +32,7 @@ public class OpenAiTextCorrectionService : ITextCorrectionService
         _clientFactory = clientFactory;
     }
 
-    public async Task<string> CorrectAsync(string rawText, string? language, CancellationToken ct = default)
+    public async Task<string> CorrectAsync(string rawText, string? language, string? systemPromptOverride = null, CancellationToken ct = default)
     {
         try
         {
@@ -46,7 +46,7 @@ public class OpenAiTextCorrectionService : ITextCorrectionService
 
             var chatClient = _clientFactory.GetChatClient(options.TextCorrection.Model);
 
-            var systemPrompt = options.TextCorrection.SystemPrompt ?? TextCorrectionDefaults.CorrectionSystemPrompt;
+            var systemPrompt = systemPromptOverride ?? options.TextCorrection.SystemPrompt ?? TextCorrectionDefaults.CorrectionSystemPrompt;
             systemPrompt += _dictionaryService.BuildPromptFragment();
             systemPrompt += _ideContextService.BuildPromptFragment();
 

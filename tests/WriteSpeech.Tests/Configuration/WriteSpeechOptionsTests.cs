@@ -7,6 +7,15 @@ namespace WriteSpeech.Tests.Configuration;
 
 public class WriteSpeechOptionsTests
 {
+    /// <summary>
+    /// Creates options that pass all validator checks (Local provider with model name).
+    /// Use as base for tests that need valid options but test a specific field.
+    /// </summary>
+    private static WriteSpeechOptions CreateValidOptions() => new()
+    {
+        Provider = TranscriptionProvider.Local,
+        Local = new LocalWhisperOptions { ModelName = "ggml-small.bin" }
+    };
     [Fact]
     public void DefaultValues_AreCorrect()
     {
@@ -94,10 +103,20 @@ public class WriteSpeechOptionsTests
     // --- WriteSpeechOptionsValidator ---
 
     [Fact]
-    public void Validator_DefaultOptions_Succeeds()
+    public void Validator_DefaultOptions_RequiresApiKey()
     {
+        // Default Provider is OpenAI, which requires an API key
         var validator = new WriteSpeechOptionsValidator();
         var result = validator.Validate(null, new WriteSpeechOptions());
+        result.Failed.Should().BeTrue();
+        result.FailureMessage.Should().Contain("ApiKey");
+    }
+
+    [Fact]
+    public void Validator_ValidOptions_Succeeds()
+    {
+        var validator = new WriteSpeechOptionsValidator();
+        var result = validator.Validate(null, CreateValidOptions());
         result.Succeeded.Should().BeTrue();
     }
 
@@ -109,7 +128,8 @@ public class WriteSpeechOptionsTests
     public void Validator_InvalidSampleRate_Fails(int sampleRate)
     {
         var validator = new WriteSpeechOptionsValidator();
-        var options = new WriteSpeechOptions { Audio = new AudioOptions { SampleRate = sampleRate } };
+        var options = CreateValidOptions();
+        options.Audio.SampleRate = sampleRate;
 
         var result = validator.Validate(null, options);
 
@@ -125,7 +145,8 @@ public class WriteSpeechOptionsTests
     public void Validator_ValidSampleRate_Succeeds(int sampleRate)
     {
         var validator = new WriteSpeechOptionsValidator();
-        var options = new WriteSpeechOptions { Audio = new AudioOptions { SampleRate = sampleRate } };
+        var options = CreateValidOptions();
+        options.Audio.SampleRate = sampleRate;
 
         var result = validator.Validate(null, options);
 
@@ -189,7 +210,8 @@ public class WriteSpeechOptionsTests
     public void Validator_ValidEndpointUrl_Succeeds()
     {
         var validator = new WriteSpeechOptionsValidator();
-        var options = new WriteSpeechOptions { OpenAI = new OpenAiOptions { Endpoint = "https://api.openai.com/v1" } };
+        var options = CreateValidOptions();
+        options.OpenAI.Endpoint = "https://api.openai.com/v1";
 
         var result = validator.Validate(null, options);
 
@@ -200,7 +222,8 @@ public class WriteSpeechOptionsTests
     public void Validator_NullEndpoint_Succeeds()
     {
         var validator = new WriteSpeechOptionsValidator();
-        var options = new WriteSpeechOptions { OpenAI = new OpenAiOptions { Endpoint = null } };
+        var options = CreateValidOptions();
+        options.OpenAI.Endpoint = null;
 
         var result = validator.Validate(null, options);
 

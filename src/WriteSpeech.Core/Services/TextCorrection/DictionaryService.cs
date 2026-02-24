@@ -1,10 +1,13 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using WriteSpeech.Core.Configuration;
 
 namespace WriteSpeech.Core.Services.TextCorrection;
 
 public class DictionaryService : IDictionaryService
 {
+    private static readonly JsonSerializerOptions s_jsonOptions = new() { WriteIndented = true };
+
     private readonly ILogger<DictionaryService> _logger;
     private readonly string _filePath;
     private readonly List<string> _entries = [];
@@ -17,7 +20,7 @@ public class DictionaryService : IDictionaryService
         _logger = logger;
         _filePath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "WriteSpeech", "custom-dictionary.json");
+            WriteSpeechOptions.AppDataFolderName, "custom-dictionary.json");
         _saveHelper = new DebouncedSaveHelper(SaveAsync, logger, 300);
     }
 
@@ -105,7 +108,7 @@ public class DictionaryService : IDictionaryService
             List<string> snapshot;
             lock (_lock) snapshot = [.. _entries];
 
-            var json = JsonSerializer.Serialize(snapshot, new JsonSerializerOptions { WriteIndented = true });
+            var json = JsonSerializer.Serialize(snapshot, s_jsonOptions);
             await File.WriteAllTextAsync(_filePath, json).ConfigureAwait(false);
             _logger.LogDebug("Saved {Count} custom dictionary entries", snapshot.Count);
         }
@@ -115,7 +118,11 @@ public class DictionaryService : IDictionaryService
         }
     }
 
-    public void Dispose() => _saveHelper.Dispose();
+    public void Dispose()
+    {
+        _saveHelper.FlushAsync().GetAwaiter().GetResult();
+        _saveHelper.Dispose();
+    }
 
     private void EnsureLoaded()
     {

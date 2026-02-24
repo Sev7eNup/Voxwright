@@ -12,9 +12,12 @@ public class AudioRecordingService : IAudioRecordingService
     private WaveInEvent? _waveIn;
     private MemoryStream? _memoryStream;
     private WaveFileWriter? _waveFileWriter;
+    private System.Timers.Timer? _maxDurationTimer;
     private bool _disposed;
 
     public event EventHandler<float>? AudioLevelChanged;
+    public event EventHandler<Exception>? RecordingError;
+    public event EventHandler? MaxDurationReached;
     public bool IsRecording => _waveIn is not null;
 
     public AudioRecordingService(
@@ -47,8 +50,10 @@ public class AudioRecordingService : IAudioRecordingService
         _waveIn.RecordingStopped += OnRecordingStopped;
         _waveIn.StartRecording();
 
-        _logger.LogInformation("Recording started (Device: {Device}, SampleRate: {SampleRate}Hz)",
-            audioOptions.DeviceIndex, audioOptions.SampleRate);
+        StartMaxDurationTimer(audioOptions.MaxRecordingSeconds);
+
+        _logger.LogInformation("Recording started (Device: {Device}, SampleRate: {SampleRate}Hz, MaxDuration: {MaxSec}s)",
+            audioOptions.DeviceIndex, audioOptions.SampleRate, audioOptions.MaxRecordingSeconds);
 
         return Task.CompletedTask;
     }
@@ -57,6 +62,8 @@ public class AudioRecordingService : IAudioRecordingService
     {
         if (!IsRecording)
             throw new InvalidOperationException("Not recording.");
+
+        StopMaxDurationTimer();
 
         _waveIn!.StopRecording();
         _waveIn.DataAvailable -= OnDataAvailable;
@@ -100,13 +107,36 @@ public class AudioRecordingService : IAudioRecordingService
         if (e.Exception is not null)
         {
             _logger.LogError(e.Exception, "Recording error");
+            RecordingError?.Invoke(this, e.Exception);
         }
+    }
+
+    private void StartMaxDurationTimer(int maxRecordingSeconds)
+    {
+        StopMaxDurationTimer();
+        _maxDurationTimer = new System.Timers.Timer(maxRecordingSeconds * 1000);
+        _maxDurationTimer.AutoReset = false;
+        _maxDurationTimer.Elapsed += (_, _) =>
+        {
+            _logger.LogInformation("Max recording duration reached ({MaxSec}s)", maxRecordingSeconds);
+            MaxDurationReached?.Invoke(this, EventArgs.Empty);
+        };
+        _maxDurationTimer.Start();
+    }
+
+    private void StopMaxDurationTimer()
+    {
+        _maxDurationTimer?.Stop();
+        _maxDurationTimer?.Dispose();
+        _maxDurationTimer = null;
     }
 
     public void Dispose()
     {
         if (_disposed) return;
         _disposed = true;
+
+        StopMaxDurationTimer();
 
         if (IsRecording)
         {

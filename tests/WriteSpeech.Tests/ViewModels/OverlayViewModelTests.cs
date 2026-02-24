@@ -10,6 +10,7 @@ using WriteSpeech.Core.Services.History;
 using WriteSpeech.Core.Services.Snippets;
 using WriteSpeech.Core.Services.Statistics;
 using WriteSpeech.Core.Services.IDE;
+using WriteSpeech.Core.Services.Modes;
 using WriteSpeech.Core.Services.TextCorrection;
 using WriteSpeech.Core.Services.TextInsertion;
 using WriteSpeech.Core.Services.Transcription;
@@ -82,6 +83,7 @@ public class OverlayViewModelTests : IDisposable
             Substitute.For<IWindowFocusService>(),
             Substitute.For<IIDEDetectionService>(),
             Substitute.For<IIDEContextService>(),
+            Substitute.For<IModeService>(),
             new SynchronousDispatcherService(),
             Substitute.For<ISettingsPersistenceService>(),
             Microsoft.Extensions.Logging.Abstractions.NullLogger<OverlayViewModel>.Instance,
@@ -215,14 +217,14 @@ public class OverlayViewModelTests : IDisposable
         _audioService.StopRecordingAsync().Returns(new byte[2000]);
         _transcriptionProvider.TranscribeAsync(Arg.Any<byte[]>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
             .Returns(new TranscriptionResult { Text = "raw text" });
-        _textCorrectionService.CorrectAsync("raw text", Arg.Any<string?>(), Arg.Any<CancellationToken>())
+        _textCorrectionService.CorrectAsync("raw text", Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
             .Returns("Corrected text.");
 
         var vm = CreateViewModel(o => o.TextCorrection.Provider = TextCorrectionProvider.Cloud);
         await vm.ToggleRecordingCommand.ExecuteAsync(null);
         await vm.ToggleRecordingCommand.ExecuteAsync(null);
 
-        await _textCorrectionService.Received(1).CorrectAsync("raw text", Arg.Any<string?>(), Arg.Any<CancellationToken>());
+        await _textCorrectionService.Received(1).CorrectAsync("raw text", Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -236,7 +238,7 @@ public class OverlayViewModelTests : IDisposable
         await vm.ToggleRecordingCommand.ExecuteAsync(null);
         await vm.ToggleRecordingCommand.ExecuteAsync(null);
 
-        await _textCorrectionService.DidNotReceive().CorrectAsync(Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<CancellationToken>());
+        await _textCorrectionService.DidNotReceive().CorrectAsync(Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<CancellationToken>());
     }
 
     // --- Waveform Buffer ---
@@ -459,7 +461,7 @@ public class OverlayViewModelTests : IDisposable
     {
         _audioService.StopRecordingAsync().Returns(new byte[2000]);
         _combinedService.IsAvailable.Returns(true);
-        _combinedService.TranscribeAndCorrectAsync(Arg.Any<byte[]>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
+        _combinedService.TranscribeAndCorrectAsync(Arg.Any<byte[]>(), Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
             .Returns("corrected text");
 
         var vm = CreateViewModel(o =>
@@ -471,7 +473,7 @@ public class OverlayViewModelTests : IDisposable
         await vm.ToggleRecordingCommand.ExecuteAsync(null); // → Stop
 
         await _combinedService.Received(1).TranscribeAndCorrectAsync(
-            Arg.Any<byte[]>(), Arg.Any<string?>(), Arg.Any<CancellationToken>());
+            Arg.Any<byte[]>(), Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<CancellationToken>());
         // Standard pipeline should NOT be used
         await _transcriptionProvider.DidNotReceive().TranscribeAsync(
             Arg.Any<byte[]>(), Arg.Any<string?>(), Arg.Any<CancellationToken>());
@@ -495,7 +497,7 @@ public class OverlayViewModelTests : IDisposable
         await _transcriptionProvider.Received(1).TranscribeAsync(
             Arg.Any<byte[]>(), Arg.Any<string?>(), Arg.Any<CancellationToken>());
         await _combinedService.DidNotReceive().TranscribeAndCorrectAsync(
-            Arg.Any<byte[]>(), Arg.Any<string?>(), Arg.Any<CancellationToken>());
+            Arg.Any<byte[]>(), Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -503,7 +505,7 @@ public class OverlayViewModelTests : IDisposable
     {
         _audioService.StopRecordingAsync().Returns(new byte[2000]);
         _combinedService.IsAvailable.Returns(true);
-        _combinedService.TranscribeAndCorrectAsync(Arg.Any<byte[]>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
+        _combinedService.TranscribeAndCorrectAsync(Arg.Any<byte[]>(), Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
             .ThrowsAsync(new Exception("combined model error"));
         _transcriptionProvider.TranscribeAsync(Arg.Any<byte[]>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
             .Returns(new TranscriptionResult { Text = "fallback text" });
@@ -518,7 +520,7 @@ public class OverlayViewModelTests : IDisposable
 
         // Combined was tried first
         await _combinedService.Received(1).TranscribeAndCorrectAsync(
-            Arg.Any<byte[]>(), Arg.Any<string?>(), Arg.Any<CancellationToken>());
+            Arg.Any<byte[]>(), Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<CancellationToken>());
         // Then fell back to standard pipeline
         await _transcriptionProvider.Received(1).TranscribeAsync(
             Arg.Any<byte[]>(), Arg.Any<string?>(), Arg.Any<CancellationToken>());
@@ -653,7 +655,7 @@ public class OverlayViewModelTests : IDisposable
         _audioService.StopRecordingAsync().Returns(new byte[2000]);
         _transcriptionProvider.TranscribeAsync(Arg.Any<byte[]>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
             .Returns(new TranscriptionResult { Text = "raw text" });
-        _textCorrectionService.CorrectAsync("raw text", Arg.Any<string?>(), Arg.Any<CancellationToken>())
+        _textCorrectionService.CorrectAsync("raw text", Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
             .Returns("Corrected text.");
 
         var statusTexts = new List<string>();
@@ -676,7 +678,7 @@ public class OverlayViewModelTests : IDisposable
     {
         _audioService.StopRecordingAsync().Returns(new byte[2000]);
         _combinedService.IsAvailable.Returns(true);
-        _combinedService.TranscribeAndCorrectAsync(Arg.Any<byte[]>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
+        _combinedService.TranscribeAndCorrectAsync(Arg.Any<byte[]>(), Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
             .Returns("corrected text");
 
         var statusTexts = new List<string>();

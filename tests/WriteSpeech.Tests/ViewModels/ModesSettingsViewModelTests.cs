@@ -1,0 +1,159 @@
+using System.IO;
+using FluentAssertions;
+using Microsoft.Extensions.Logging.Abstractions;
+using WriteSpeech.App.ViewModels.Settings;
+using WriteSpeech.Core.Services.Modes;
+using WriteSpeech.Tests.TestHelpers;
+
+namespace WriteSpeech.Tests.ViewModels;
+
+public class ModesSettingsViewModelTests : IDisposable
+{
+    private readonly string _tempDir;
+    private readonly ModeService _modeService;
+
+    public ModesSettingsViewModelTests()
+    {
+        _tempDir = Path.Combine(Path.GetTempPath(), $"writespeech-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(_tempDir);
+
+        var optionsMonitor = OptionsHelper.CreateMonitor(_ => { });
+        _modeService = new ModeService(NullLogger<ModeService>.Instance, optionsMonitor);
+        SetFilePath(_modeService, Path.Combine(_tempDir, "modes.json"));
+        _modeService.LoadAsync().GetAwaiter().GetResult();
+    }
+
+    private static void SetFilePath(ModeService service, string path)
+    {
+        var field = typeof(ModeService).GetField("_filePath",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
+        field.SetValue(service, path);
+    }
+
+    public void Dispose()
+    {
+        _modeService.Dispose();
+        try { Directory.Delete(_tempDir, recursive: true); } catch { }
+    }
+
+    private ModesSettingsViewModel CreateViewModel() =>
+        new(_modeService, () => { });
+
+    [Fact]
+    public void Constructor_LoadsBuiltInModes()
+    {
+        var vm = CreateViewModel();
+
+        vm.Modes.Should().HaveCount(5);
+        vm.Modes.Select(m => m.Name).Should().Contain(["Default", "Email", "Message", "Code", "Note"]);
+    }
+
+    [Fact]
+    public void Constructor_SetsAutoSwitchFromService()
+    {
+        var vm = CreateViewModel();
+        vm.AutoSwitchEnabled.Should().BeTrue();
+    }
+
+    [Fact]
+    public void SaveModeCommand_AddsCustomMode()
+    {
+        var vm = CreateViewModel();
+        vm.NewModeName = "Custom";
+        vm.NewModePrompt = "Custom prompt";
+        vm.NewModeAppPatterns = "myapp, otherapp";
+
+        vm.SaveModeCommand.Execute(null);
+
+        vm.Modes.Should().HaveCount(6);
+        var custom = vm.Modes.First(m => m.Name == "Custom");
+        custom.IsBuiltIn.Should().BeFalse();
+        custom.AppPatterns.Should().Be("myapp, otherapp");
+    }
+
+    [Fact]
+    public void SaveModeCommand_ClearsEditor()
+    {
+        var vm = CreateViewModel();
+        vm.NewModeName = "Custom";
+        vm.NewModePrompt = "Custom prompt";
+        vm.NewModeAppPatterns = "myapp";
+
+        vm.SaveModeCommand.Execute(null);
+
+        vm.NewModeName.Should().BeEmpty();
+        vm.NewModePrompt.Should().BeEmpty();
+        vm.NewModeAppPatterns.Should().BeEmpty();
+        vm.IsEditing.Should().BeFalse();
+    }
+
+    [Fact]
+    public void RemoveModeCommand_RemovesCustomMode()
+    {
+        var vm = CreateViewModel();
+        vm.NewModeName = "Custom";
+        vm.NewModePrompt = "prompt";
+        vm.SaveModeCommand.Execute(null);
+        vm.Modes.Should().HaveCount(6);
+
+        var custom = vm.Modes.First(m => m.Name == "Custom");
+        vm.RemoveModeCommand.Execute(custom);
+
+        vm.Modes.Should().HaveCount(5);
+    }
+
+    [Fact]
+    public void RemoveModeCommand_BuiltInMode_DoesNotRemove()
+    {
+        var vm = CreateViewModel();
+
+        var email = vm.Modes.First(m => m.Name == "Email");
+        vm.RemoveModeCommand.Execute(email);
+
+        vm.Modes.Should().HaveCount(5);
+    }
+
+    [Fact]
+    public void EditModeCommand_PopulatesEditor()
+    {
+        var vm = CreateViewModel();
+        _modeService.AddMode("Custom", "my prompt", ["app1", "app2"]);
+        vm.RefreshModes();
+
+        var custom = vm.Modes.First(m => m.Name == "Custom");
+        vm.EditModeCommand.Execute(custom);
+
+        vm.NewModeName.Should().Be("Custom");
+        vm.NewModePrompt.Should().Be("my prompt");
+        vm.NewModeAppPatterns.Should().Be("app1, app2");
+        vm.IsEditing.Should().BeTrue();
+        vm.EditingOriginalName.Should().Be("Custom");
+    }
+
+    [Fact]
+    public void CancelEditCommand_ClearsEditor()
+    {
+        var vm = CreateViewModel();
+        vm.NewModeName = "test";
+        vm.NewModePrompt = "prompt";
+        vm.IsEditing = true;
+
+        vm.CancelEditCommand.Execute(null);
+
+        vm.NewModeName.Should().BeEmpty();
+        vm.NewModePrompt.Should().BeEmpty();
+        vm.IsEditing.Should().BeFalse();
+    }
+
+    [Fact]
+    public void ToggleAutoSwitchCommand_UpdatesService()
+    {
+        var vm = CreateViewModel();
+        vm.AutoSwitchEnabled.Should().BeTrue();
+
+        vm.AutoSwitchEnabled = false;
+        vm.ToggleAutoSwitchCommand.Execute(null);
+
+        _modeService.AutoSwitchEnabled.Should().BeFalse();
+    }
+}

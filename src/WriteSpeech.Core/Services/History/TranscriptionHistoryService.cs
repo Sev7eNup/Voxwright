@@ -8,8 +8,10 @@ namespace WriteSpeech.Core.Services.History;
 
 public class TranscriptionHistoryService : ITranscriptionHistoryService
 {
+    private static readonly JsonSerializerOptions s_jsonOptions = new() { WriteIndented = true };
+
     private readonly ILogger<TranscriptionHistoryService> _logger;
-    private readonly int _maxEntries;
+    private readonly IOptionsMonitor<WriteSpeechOptions> _optionsMonitor;
     private readonly string _filePath;
     private readonly Lock _lock = new();
     private readonly DebouncedSaveHelper _saveHelper;
@@ -17,13 +19,13 @@ public class TranscriptionHistoryService : ITranscriptionHistoryService
 
     public TranscriptionHistoryService(
         ILogger<TranscriptionHistoryService> logger,
-        IOptions<WriteSpeechOptions> options)
+        IOptionsMonitor<WriteSpeechOptions> optionsMonitor)
     {
         _logger = logger;
-        _maxEntries = options.Value.App.MaxHistoryEntries;
+        _optionsMonitor = optionsMonitor;
         _filePath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "WriteSpeech", "transcription-history.json");
+            WriteSpeechOptions.AppDataFolderName, "transcription-history.json");
         _saveHelper = new DebouncedSaveHelper(SaveAsync, logger);
     }
 
@@ -46,7 +48,7 @@ public class TranscriptionHistoryService : ITranscriptionHistoryService
                 DurationSeconds = durationSeconds
             });
 
-            while (_entries.Count > _maxEntries)
+            while (_entries.Count > _optionsMonitor.CurrentValue.App.MaxHistoryEntries)
                 _entries.RemoveAt(_entries.Count - 1);
         }
 
@@ -98,7 +100,7 @@ public class TranscriptionHistoryService : ITranscriptionHistoryService
             var dir = Path.GetDirectoryName(_filePath)!;
             Directory.CreateDirectory(dir);
 
-            var json = JsonSerializer.Serialize(snapshot, new JsonSerializerOptions { WriteIndented = true });
+            var json = JsonSerializer.Serialize(snapshot, s_jsonOptions);
             await File.WriteAllTextAsync(_filePath, json).ConfigureAwait(false);
         }
         catch (Exception ex)
@@ -107,7 +109,11 @@ public class TranscriptionHistoryService : ITranscriptionHistoryService
         }
     }
 
-    public void Dispose() => _saveHelper.Dispose();
+    public void Dispose()
+    {
+        _saveHelper.FlushAsync().GetAwaiter().GetResult();
+        _saveHelper.Dispose();
+    }
 
     private void EnsureLoaded()
     {

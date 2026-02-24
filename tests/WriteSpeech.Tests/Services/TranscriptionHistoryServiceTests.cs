@@ -1,9 +1,9 @@
 using System.IO;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using WriteSpeech.Core.Configuration;
 using WriteSpeech.Core.Services.History;
+using WriteSpeech.Tests.TestHelpers;
 
 namespace WriteSpeech.Tests.Services;
 
@@ -24,12 +24,10 @@ public class TranscriptionHistoryServiceTests : IDisposable
 
     private TranscriptionHistoryService CreateService(int maxEntries = 20)
     {
-        var options = Options.Create(new WriteSpeechOptions
-        {
-            App = new AppOptions { MaxHistoryEntries = maxEntries }
-        });
+        var optionsMonitor = OptionsHelper.CreateMonitor(o =>
+            o.App = new AppOptions { MaxHistoryEntries = maxEntries });
         var service = new TranscriptionHistoryService(
-            NullLogger<TranscriptionHistoryService>.Instance, options);
+            NullLogger<TranscriptionHistoryService>.Instance, optionsMonitor);
         SetFilePath(service, Path.Combine(_tempDir, "history.json"));
         return service;
     }

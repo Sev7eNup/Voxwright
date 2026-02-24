@@ -36,7 +36,7 @@ public class LocalTextCorrectionService : ITextCorrectionService, IDisposable
         _ideContextService = ideContextService;
     }
 
-    public async Task<string> CorrectAsync(string rawText, string? language, CancellationToken ct = default)
+    public async Task<string> CorrectAsync(string rawText, string? language, string? systemPromptOverride = null, CancellationToken ct = default)
     {
         try
         {
@@ -52,7 +52,7 @@ public class LocalTextCorrectionService : ITextCorrectionService, IDisposable
 
             EnsureModelLoaded(modelPath, correctionOpts.LocalGpuAcceleration);
 
-            var systemPrompt = correctionOpts.SystemPrompt ?? TextCorrectionDefaults.CorrectionSystemPrompt;
+            var systemPrompt = systemPromptOverride ?? correctionOpts.SystemPrompt ?? TextCorrectionDefaults.CorrectionSystemPrompt;
             systemPrompt += _dictionaryService.BuildPromptFragment();
             if (options.Integration.IncludeForLocalModels)
                 systemPrompt += _ideContextService.BuildPromptFragment();
@@ -130,7 +130,7 @@ public class LocalTextCorrectionService : ITextCorrectionService, IDisposable
     {
         var correctionOpts = _optionsMonitor.CurrentValue.TextCorrection;
         var dir = correctionOpts.GetLocalModelDirectory();
-        var path = Path.Combine(dir, modelName);
+        var path = Path.Combine(dir, Path.GetFileName(modelName));
         if (File.Exists(path))
             EnsureModelLoaded(path, correctionOpts.LocalGpuAcceleration);
     }

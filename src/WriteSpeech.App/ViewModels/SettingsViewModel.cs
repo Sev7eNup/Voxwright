@@ -10,6 +10,7 @@ using WriteSpeech.Core.Services.Configuration;
 using WriteSpeech.Core.Services.Hotkey;
 using WriteSpeech.Core.Services.ModelManagement;
 using WriteSpeech.Core.Services.Snippets;
+using WriteSpeech.Core.Services.Modes;
 using WriteSpeech.Core.Services.Statistics;
 using WriteSpeech.Core.Services.TextCorrection;
 
@@ -24,6 +25,7 @@ public enum SettingsPage
     Intelligence,
     Dictionary,
     Snippets,
+    Modes,
     Statistics
 }
 
@@ -38,6 +40,7 @@ public partial class SettingsViewModel : ObservableObject
     public IntegrationsSettingsViewModel Integrations { get; }
     public StatisticsViewModel Statistics { get; }
     public DictionarySnippetsViewModel DictionarySnippets { get; }
+    public ModesSettingsViewModel Modes { get; }
 
     // --- Page navigation ---
     [ObservableProperty]
@@ -57,6 +60,7 @@ public partial class SettingsViewModel : ObservableObject
         IModelPreloadService preloadService,
         IAutoStartService autoStartService,
         IDispatcherService dispatcher,
+        IModeService modeService,
         ISettingsPersistenceService persistenceService,
         ILogger<SettingsViewModel> logger)
     {
@@ -77,6 +81,7 @@ public partial class SettingsViewModel : ObservableObject
 
         Statistics = new StatisticsViewModel(statsService);
         DictionarySnippets = new DictionarySnippetsViewModel(dictionaryService, snippetService, ScheduleSave, opts);
+        Modes = new ModesSettingsViewModel(modeService, ScheduleSave);
     }
 
     // --- Navigation ---
@@ -91,6 +96,8 @@ public partial class SettingsViewModel : ObservableObject
             Transcription.RefreshModels();
         else if (page == SettingsPage.Dictionary)
             DictionarySnippets.RefreshEntries();
+        else if (page == SettingsPage.Modes)
+            Modes.RefreshModes();
     }
 
     // --- Persistence ---
@@ -104,6 +111,7 @@ public partial class SettingsViewModel : ObservableObject
             Transcription.WriteSettings(section);
             Integrations.WriteSettings(section);
             DictionarySnippets.WriteSettings(section);
+            Modes.WriteSettings(section);
         });
     }
 
