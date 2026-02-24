@@ -11,12 +11,14 @@ public partial class IntegrationsSettingsViewModel : ObservableObject
 
     [ObservableProperty] private bool _variableRecognition;
     [ObservableProperty] private bool _fileTagging;
+    [ObservableProperty] private bool _includeForLocalModels;
 
     public IntegrationsSettingsViewModel(Action scheduleSave, WriteSpeechOptions options)
     {
         _scheduleSave = scheduleSave;
         _variableRecognition = options.Integration.VariableRecognition;
         _fileTagging = options.Integration.FileTagging;
+        _includeForLocalModels = options.Integration.IncludeForLocalModels;
     }
 
     [RelayCommand]
@@ -25,10 +27,14 @@ public partial class IntegrationsSettingsViewModel : ObservableObject
     [RelayCommand]
     private void ToggleFileTagging() => _scheduleSave();
 
+    [RelayCommand]
+    private void ToggleIncludeForLocalModels() => _scheduleSave();
+
     public void WriteSettings(JsonNode section)
     {
         var integration = SettingsViewModel.EnsureObject(section, "Integration");
         integration["VariableRecognition"] = VariableRecognition;
         integration["FileTagging"] = FileTagging;
+        integration["IncludeForLocalModels"] = IncludeForLocalModels;
     }
 }

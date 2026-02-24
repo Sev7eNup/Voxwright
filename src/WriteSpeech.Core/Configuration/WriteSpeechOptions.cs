@@ -112,6 +112,7 @@ public class IntegrationOptions
 {
     public bool VariableRecognition { get; set; } = true;
     public bool FileTagging { get; set; } = true;
+    public bool IncludeForLocalModels { get; set; }
 }
 
 public class WriteSpeechOptionsValidator : IValidateOptions<WriteSpeechOptions>

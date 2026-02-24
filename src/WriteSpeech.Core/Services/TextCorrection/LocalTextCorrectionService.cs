@@ -54,7 +54,8 @@ public class LocalTextCorrectionService : ITextCorrectionService, IDisposable
 
             var systemPrompt = correctionOpts.SystemPrompt ?? TextCorrectionDefaults.CorrectionSystemPrompt;
             systemPrompt += _dictionaryService.BuildPromptFragment();
-            systemPrompt += _ideContextService.BuildPromptFragment();
+            if (options.Integration.IncludeForLocalModels)
+                systemPrompt += _ideContextService.BuildPromptFragment();
 
             if (correctionOpts.AutoAddToDictionary)
                 systemPrompt += TextCorrectionDefaults.VocabExtractionInstruction;
