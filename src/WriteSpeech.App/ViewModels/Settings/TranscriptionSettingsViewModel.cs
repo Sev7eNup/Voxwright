@@ -185,6 +185,8 @@ public partial class TranscriptionSettingsViewModel : ObservableObject
 
             if (provider == TextCorrectionProvider.Local)
                 _preloadService.PreloadCorrectionModel(CorrectionLocalModelName);
+            else
+                _preloadService.UnloadCorrectionModel();
         }
     }
 

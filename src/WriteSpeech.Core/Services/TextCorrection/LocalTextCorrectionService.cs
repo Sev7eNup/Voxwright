@@ -189,6 +189,17 @@ public class LocalTextCorrectionService : ITextCorrectionService, IDisposable
         }
     }
 
+    public void UnloadModel()
+    {
+        lock (_loadLock)
+        {
+            _model?.Dispose();
+            _model = null;
+            _loadedModelPath = null;
+            _logger.LogInformation("Correction model unloaded");
+        }
+    }
+
     public void Dispose()
     {
         if (_disposed) return;

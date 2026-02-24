@@ -248,6 +248,26 @@ public class TranscriptionSettingsViewModelTests
     }
 
     [Fact]
+    public void SelectCorrectionProvider_Cloud_UnloadsLocalModel()
+    {
+        var vm = CreateViewModel();
+
+        vm.SelectCorrectionProviderCommand.Execute("Cloud");
+
+        _preloadService.Received(1).UnloadCorrectionModel();
+    }
+
+    [Fact]
+    public void SelectCorrectionProvider_Off_UnloadsLocalModel()
+    {
+        var vm = CreateViewModel();
+
+        vm.SelectCorrectionProviderCommand.Execute("Off");
+
+        _preloadService.Received(1).UnloadCorrectionModel();
+    }
+
+    [Fact]
     public void SelectCorrectionProvider_Local_SetsProviderAndSaves()
     {
         var vm = CreateViewModel(o => o.TextCorrection.LocalModelName = "llama-3.gguf");
@@ -256,6 +276,16 @@ public class TranscriptionSettingsViewModelTests
 
         vm.CorrectionProvider.Should().Be(TextCorrectionProvider.Local);
         _saveCalled.Should().BeTrue();
+    }
+
+    [Fact]
+    public void SelectCorrectionProvider_Local_DoesNotUnloadModel()
+    {
+        var vm = CreateViewModel(o => o.TextCorrection.LocalModelName = "llama-3.gguf");
+
+        vm.SelectCorrectionProviderCommand.Execute("Local");
+
+        _preloadService.DidNotReceive().UnloadCorrectionModel();
     }
 
     // --- WriteSettings ---
