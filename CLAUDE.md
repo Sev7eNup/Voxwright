@@ -1,28 +1,28 @@
-# WhisperShow.NET
+# WriteSpeech.NET
 
 Speech-to-Text desktop overlay app (inspired by Wispr Flow). Record speech via microphone, transcribe it, optionally correct it via AI, and auto-insert the text at the cursor position in the previously active window.
 
 ## Build & Run
 
 ```bash
-dotnet build WhisperShow.slnx
-dotnet run --project src/WhisperShow.App
+dotnet build WriteSpeech.slnx
+dotnet run --project src/WriteSpeech.App
 ```
 
 Requires **.NET 10 SDK** (`net10.0-windows` TFM). Windows-only (WPF + Win32 P/Invoke).
 
 **Important:** If the app is already running, `dotnet build` will fail because the exe is locked. Kill the process first:
 ```bash
-taskkill //F //IM WhisperShow.App.exe
+taskkill //F //IM WriteSpeech.App.exe
 ```
 
 ## Project Structure
 
 ```
-WhisperShow.slnx
+WriteSpeech.slnx
 src/
-  WhisperShow.Core/          # Platform-independent core logic (net10.0)
-    Configuration/            # WhisperShowOptions (strongly-typed config, IOptionsMonitor)
+  WriteSpeech.Core/          # Platform-independent core logic (net10.0)
+    Configuration/            # WriteSpeechOptions (strongly-typed config, IOptionsMonitor)
     Models/                   # RecordingState, TranscriptionResult, TranscriptionProvider,
                               # ModelInfoBase (abstract base), WhisperModel, CorrectionModelInfo,
                               # TextCorrectionProvider, TranscriptionHistoryEntry, UsageStats
@@ -53,10 +53,10 @@ src/
       OpenAiClientFactory.cs  # Centralized OpenAI client caching (thread-safe, Lock)
       DebouncedSaveHelper.cs  # Reusable debounced async save utility (used by 6 services)
 
-  WhisperShow.App/            # WPF application (net10.0-windows)
+  WriteSpeech.App/            # WPF application (net10.0-windows)
     App.xaml.cs               # Host builder, DI, Serilog, CUDA path discovery, single-instance (Mutex),
                               # data preloading (history/stats/dictionary/snippets), model preloading
-    AssemblyInfo.cs           # InternalsVisibleTo("WhisperShow.Tests")
+    AssemblyInfo.cs           # InternalsVisibleTo("WriteSpeech.Tests")
     NativeMethods.cs          # Win32 P/Invoke (SendInput, RegisterHotKey, etc.)
     Themes/                   # SettingsStyles.xaml (shared), SettingsDarkTheme.xaml, SettingsLightTheme.xaml,
                               # TrayMenuStyles.xaml
@@ -103,8 +103,8 @@ src/
       TrayIconManager.cs            # System tray icon setup and context menu
 
 tests/
-  WhisperShow.Tests/          # xUnit 2.9.3 + NSubstitute 5.3.0 + FluentAssertions 8.2.0
-    Configuration/            # WhisperShowOptionsTests (validation, defaults)
+  WriteSpeech.Tests/          # xUnit 2.9.3 + NSubstitute 5.3.0 + FluentAssertions 8.2.0
+    Configuration/            # WriteSpeechOptionsTests (validation, defaults)
     Converters/               # SettingsConvertersTests
     Models/                   # WhisperModelTests
     Services/                 # OpenAiClientFactory, DebouncedSaveHelper, transcription, correction,
@@ -119,7 +119,7 @@ tests/
 ## Testing
 
 ```bash
-dotnet test tests/WhisperShow.Tests
+dotnet test tests/WriteSpeech.Tests
 ```
 
 Key test patterns:
@@ -132,21 +132,21 @@ Key test patterns:
 ## Architecture & Key Patterns
 
 ### DI Container (Microsoft.Extensions.Hosting)
-All services registered as singletons in `App.xaml.cs`. Core interfaces live in `WhisperShow.Core`, implementations that need WPF/Win32 live in `WhisperShow.App/Services/`.
+All services registered as singletons in `App.xaml.cs`. Core interfaces live in `WriteSpeech.Core`, implementations that need WPF/Win32 live in `WriteSpeech.App/Services/`.
 
 ### Live Settings (IOptionsMonitor)
-All core services use `IOptionsMonitor<WhisperShowOptions>` (not `IOptions<T>`!) for live configuration updates. `OverlayViewModel` reads settings from `SettingsViewModel` directly. Changes in the Settings UI take effect immediately without restart.
+All core services use `IOptionsMonitor<WriteSpeechOptions>` (not `IOptions<T>`!) for live configuration updates. `OverlayViewModel` reads settings from `SettingsViewModel` directly. Changes in the Settings UI take effect immediately without restart.
 
 ### Transcription Providers
 - **OpenAI**: Uses `OpenAI` SDK (`AudioClient.TranscribeAudioAsync`) — cloud-based, requires API key
 - **Local**: Uses `Whisper.net` (`WhisperFactory.FromPath`) — offline, requires GGML model file
-- Switched via `TranscriptionProviderFactory` based on `WhisperShowOptions.Provider` enum
+- Switched via `TranscriptionProviderFactory` based on `WriteSpeechOptions.Provider` enum
 
 ### Text Correction Providers
 - **Cloud (OpenAI)**: Uses `ChatClient` (GPT-4o-mini) for post-processing transcriptions
 - **Local**: Uses `LLamaSharp` with GGUF models for offline correction
 - **Combined Audio Model**: Sends audio directly to GPT-4o-audio-preview (single API call for transcription + correction)
-- **Dictionary**: Custom word list injected into correction prompts (`%APPDATA%/WhisperShow/custom-dictionary.json`)
+- **Dictionary**: Custom word list injected into correction prompts (`%APPDATA%/WriteSpeech/custom-dictionary.json`)
 - **Shared prompts**: Default system prompts live in `TextCorrectionDefaults` (not duplicated per service)
 - Switched via `TextCorrectionProviderFactory` (Off/Cloud/Local)
 
@@ -159,20 +159,20 @@ Reusable utility for debounced async persistence. Used by 6 services: `Transcrip
 ### Centralized Settings Persistence (ISettingsPersistenceService)
 `SettingsPersistenceService` provides `ScheduleUpdate(Action<JsonNode> mutator)`. Multiple mutators are composed — if several `ScheduleUpdate()` calls arrive before the debounce flush, all mutations apply to the same JSON document. Thread-safe via `Lock` + `DebouncedSaveHelper`.
 
-### Options Validation (WhisperShowOptionsValidator)
-`IValidateOptions<WhisperShowOptions>` validates at startup and on reload: SampleRate (8000-48000), MaxRecordingSeconds (>=10), AutoDismissSeconds (>=1), Scale (0.5-3.0), MaxHistoryEntries (>=1), Endpoint (valid URI if set).
+### Options Validation (WriteSpeechOptionsValidator)
+`IValidateOptions<WriteSpeechOptions>` validates at startup and on reload: SampleRate (8000-48000), MaxRecordingSeconds (>=10), AutoDismissSeconds (>=1), Scale (0.5-3.0), MaxHistoryEntries (>=1), Endpoint (valid URI if set).
 
 ### IDispatcherService
 Abstraction over WPF `Dispatcher.Invoke()`. `WpfDispatcherService` wraps `Application.Current.Dispatcher`; tests use `SynchronousDispatcherService` that executes actions inline. All ViewModels use this instead of direct `Dispatcher` access.
 
 ### Settings Sub-ViewModels
-`SettingsViewModel` delegates to `GeneralSettingsViewModel`, `SystemSettingsViewModel`, and `TranscriptionSettingsViewModel`. Each sub-VM receives `WhisperShowOptions` in constructor (not individual primitives) and implements `WriteSettings(JsonNode)` for persistence.
+`SettingsViewModel` delegates to `GeneralSettingsViewModel`, `SystemSettingsViewModel`, and `TranscriptionSettingsViewModel`. Each sub-VM receives `WriteSpeechOptions` in constructor (not individual primitives) and implements `WriteSettings(JsonNode)` for persistence.
 
 ### Model Info Hierarchy (ModelInfoBase)
 Abstract base class shared by `WhisperModel` and `CorrectionModelInfo`. Provides `Name`, `FileName`, `SizeBytes`, `FilePath`, `IsDownloaded`, `SizeDisplay`. `CorrectionModelInfo` extends with `DownloadUrl`.
 
 ### Snippet Service (SnippetService)
-Trigger→replacement text substitution applied after transcription. Uses compiled `Regex` with word boundary matching (`\b`), cached and invalidated on add/remove. Persisted to `%APPDATA%/WhisperShow/snippets.json`.
+Trigger→replacement text substitution applied after transcription. Uses compiled `Regex` with word boundary matching (`\b`), cached and invalidated on add/remove. Persisted to `%APPDATA%/WriteSpeech/snippets.json`.
 
 ### Recording Flow (OverlayViewModel)
 1. **Idle** -> User clicks mic button or presses hotkey (Ctrl+Shift+Space)
@@ -196,7 +196,7 @@ This is necessary because `CUDA_PATH` may point to an older CUDA version while W
 `PreloadLocalModels()` fires a background `Task.Run` at startup to load Whisper and/or correction models if their respective providers are set to Local. Does not block the UI thread.
 
 ### Single-Instance Enforcement (App.xaml.cs)
-Uses `Mutex("WhisperShow-SingleInstance")` in `OnStartup`. Shows `MessageBox` and calls `Shutdown()` if another instance is running.
+Uses `Mutex("WriteSpeech-SingleInstance")` in `OnStartup`. Shows `MessageBox` and calls `Shutdown()` if another instance is running.
 
 ### Data Preloading (App.xaml.cs)
 `Task.WhenAll()` loads history, stats, dictionary, and snippets before showing the overlay.
@@ -223,13 +223,13 @@ Rolling `float[20]` buffer in ViewModel. `AudioLevelChanged` event shifts buffer
 
 ## Configuration
 
-`appsettings.json` under section `"WhisperShow"`:
+`appsettings.json` under section `"WriteSpeech"`:
 - `Provider`: `"OpenAI"` or `"Local"`
 - `OpenAI.ApiKey`: OpenAI API key (keep out of git!)
 - `OpenAI.Model`: default `"whisper-1"`
 - `OpenAI.Endpoint`: custom OpenAI-compatible endpoint URL (default: `null`, validated as URI)
 - `Local.ModelName`: GGML model filename, default `"ggml-small.bin"`
-- `Local.ModelDirectory`: path to models dir (default: `%APPDATA%/WhisperShow/models`)
+- `Local.ModelDirectory`: path to models dir (default: `%APPDATA%/WriteSpeech/models`)
 - `Local.GpuAcceleration`: enable CUDA for local Whisper (default: `true`)
 - `Language`: language code or null for auto-detect
 - `Hotkey.Toggle`: default `"Control, Shift"` + `"Space"`
@@ -243,7 +243,7 @@ Rolling `float[20]` buffer in ViewModel. `AudioLevelChanged` event shifts buffer
 - `TextCorrection.Model`: cloud correction model (default: `"gpt-4o-mini"`)
 - `TextCorrection.SystemPrompt`: custom system prompt for correction
 - `TextCorrection.LocalModelName`: GGUF model filename for local correction
-- `TextCorrection.LocalModelDirectory`: path to local correction models (default: `%APPDATA%/WhisperShow/correction-models`)
+- `TextCorrection.LocalModelDirectory`: path to local correction models (default: `%APPDATA%/WriteSpeech/correction-models`)
 - `TextCorrection.LocalGpuAcceleration`: enable CUDA for local correction (default: `true`)
 - `TextCorrection.UseCombinedAudioModel`: use GPT-4o audio input (default: `false`)
 - `TextCorrection.CombinedAudioModel`: combined model name (default: `"gpt-4o-mini-audio-preview"`)
@@ -259,7 +259,7 @@ Rolling `float[20]` buffer in ViewModel. `AudioLevelChanged` event shifts buffer
 - `App.Theme`: `"Light"` or `"Dark"` (default: `"Dark"`)
 - `App.MaxHistoryEntries`: max history entries (default: 20)
 
-Environment variables prefixed with `WHISPERSHOW_` also bind to config.
+Environment variables prefixed with `WRITESPEECH_` also bind to config.
 
 ## Key Dependencies
 
@@ -278,7 +278,7 @@ Environment variables prefixed with `WHISPERSHOW_` also bind to config.
 | CommunityToolkit.Mvvm 8.4.0 | Source generators ([ObservableProperty], [RelayCommand]) |
 | H.NotifyIcon.Wpf 2.4.1 | System tray icon |
 | Serilog.Extensions.Hosting 10.0.0 | Serilog integration with Host builder |
-| Serilog.Sinks.File 7.0.0 | File logging to `%APPDATA%/WhisperShow/logs/` |
+| Serilog.Sinks.File 7.0.0 | File logging to `%APPDATA%/WriteSpeech/logs/` |
 
 ## Known Gotchas
 
@@ -289,15 +289,15 @@ Environment variables prefixed with `WHISPERSHOW_` also bind to config.
 - **appsettings.json**: Contains API key locally — sanitize before committing.
 - **CUDA_PATH may point to old version**: `AddCudaLibraryPaths()` works around this by scanning versioned env vars and filesystem for v13.x.
 - **WS_EX_NOACTIVATE blocks tray menu**: Temporarily remove the flag in `TrayRightMouseDown`, call `SetForegroundWindow`, restore when menu closes.
-- **IOptionsMonitor, not IOptions**: All core services must use `IOptionsMonitor<WhisperShowOptions>` for live settings.
+- **IOptionsMonitor, not IOptions**: All core services must use `IOptionsMonitor<WriteSpeechOptions>` for live settings.
 - **Factory methods are `virtual`**: `TranscriptionProviderFactory.GetProvider` and `TextCorrectionProviderFactory.GetProvider` must stay `virtual` — tests override them for isolation (`OverlayViewModelTests`).
 - **appsettings.json contains API key locally**: Only `appsettings.Development.json` and `appsettings.Local.json` are gitignored — the main `appsettings.json` is tracked. Always check `git diff` before staging to avoid committing secrets.
-- **Single-instance Mutex**: `App.xaml.cs` uses `Mutex("WhisperShow-SingleInstance")` — if the app crashes without disposing the mutex, you may need to restart or wait for the OS to release it.
+- **Single-instance Mutex**: `App.xaml.cs` uses `Mutex("WriteSpeech-SingleInstance")` — if the app crashes without disposing the mutex, you may need to restart or wait for the OS to release it.
 - **TestOptionsMonitor.OnChange() returns null**: `_optionsChangeRegistration` must be `IDisposable?` (nullable) because the test helper doesn't implement change notifications.
 
 ## Git Repository
 
-GitHub: `https://github.com/Sev7eNup/WhisperShow.NET`
+GitHub: `https://github.com/Sev7eNup/WriteSpeech.NET`
 
 ## User Preferences
 

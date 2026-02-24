@@ -1,4 +1,4 @@
-# WhisperShow.NET
+# WriteSpeech.NET
 
 Windows desktop speech-to-text overlay inspired by [Wispr Flow](https://wisprflow.com). Record speech via microphone, transcribe it using OpenAI Whisper or a local model, optionally correct it with AI, and auto-insert the text at the cursor position in any application.
 
@@ -43,13 +43,13 @@ Windows desktop speech-to-text overlay inspired by [Wispr Flow](https://wisprflo
 ## Build & Run
 
 ```bash
-dotnet build WhisperShow.slnx
-dotnet run --project src/WhisperShow.App
+dotnet build WriteSpeech.slnx
+dotnet run --project src/WriteSpeech.App
 ```
 
 > **Note:** If the app is already running, the build will fail because the exe is locked. Kill it first:
 > ```bash
-> taskkill /F /IM WhisperShow.App.exe
+> taskkill /F /IM WriteSpeech.App.exe
 > ```
 
 ## Quick Start
@@ -66,7 +66,7 @@ For cloud transcription, enter your OpenAI API key in Settings > Transcription. 
 
 ## Configuration
 
-All settings live in `src/WhisperShow.App/appsettings.json` under the `"WhisperShow"` section. They can also be modified via the Settings UI (right-click tray icon > Settings).
+All settings live in `src/WriteSpeech.App/appsettings.json` under the `"WriteSpeech"` section. They can also be modified via the Settings UI (right-click tray icon > Settings).
 
 ### Transcription
 
@@ -77,7 +77,7 @@ All settings live in `src/WhisperShow.App/appsettings.json` under the `"WhisperS
 | `OpenAI.Model` | string | `"whisper-1"` | OpenAI transcription model |
 | `OpenAI.Endpoint` | string | — | Custom OpenAI-compatible endpoint |
 | `Local.ModelName` | string | `"ggml-small.bin"` | GGML model filename |
-| `Local.ModelDirectory` | string | — | Custom model directory (default: `%APPDATA%/WhisperShow/models`) |
+| `Local.ModelDirectory` | string | — | Custom model directory (default: `%APPDATA%/WriteSpeech/models`) |
 | `Local.GpuAcceleration` | bool | `true` | Enable CUDA for local Whisper |
 | `Language` | string | — | Language code (`"de"`, `"en"`, ...) or null for auto-detect |
 
@@ -135,11 +135,11 @@ All settings live in `src/WhisperShow.App/appsettings.json` under the `"WhisperS
 
 ### Environment Variables
 
-Environment variables prefixed with `WHISPERSHOW_` override config file values. Use double underscores for nested keys:
+Environment variables prefixed with `WRITESPEECH_` override config file values. Use double underscores for nested keys:
 
 ```
-WHISPERSHOW_OPENAI__APIKEY=sk-...
-WHISPERSHOW_PROVIDER=Local
+WRITESPEECH_OPENAI__APIKEY=sk-...
+WRITESPEECH_PROVIDER=Local
 ```
 
 > **Security:** `appsettings.json` is git-tracked. For local development, use `appsettings.Local.json` (gitignored) to store your API key.
@@ -165,15 +165,15 @@ WHISPERSHOW_PROVIDER=Local
 | Qwen 2.5 3B Instruct | `qwen2.5-3b-instruct-q4_k_m.gguf` | ~2 GB |
 | Phi-3.5 Mini 3.8B | `Phi-3.5-mini-instruct-Q4_K_M.gguf` | ~2.4 GB |
 
-All models can be downloaded directly from the Settings UI (Settings > Models). They are stored in `%APPDATA%/WhisperShow/models/` and `%APPDATA%/WhisperShow/correction-models/` respectively.
+All models can be downloaded directly from the Settings UI (Settings > Models). They are stored in `%APPDATA%/WriteSpeech/models/` and `%APPDATA%/WriteSpeech/correction-models/` respectively.
 
 ## Project Structure
 
 ```
-WhisperShow.slnx
+WriteSpeech.slnx
 src/
-  WhisperShow.Core/              # Platform-independent core logic (net10.0)
-    Configuration/               #   WhisperShowOptions (strongly-typed config)
+  WriteSpeech.Core/              # Platform-independent core logic (net10.0)
+    Configuration/               #   WriteSpeechOptions (strongly-typed config)
     Models/                      #   RecordingState, TranscriptionResult, ModelInfoBase, ...
     Services/
       Audio/                     #   Recording (NAudio), muting, WAV→MP3 compression
@@ -186,7 +186,7 @@ src/
       OpenAiClientFactory.cs     #   Centralized OpenAI client caching (thread-safe)
       DebouncedSaveHelper.cs     #   Reusable debounced async save utility
 
-  WhisperShow.App/               # WPF application (net10.0-windows)
+  WriteSpeech.App/               # WPF application (net10.0-windows)
     App.xaml.cs                  #   Host builder, DI setup, CUDA path discovery
     NativeMethods.cs             #   Win32 P/Invoke (SendInput, RegisterHotKey, ...)
     Themes/                      #   Dark/Light theme ResourceDictionaries
@@ -203,7 +203,7 @@ src/
     Services/                    #   Win32 implementations: TextInsertion, GlobalHotkey, Tray, ...
 
 tests/
-  WhisperShow.Tests/             # xUnit + NSubstitute + FluentAssertions (307+ tests)
+  WriteSpeech.Tests/             # xUnit + NSubstitute + FluentAssertions (307+ tests)
     Services/                    #   Service unit tests
     ViewModels/                  #   ViewModel unit tests
     Views/                       #   WPF-specific tests (themes, code-behind helpers)
@@ -214,7 +214,7 @@ tests/
 
 ### DI Container
 
-All services are registered as singletons via `Microsoft.Extensions.Hosting` in `App.xaml.cs`. Core interfaces live in `WhisperShow.Core`, Win32/WPF implementations in `WhisperShow.App/Services/`.
+All services are registered as singletons via `Microsoft.Extensions.Hosting` in `App.xaml.cs`. Core interfaces live in `WriteSpeech.Core`, Win32/WPF implementations in `WriteSpeech.App/Services/`.
 
 ### MVVM
 
@@ -234,7 +234,7 @@ Idle → [Hotkey/Click] → Recording → [Stop] → Transcribing → [Done] →
 
 | Pattern | Purpose |
 |---|---|
-| `IOptionsMonitor<WhisperShowOptions>` | Live settings — changes take effect without restart |
+| `IOptionsMonitor<WriteSpeechOptions>` | Live settings — changes take effect without restart |
 | `TranscriptionProviderFactory` / `TextCorrectionProviderFactory` | Runtime provider selection (methods are `virtual` for test isolation) |
 | `OpenAiClientFactory` | Thread-safe caching of `OpenAIClient` instances by ApiKey+Endpoint |
 | `DebouncedSaveHelper` | Reusable debounced async persistence (used by 6 services) |
@@ -254,7 +254,7 @@ Idle → [Hotkey/Click] → Recording → [Stop] → Transcribing → [Done] →
 ## Testing
 
 ```bash
-dotnet test tests/WhisperShow.Tests
+dotnet test tests/WriteSpeech.Tests
 ```
 
 - **307+ tests** covering services, ViewModels, converters, WPF helpers, and dispose correctness
@@ -264,12 +264,12 @@ dotnet test tests/WhisperShow.Tests
 
 ```bash
 # With code coverage
-dotnet test tests/WhisperShow.Tests --collect:"XPlat Code Coverage"
+dotnet test tests/WriteSpeech.Tests --collect:"XPlat Code Coverage"
 ```
 
 ## Data Files
 
-All user data is stored in `%APPDATA%/WhisperShow/`:
+All user data is stored in `%APPDATA%/WriteSpeech/`:
 
 | Path | Content |
 |---|---|
@@ -304,7 +304,7 @@ All user data is stored in `%APPDATA%/WhisperShow/`:
 The app is still running. Kill it before rebuilding:
 
 ```bash
-taskkill /F /IM WhisperShow.App.exe
+taskkill /F /IM WriteSpeech.App.exe
 ```
 
 ### CUDA not detected / local model falls back to CPU
@@ -318,7 +318,7 @@ taskkill /F /IM WhisperShow.App.exe
 
 - Ensure the key is entered in Settings > Transcription > API Key
 - For custom endpoints (Azure, LM Studio), also set the Endpoint field
-- Check `%APPDATA%/WhisperShow/logs/` for detailed error messages
+- Check `%APPDATA%/WriteSpeech/logs/` for detailed error messages
 
 ### Overlay does not appear
 
@@ -333,21 +333,21 @@ taskkill /F /IM WhisperShow.App.exe
 
 ### Second instance shows error
 
-WhisperShow.NET enforces single-instance via a named Mutex. Close the existing instance first, or use the tray icon.
+WriteSpeech.NET enforces single-instance via a named Mutex. Close the existing instance first, or use the tray icon.
 
 ## Contributing
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/my-feature`)
 3. Write tests for your changes
-4. Ensure all tests pass: `dotnet test tests/WhisperShow.Tests`
-5. Ensure the build succeeds: `dotnet build WhisperShow.slnx`
+4. Ensure all tests pass: `dotnet test tests/WriteSpeech.Tests`
+5. Ensure the build succeeds: `dotnet build WriteSpeech.slnx`
 6. Submit a Pull Request
 
 ### Code Conventions
 
-- Core interfaces in `WhisperShow.Core`, Win32/WPF implementations in `WhisperShow.App`
-- Use `IOptionsMonitor<WhisperShowOptions>` (not `IOptions<T>`) for live settings
+- Core interfaces in `WriteSpeech.Core`, Win32/WPF implementations in `WriteSpeech.App`
+- Use `IOptionsMonitor<WriteSpeechOptions>` (not `IOptions<T>`) for live settings
 - OpenAI client access goes through `OpenAiClientFactory`
 - Debounced saves use `DebouncedSaveHelper`
 - Factory methods (`GetProvider`) must stay `virtual` for test isolation
