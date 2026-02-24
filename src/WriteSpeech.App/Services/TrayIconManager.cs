@@ -6,11 +6,13 @@ using System.Windows.Media.Imaging;
 using H.NotifyIcon;
 using Microsoft.Extensions.Options;
 using NAudio.Wave;
+using WriteSpeech.App.ViewModels;
 using WriteSpeech.App.Views;
 using WriteSpeech.Core.Configuration;
 using WriteSpeech.Core.Models;
 using WriteSpeech.Core.Services.Configuration;
 using WriteSpeech.Core.Services.History;
+using WriteSpeech.Core.Services.Modes;
 using WriteSpeech.Core.Services.TextInsertion;
 
 namespace WriteSpeech.App.Services;
@@ -22,6 +24,7 @@ public class TrayIconManager : IDisposable
     private readonly ITranscriptionHistoryService _historyService;
     private readonly ITextInsertionService _textInsertionService;
     private readonly IWindowFocusService _windowFocusService;
+    private readonly IModeService _modeService;
     private readonly IDisposable? _optionsChangeRegistration;
 
     private TaskbarIcon? _trayIcon;
@@ -37,24 +40,28 @@ public class TrayIconManager : IDisposable
     // Submenu caching — only rebuild when settings change
     private bool _languageDirty = true;
     private bool _microphoneDirty = true;
+    private bool _modeDirty = true;
 
     public TrayIconManager(
         IOptionsMonitor<WriteSpeechOptions> optionsMonitor,
         ISettingsPersistenceService settingsPersistence,
         ITranscriptionHistoryService historyService,
         ITextInsertionService textInsertionService,
-        IWindowFocusService windowFocusService)
+        IWindowFocusService windowFocusService,
+        IModeService modeService)
     {
         _optionsMonitor = optionsMonitor;
         _settingsPersistence = settingsPersistence;
         _historyService = historyService;
         _textInsertionService = textInsertionService;
         _windowFocusService = windowFocusService;
+        _modeService = modeService;
 
         _optionsChangeRegistration = _optionsMonitor.OnChange((_, _) =>
         {
             _languageDirty = true;
             _microphoneDirty = true;
+            _modeDirty = true;
         });
     }
 
@@ -128,6 +135,10 @@ public class TrayIconManager : IDisposable
         var microphoneItem = CreateMenuItem("Microphone", "\uE720", subMenuStyle);
         contextMenu.Items.Add(microphoneItem);
 
+        // Mode submenu
+        var modeItem = CreateMenuItem("Mode", "\uE8BA", subMenuStyle);
+        contextMenu.Items.Add(modeItem);
+
         // Paste Last Transcript
         var pasteItem = CreateMenuItem("Paste Last Transcript", "\uE77F", menuItemStyle);
         pasteItem.Click += async (_, _) =>
@@ -178,6 +189,11 @@ public class TrayIconManager : IDisposable
             {
                 RebuildMicrophoneSubmenu(microphoneItem, checkMenuStyle);
                 _microphoneDirty = false;
+            }
+            if (_modeDirty)
+            {
+                RebuildModeSubmenu(modeItem, checkMenuStyle);
+                _modeDirty = false;
             }
             pasteItem.IsEnabled = _historyService.GetEntries().Count > 0;
         };
@@ -265,6 +281,69 @@ public class TrayIconManager : IDisposable
                 Style = checkMenuStyle
             };
             parent.Items.Add(emptyItem);
+        }
+    }
+
+    private void RebuildModeSubmenu(MenuItem parent, Style checkMenuStyle)
+    {
+        parent.Items.Clear();
+        var modes = _modeService.GetModes();
+        var activeMode = _modeService.ActiveModeName;
+        var autoSwitch = _modeService.AutoSwitchEnabled;
+
+        // Auto option
+        var autoItem = new MenuItem
+        {
+            Header = "Auto",
+            IsCheckable = true,
+            IsChecked = autoSwitch,
+            Style = checkMenuStyle
+        };
+        autoItem.Click += (_, _) =>
+        {
+            _modeService.AutoSwitchEnabled = true;
+            _modeService.SetActiveMode(null);
+            _settingsPersistence.ScheduleUpdate(node =>
+            {
+                var tc = SettingsViewModel.EnsureObject(node, "TextCorrection");
+                tc["AutoSwitchMode"] = true;
+                tc["ActiveMode"] = (string?)null;
+            });
+            _modeDirty = true;
+        };
+        parent.Items.Add(autoItem);
+
+        parent.Items.Add(new Separator
+        {
+            Style = (Style)parent.FindResource("TraySeparatorStyle")
+        });
+
+        // Each mode
+        foreach (var mode in modes)
+        {
+            var isActive = !autoSwitch
+                && mode.Name.Equals(activeMode, StringComparison.OrdinalIgnoreCase);
+            var item = new MenuItem
+            {
+                Header = mode.Name,
+                IsCheckable = true,
+                IsChecked = isActive,
+                Style = checkMenuStyle
+            };
+            var modeName = mode.Name;
+            item.Click += (_, _) =>
+            {
+                _modeService.AutoSwitchEnabled = false;
+                _modeService.SetActiveMode(modeName);
+                _settingsPersistence.ScheduleUpdate(node =>
+                {
+                    var tc = SettingsViewModel.EnsureObject(node, "TextCorrection");
+                    tc["AutoSwitchMode"] = false;
+                    tc["ActiveMode"] = modeName;
+                });
+                _modeDirty = true;
+            };
+            parent.Items.Add(item);
         }
     }
 

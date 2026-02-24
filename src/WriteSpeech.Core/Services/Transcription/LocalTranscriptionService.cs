@@ -89,7 +89,7 @@ public class LocalTranscriptionService : ITranscriptionService, IDisposable
     {
         var localOpts = _optionsMonitor.CurrentValue.Local;
         var dir = localOpts.GetModelDirectory();
-        var path = Path.Combine(dir, modelName);
+        var path = Path.Combine(dir, Path.GetFileName(modelName));
         if (File.Exists(path))
             EnsureFactoryLoaded(path, localOpts.GpuAcceleration);
     }

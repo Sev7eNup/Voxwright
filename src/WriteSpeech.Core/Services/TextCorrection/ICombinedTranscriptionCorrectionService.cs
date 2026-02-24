@@ -6,7 +6,7 @@ namespace WriteSpeech.Core.Services.TextCorrection;
 /// </summary>
 public interface ICombinedTranscriptionCorrectionService
 {
-    Task<string> TranscribeAndCorrectAsync(byte[] audioData, string? language, CancellationToken ct = default);
+    Task<string> TranscribeAndCorrectAsync(byte[] audioData, string? language, string? systemPromptOverride = null, CancellationToken ct = default);
     bool IsAvailable { get; }
     bool IsModelLoaded { get; }
 }

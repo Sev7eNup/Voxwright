@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
+using WriteSpeech.Core.Configuration;
 
 namespace WriteSpeech.Core.Services.Snippets;
 
@@ -19,7 +20,7 @@ public class SnippetService : ISnippetService
         _logger = logger;
         _filePath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "WriteSpeech", "snippets.json");
+            WriteSpeechOptions.AppDataFolderName, "snippets.json");
         _saveHelper = new DebouncedSaveHelper(SaveAsync, logger, 300);
     }
 
@@ -159,7 +160,11 @@ public class SnippetService : ISnippetService
         }
     }
 
-    public void Dispose() => _saveHelper.Dispose();
+    public void Dispose()
+    {
+        _saveHelper.FlushAsync().GetAwaiter().GetResult();
+        _saveHelper.Dispose();
+    }
 
     private void EnsureLoaded()
     {

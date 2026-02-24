@@ -13,6 +13,7 @@ using WriteSpeech.Core.Services.TextCorrection;
 using WriteSpeech.Core.Services.TextInsertion;
 using WriteSpeech.Core.Services.History;
 using WriteSpeech.Core.Services.Statistics;
+using WriteSpeech.Core.Services.Modes;
 using WriteSpeech.Core.Services.Transcription;
 
 
@@ -34,12 +35,15 @@ public partial class OverlayViewModel : ObservableObject, IDisposable
     private readonly IIDEDetectionService _ideDetectionService;
     private readonly IIDEContextService _ideContextService;
     private readonly IDispatcherService _dispatcher;
+    private readonly IModeService _modeService;
     private readonly ISettingsPersistenceService _persistenceService;
     private readonly ILogger<OverlayViewModel> _logger;
     private readonly IOptionsMonitor<WriteSpeechOptions> _optionsMonitor;
     private readonly IDisposable? _optionsChangeRegistration;
     private IntPtr _previousForegroundWindow;
+    private string? _activeProcessName;
     private CancellationTokenSource? _autoDismissCts;
+    private CancellationTokenSource? _transcriptionCts;
     private DateTime _recordingStartTime;
     private System.Timers.Timer? _recordingTimer;
 
@@ -93,6 +97,7 @@ public partial class OverlayViewModel : ObservableObject, IDisposable
         IWindowFocusService windowFocusService,
         IIDEDetectionService ideDetectionService,
         IIDEContextService ideContextService,
+        IModeService modeService,
         IDispatcherService dispatcher,
         ISettingsPersistenceService persistenceService,
         ILogger<OverlayViewModel> logger,
@@ -111,6 +116,7 @@ public partial class OverlayViewModel : ObservableObject, IDisposable
         _windowFocusService = windowFocusService;
         _ideDetectionService = ideDetectionService;
         _ideContextService = ideContextService;
+        _modeService = modeService;
         _dispatcher = dispatcher;
         _persistenceService = persistenceService;
         _logger = logger;
@@ -120,6 +126,8 @@ public partial class OverlayViewModel : ObservableObject, IDisposable
         PositionY = optionsMonitor.CurrentValue.Overlay.PositionY;
 
         _audioService.AudioLevelChanged += OnAudioLevelChanged;
+        _audioService.RecordingError += OnRecordingError;
+        _audioService.MaxDurationReached += OnMaxDurationReached;
 
         _optionsChangeRegistration = _optionsMonitor.OnChange(OnOptionsChanged);
 
@@ -128,6 +136,36 @@ public partial class OverlayViewModel : ObservableObject, IDisposable
 
     private void OnAudioLevelChanged(object? sender, float level)
         => _dispatcher.Invoke(() => AudioLevel = level);
+
+    private void OnRecordingError(object? sender, Exception ex)
+    {
+        _dispatcher.Invoke(() =>
+        {
+            if (State != RecordingState.Recording) return;
+
+            StopRecordingTimer();
+            if (MuteWhileDictating)
+                _mutingService.UnmuteAll();
+
+            _logger.LogError(ex, "Recording device error during active recording");
+            ErrorMessage = $"Recording device error: {ex.Message}";
+            State = RecordingState.Error;
+            _soundEffects.PlayError();
+            StartAutoDismissTimer();
+        });
+    }
+
+    private void OnMaxDurationReached(object? sender, EventArgs e)
+    {
+        _dispatcher.Invoke(async () =>
+        {
+            if (State == RecordingState.Recording)
+            {
+                _logger.LogInformation("Max recording duration reached, auto-stopping");
+                await StopAndTranscribeAsync();
+            }
+        });
+    }
 
     private void OnOptionsChanged(WriteSpeechOptions options, string? name)
     {
@@ -186,8 +224,9 @@ public partial class OverlayViewModel : ObservableObject, IDisposable
         try
         {
             _previousForegroundWindow = _windowFocusService.GetForegroundWindow();
-            _logger.LogInformation("Starting recording (ForegroundWindow: 0x{Handle:X})",
-                _previousForegroundWindow.ToInt64());
+            _activeProcessName = _windowFocusService.GetProcessName(_previousForegroundWindow);
+            _logger.LogInformation("Starting recording (ForegroundWindow: 0x{Handle:X}, Process: {Process})",
+                _previousForegroundWindow.ToInt64(), _activeProcessName ?? "unknown");
 
             // Prepare IDE context while user records (non-blocking)
             PrepareIDEContext();
@@ -218,6 +257,12 @@ public partial class OverlayViewModel : ObservableObject, IDisposable
         if (MuteWhileDictating)
             _mutingService.UnmuteAll();
         _soundEffects.PlayStopRecording();
+
+        _transcriptionCts?.Cancel();
+        _transcriptionCts?.Dispose();
+        _transcriptionCts = new CancellationTokenSource();
+        var ct = _transcriptionCts.Token;
+
         try
         {
             State = RecordingState.Transcribing;
@@ -242,20 +287,22 @@ public partial class OverlayViewModel : ObservableObject, IDisposable
                 StatusText = "Transcribing & correcting...";
                 try
                 {
-                    text = await _combinedService.TranscribeAndCorrectAsync(audioData, Options.Language);
+                    var combinedPrompt = _modeService.ResolveCombinedSystemPrompt(_activeProcessName);
+                    text = await _combinedService.TranscribeAndCorrectAsync(audioData, Options.Language, combinedPrompt, ct);
                     correctionProvider = "Combined";
                 }
+                catch (OperationCanceledException) { return; }
                 catch (Exception ex)
                 {
                     _logger.LogWarning(ex, "Combined audio model failed, falling back to standard pipeline");
-                    text = await StandardTranscribeAsync(audioData);
+                    text = await StandardTranscribeAsync(audioData, ct);
                     correctionProvider = Options.TextCorrection.Provider.ToString();
                 }
             }
             else
             {
                 _logger.LogInformation("Using standard transcription pipeline (Provider: {Provider})", Options.Provider);
-                text = await StandardTranscribeAsync(audioData);
+                text = await StandardTranscribeAsync(audioData, ct);
                 correctionProvider = Options.TextCorrection.Provider.ToString();
             }
 
@@ -296,6 +343,11 @@ public partial class OverlayViewModel : ObservableObject, IDisposable
                 _logger.LogInformation("State: Transcribing -> Idle (result overlay disabled)");
             }
         }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("Transcription cancelled");
+            State = RecordingState.Idle;
+        }
         catch (Exception ex)
         {
             _statsService.RecordError();
@@ -307,11 +359,11 @@ public partial class OverlayViewModel : ObservableObject, IDisposable
         }
     }
 
-    private async Task<string> StandardTranscribeAsync(byte[] audioData)
+    private async Task<string> StandardTranscribeAsync(byte[] audioData, CancellationToken ct = default)
     {
         var provider = _providerFactory.GetProvider(Options.Provider);
         StatusText = provider.IsModelLoaded ? "Transcribing..." : "Loading transcription model...";
-        var result = await provider.TranscribeAsync(audioData, Options.Language);
+        var result = await provider.TranscribeAsync(audioData, Options.Language, ct);
 
         var text = result.Text;
 
@@ -320,7 +372,8 @@ public partial class OverlayViewModel : ObservableObject, IDisposable
         if (corrector is not null && !string.IsNullOrWhiteSpace(text))
         {
             StatusText = corrector.IsModelLoaded ? "Correcting text..." : "Loading correction model...";
-            text = await corrector.CorrectAsync(text, Options.Language);
+            var modePrompt = _modeService.ResolveSystemPrompt(_activeProcessName);
+            text = await corrector.CorrectAsync(text, Options.Language, modePrompt, ct);
         }
 
         return text;
@@ -473,8 +526,9 @@ public partial class OverlayViewModel : ObservableObject, IDisposable
         PositionY = y;
         _persistenceService.ScheduleUpdate(section =>
         {
-            section["Overlay"]!["PositionX"] = x;
-            section["Overlay"]!["PositionY"] = y;
+            var overlay = SettingsViewModel.EnsureObject(section, "Overlay");
+            overlay["PositionX"] = x;
+            overlay["PositionY"] = y;
         });
     }
 
@@ -487,6 +541,11 @@ public partial class OverlayViewModel : ObservableObject, IDisposable
     public void Dispose()
     {
         _audioService.AudioLevelChanged -= OnAudioLevelChanged;
+        _audioService.RecordingError -= OnRecordingError;
+        _audioService.MaxDurationReached -= OnMaxDurationReached;
+        _transcriptionCts?.Cancel();
+        _transcriptionCts?.Dispose();
+        _transcriptionCts = null;
         _autoDismissCts?.Cancel();
         _autoDismissCts?.Dispose();
         _autoDismissCts = null;

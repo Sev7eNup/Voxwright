@@ -8,7 +8,7 @@ namespace WriteSpeech.Core.Services.ModelManagement;
 public class CorrectionModelManager : ICorrectionModelManager
 {
     private readonly ILogger<CorrectionModelManager> _logger;
-    private readonly TextCorrectionOptions _options;
+    private readonly IOptionsMonitor<WriteSpeechOptions> _optionsMonitor;
     private readonly ModelDownloadHelper _downloadHelper;
 
     private static readonly (string Name, string FileName, long SizeBytes, string DownloadUrl)[] KnownModels =
@@ -39,15 +39,15 @@ public class CorrectionModelManager : ICorrectionModelManager
         ),
     ];
 
-    public string ModelDirectory => _options.GetLocalModelDirectory();
+    public string ModelDirectory => _optionsMonitor.CurrentValue.TextCorrection.GetLocalModelDirectory();
 
     public CorrectionModelManager(
         ILogger<CorrectionModelManager> logger,
-        IOptions<WriteSpeechOptions> options,
+        IOptionsMonitor<WriteSpeechOptions> optionsMonitor,
         ModelDownloadHelper downloadHelper)
     {
         _logger = logger;
-        _options = options.Value.TextCorrection;
+        _optionsMonitor = optionsMonitor;
         _downloadHelper = downloadHelper;
     }
 

@@ -408,5 +408,6 @@
     <converters:StringEqualsToVisibilityConverter x:Key="StringToVisibility"/>
     <converters:CapturingHotkeyTextConverter x:Key="StringToCapturingText"/>
     <converters:EqualityConverter x:Key="EqualityConverter"/>
+    <converters:NonEmptyStringToVisibilityConverter x:Key="StringNotEmptyToVisibility"/>
 
 </ResourceDictionary>

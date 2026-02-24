@@ -23,6 +23,7 @@ using WriteSpeech.Core.Services;
 using WriteSpeech.Core.Services.IDE;
 using WriteSpeech.Core.Services.TextCorrection;
 using WriteSpeech.Core.Services.TextInsertion;
+using WriteSpeech.Core.Services.Modes;
 using WriteSpeech.Core.Services.Transcription;
 
 namespace WriteSpeech.App;
@@ -100,6 +101,7 @@ public partial class App : Application
                 services.AddSingleton<IDictionaryService, DictionaryService>();
                 services.AddSingleton<IIDEContextService, IDEContextService>();
                 services.AddSingleton<ISnippetService, SnippetService>();
+                services.AddSingleton<IModeService, ModeService>();
                 services.AddSingleton<IUsageStatsService, UsageStatsService>();
                 services.AddSingleton<ITranscriptionHistoryService, TranscriptionHistoryService>();
 
@@ -131,7 +133,8 @@ public partial class App : Application
             _host.Services.GetRequiredService<ITranscriptionHistoryService>().LoadAsync(),
             _host.Services.GetRequiredService<IUsageStatsService>().LoadAsync(),
             _host.Services.GetRequiredService<IDictionaryService>().LoadAsync(),
-            _host.Services.GetRequiredService<ISnippetService>().LoadAsync());
+            _host.Services.GetRequiredService<ISnippetService>().LoadAsync(),
+            _host.Services.GetRequiredService<IModeService>().LoadAsync());
 
         try
         {
@@ -272,6 +275,8 @@ public partial class App : Application
 
             var audioService = _host.Services.GetService<IAudioRecordingService>();
             (audioService as IDisposable)?.Dispose();
+
+            _host.Services.GetService<IModeService>()?.Dispose();
 
             // Dispose GPU model services to release VRAM
             foreach (var transcription in _host.Services.GetServices<ITranscriptionService>())

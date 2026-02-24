@@ -9,7 +9,7 @@ namespace WriteSpeech.Core.Services.ModelManagement;
 public class ModelManager : IModelManager
 {
     private readonly ILogger<ModelManager> _logger;
-    private readonly LocalWhisperOptions _localOptions;
+    private readonly IOptionsMonitor<WriteSpeechOptions> _optionsMonitor;
     private readonly ModelDownloadHelper _downloadHelper;
 
     private static readonly (GgmlType Type, string Name, string FileName, long SizeBytes)[] KnownModels =
@@ -21,15 +21,15 @@ public class ModelManager : IModelManager
         (GgmlType.LargeV3, "Large v3", "ggml-large-v3.bin", 3_000_000_000),
     ];
 
-    public string ModelDirectory => _localOptions.GetModelDirectory();
+    public string ModelDirectory => _optionsMonitor.CurrentValue.Local.GetModelDirectory();
 
     public ModelManager(
         ILogger<ModelManager> logger,
-        IOptions<WriteSpeechOptions> options,
+        IOptionsMonitor<WriteSpeechOptions> optionsMonitor,
         ModelDownloadHelper downloadHelper)
     {
         _logger = logger;
-        _localOptions = options.Value.Local;
+        _optionsMonitor = optionsMonitor;
         _downloadHelper = downloadHelper;
     }
 

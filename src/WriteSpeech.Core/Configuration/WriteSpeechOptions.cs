@@ -6,6 +6,7 @@ namespace WriteSpeech.Core.Configuration;
 public class WriteSpeechOptions
 {
     public const string SectionName = "WriteSpeech";
+    public const string AppDataFolderName = "WriteSpeech";
 
     public TranscriptionProvider Provider { get; set; } = TranscriptionProvider.OpenAI;
     public OpenAiOptions OpenAI { get; set; } = new();
@@ -22,7 +23,7 @@ public class WriteSpeechOptions
         string.IsNullOrEmpty(customPath)
             ? Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                "WriteSpeech", subfolder)
+                AppDataFolderName, subfolder)
             : customPath;
 }
 
@@ -98,6 +99,10 @@ public class TextCorrectionOptions
 
     // Auto-add detected vocabulary to dictionary
     public bool AutoAddToDictionary { get; set; } = true;
+
+    // Correction modes
+    public string? ActiveMode { get; set; }
+    public bool AutoSwitchMode { get; set; } = true;
 }
 
 public class AppOptions
@@ -138,6 +143,18 @@ public class WriteSpeechOptionsValidator : IValidateOptions<WriteSpeechOptions>
 
         if (options.OpenAI.Endpoint is not null && !Uri.IsWellFormedUriString(options.OpenAI.Endpoint, UriKind.Absolute))
             failures.Add($"OpenAI.Endpoint is not a valid URL: '{options.OpenAI.Endpoint}'.");
+
+        if (options.Provider == TranscriptionProvider.Local
+            && string.IsNullOrWhiteSpace(options.Local.ModelName))
+            failures.Add("Local transcription provider requires a model name (Local.ModelName).");
+
+        if (options.Provider == TranscriptionProvider.OpenAI
+            && string.IsNullOrWhiteSpace(options.OpenAI.ApiKey))
+            failures.Add("OpenAI transcription provider requires an API key (OpenAI.ApiKey).");
+
+        if (options.TextCorrection.Provider == TextCorrectionProvider.Cloud
+            && string.IsNullOrWhiteSpace(options.OpenAI.ApiKey))
+            failures.Add("Cloud text correction requires an OpenAI API key (OpenAI.ApiKey).");
 
         return failures.Count > 0
             ? ValidateOptionsResult.Fail(failures)

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using WriteSpeech.Core.Services.TextInsertion;
 
@@ -38,5 +39,21 @@ public class WindowFocusService : IWindowFocusService
             NativeMethods.AttachThreadInput(currentThread, foregroundThread, false);
 
         await Task.Delay(150);
+    }
+
+    public string? GetProcessName(IntPtr windowHandle)
+    {
+        if (windowHandle == IntPtr.Zero) return null;
+        try
+        {
+            NativeMethods.GetWindowThreadProcessId(windowHandle, out var pid);
+            if (pid == 0) return null;
+            return Process.GetProcessById((int)pid).ProcessName;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Failed to get process name for window 0x{Handle:X}", windowHandle.ToInt64());
+            return null;
+        }
     }
 }

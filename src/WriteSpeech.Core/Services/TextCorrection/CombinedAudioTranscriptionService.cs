@@ -47,7 +47,7 @@ public class CombinedAudioTranscriptionService : ICombinedTranscriptionCorrectio
     }
 
     public async Task<string> TranscribeAndCorrectAsync(
-        byte[] audioData, string? language, CancellationToken ct = default)
+        byte[] audioData, string? language, string? systemPromptOverride = null, CancellationToken ct = default)
     {
         try
         {
@@ -65,7 +65,7 @@ public class CombinedAudioTranscriptionService : ICombinedTranscriptionCorrectio
                 BinaryData.FromBytes(mp3Data),
                 ChatInputAudioFormat.Mp3);
 
-            var systemPrompt = options.TextCorrection.CombinedSystemPrompt ?? TextCorrectionDefaults.CombinedAudioSystemPrompt;
+            var systemPrompt = systemPromptOverride ?? options.TextCorrection.CombinedSystemPrompt ?? TextCorrectionDefaults.CombinedAudioSystemPrompt;
             systemPrompt += _dictionaryService.BuildPromptFragment();
             systemPrompt += _ideContextService.BuildPromptFragment();
 
