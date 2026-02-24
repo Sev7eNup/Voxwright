@@ -30,10 +30,34 @@ public static class VocabResponseParser
             .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Select(w => w.TrimStart('-', '*', ' '))
             .Where(w => w.Length >= 2 && w.Length <= 100)
+            .Where(IsValidVocabEntry)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
         return (text, words);
+    }
+
+    /// <summary>
+    /// Validates that a vocab entry looks like a proper noun, brand name, or technical term —
+    /// not a common word, sentence, or prompt fragment.
+    /// </summary>
+    internal static bool IsValidVocabEntry(string entry)
+    {
+        // Must contain at least one uppercase letter (proper nouns, brands, abbreviations)
+        if (!entry.Any(char.IsUpper))
+            return false;
+
+        // Max 4 words — longer entries are sentences, not terms
+        var wordCount = entry.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
+        if (wordCount > 4)
+            return false;
+
+        // Multi-word entries ending in sentence punctuation are sentences, not terms
+        // (single-word like "Dr." or "Inc." is OK)
+        if (wordCount > 1 && (entry.EndsWith('.') || entry.EndsWith('?') || entry.EndsWith('!')))
+            return false;
+
+        return true;
     }
 
     /// <summary>
