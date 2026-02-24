@@ -21,16 +21,32 @@ public partial class IntelligencePage : UserControl
             ViewModel.SelectCorrectionProviderCommand.Execute(providerName);
     }
 
-    private void CorrectionModelTextBox_KeyDown(object sender, KeyEventArgs e)
+    private void CorrectionCloudModelCard_Click(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is System.Windows.Controls.Border border && border.Tag is string modelId)
+        {
+            ViewModel.SelectCorrectionCloudModelCommand.Execute(modelId);
+            ViewModel.IsEditingCustomCorrectionModel = false;
+        }
+    }
+
+    private void CustomCorrectionModelCard_Click(object sender, MouseButtonEventArgs e)
+    {
+        ViewModel.IsEditingCustomCorrectionModel = true;
+    }
+
+    private void CustomCorrectionModelTextBox_KeyDown(object sender, KeyEventArgs e)
     {
         if (e.Key == Key.Enter && sender is TextBox tb)
         {
-            ViewModel.ApplyCorrectionModel(tb.Text);
+            if (!string.IsNullOrWhiteSpace(tb.Text))
+                ViewModel.ApplyCorrectionModel(tb.Text);
+            ViewModel.IsEditingCustomCorrectionModel = false;
             e.Handled = true;
         }
         else if (e.Key == Key.Escape)
         {
-            ViewModel.IsEditingCorrectionModel = false;
+            ViewModel.IsEditingCustomCorrectionModel = false;
             e.Handled = true;
         }
     }

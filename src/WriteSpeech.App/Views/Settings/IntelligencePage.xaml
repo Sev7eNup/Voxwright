@@ -1,7 +1,8 @@
 <UserControl x:Class="WriteSpeech.App.Views.Settings.IntelligencePage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:converters="clr-namespace:WriteSpeech.App.Converters">
+             xmlns:converters="clr-namespace:WriteSpeech.App.Converters"
+             xmlns:local="clr-namespace:WriteSpeech.App.ViewModels.Settings">
     <StackPanel DataContext="{Binding Transcription}">
         <TextBlock Text="Intelligence" Style="{StaticResource PageTitleStyle}"/>
         <TextBlock Text="Configure text correction to improve transcription quality."
@@ -125,27 +126,85 @@
         <StackPanel Visibility="{Binding CorrectionProvider, Converter={StaticResource StringToVisibility}, ConverterParameter=Cloud}"
                     Margin="0,8,0,0">
             <TextBlock Text="Cloud settings" Style="{StaticResource GroupHeaderStyle}"/>
-            <Border Background="{DynamicResource CardBgBrush}" CornerRadius="12">
-                <Grid Margin="20,14">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-                    <StackPanel Visibility="{Binding IsEditingCorrectionModel, Converter={StaticResource InverseBoolToVisibility}}">
-                        <TextBlock Text="Model" FontSize="13" FontFamily="Segoe UI Variable, Segoe UI"
-                                   Foreground="{DynamicResource TextPrimaryBrush}"/>
-                        <TextBlock Text="{Binding CorrectionCloudModel}" FontSize="12"
-                                   FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextSecondaryBrush}"
-                                   Margin="0,3,0,0"/>
+            <StackPanel Margin="0,0,0,0">
+                <TextBlock Text="Model" FontSize="13" FontWeight="SemiBold"
+                           FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"
+                           Margin="0,0,0,8"/>
+                <ItemsControl ItemsSource="{x:Static local:TranscriptionSettingsViewModel.CloudCorrectionModels}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Margin="0,0,0,4" Padding="12,8" Cursor="Hand"
+                                    Background="{DynamicResource CardBgBrush}" CornerRadius="8"
+                                    BorderThickness="2"
+                                    MouseLeftButtonDown="CorrectionCloudModelCard_Click" Tag="{Binding Id}">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="BorderBrush" Value="Transparent"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Value="True">
+                                                <DataTrigger.Binding>
+                                                    <MultiBinding Converter="{StaticResource EqualityConverter}">
+                                                        <Binding Path="Id"/>
+                                                        <Binding Path="DataContext.CorrectionCloudModel"
+                                                                 RelativeSource="{RelativeSource AncestorType=ItemsControl}"/>
+                                                    </MultiBinding>
+                                                </DataTrigger.Binding>
+                                                <Setter Property="BorderBrush" Value="{DynamicResource SelectedBorderBrush}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding DisplayName}" FontSize="12" FontWeight="SemiBold"
+                                               FontFamily="Segoe UI Variable, Segoe UI"
+                                               Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding Description}" FontSize="11"
+                                               FontFamily="Segoe UI Variable, Segoe UI"
+                                               Foreground="{DynamicResource TextSecondaryBrush}"
+                                               VerticalAlignment="Center" Margin="8,0,0,0"/>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <!-- Custom model option -->
+                <Border Margin="0,0,0,0" Padding="12,8" Cursor="Hand"
+                        Background="{DynamicResource CardBgBrush}" CornerRadius="8"
+                        BorderThickness="2"
+                        MouseLeftButtonDown="CustomCorrectionModelCard_Click">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="BorderBrush" Value="Transparent"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsCustomCorrectionModel}" Value="True">
+                                    <Setter Property="BorderBrush" Value="{DynamicResource SelectedBorderBrush}"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal"
+                                    Visibility="{Binding IsEditingCustomCorrectionModel, Converter={StaticResource InverseBoolToVisibility}}">
+                            <TextBlock Text="Custom" FontSize="12" FontWeight="SemiBold"
+                                       FontFamily="Segoe UI Variable, Segoe UI"
+                                       Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                            <TextBlock FontSize="11" FontFamily="Segoe UI Variable, Segoe UI"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       VerticalAlignment="Center" Margin="8,0,0,0"
+                                       Text="{Binding CorrectionCloudModel}"
+                                       Visibility="{Binding IsCustomCorrectionModel, Converter={StaticResource BoolToVisibility}}"/>
+                            <TextBlock Text="Use a custom model name" FontSize="11"
+                                       FontFamily="Segoe UI Variable, Segoe UI"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       VerticalAlignment="Center" Margin="8,0,0,0"
+                                       Visibility="{Binding IsCustomCorrectionModel, Converter={StaticResource InverseBoolToVisibility}}"/>
+                        </StackPanel>
+                        <TextBox Visibility="{Binding IsEditingCustomCorrectionModel, Converter={StaticResource BoolToVisibility}}"
+                                 Text="{Binding CorrectionCloudModel}" Style="{StaticResource SettingsTextBoxStyle}"
+                                 KeyDown="CustomCorrectionModelTextBox_KeyDown"/>
                     </StackPanel>
-                    <TextBox Visibility="{Binding IsEditingCorrectionModel, Converter={StaticResource BoolToVisibility}}"
-                             Text="{Binding CorrectionCloudModel}" Style="{StaticResource SettingsTextBoxStyle}"
-                             KeyDown="CorrectionModelTextBox_KeyDown" VerticalAlignment="Center"/>
-                    <Button Grid.Column="1" Content="Change" Style="{StaticResource PillButtonStyle}"
-                            Command="{Binding StartEditingCorrectionModelCommand}" VerticalAlignment="Center"
-                            Visibility="{Binding IsEditingCorrectionModel, Converter={StaticResource InverseBoolToVisibility}}"/>
-                </Grid>
-            </Border>
+                </Border>
+            </StackPanel>
         </StackPanel>
 
         <!-- Local correction settings -->

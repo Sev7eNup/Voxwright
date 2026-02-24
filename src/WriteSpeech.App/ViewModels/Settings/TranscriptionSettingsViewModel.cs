@@ -9,15 +9,25 @@ using WriteSpeech.Core.Services.ModelManagement;
 
 namespace WriteSpeech.App.ViewModels.Settings;
 
-public record CloudTranscriptionModel(string Id, string DisplayName, string Description);
+public record CloudModelOption(string Id, string DisplayName, string Description);
 
 public partial class TranscriptionSettingsViewModel : ObservableObject
 {
-    public static IReadOnlyList<CloudTranscriptionModel> CloudTranscriptionModels { get; } =
+    public static IReadOnlyList<CloudModelOption> CloudTranscriptionModels { get; } =
     [
         new("gpt-4o-mini-transcribe", "GPT-4o Mini Transcribe", "Fast and accurate transcription"),
         new("gpt-4o-transcribe", "GPT-4o Transcribe", "Most accurate transcription"),
         new("whisper-1", "Whisper", "Original Whisper model"),
+    ];
+
+    public static IReadOnlyList<CloudModelOption> CloudCorrectionModels { get; } =
+    [
+        new("gpt-5.2", "GPT-5.2", "Latest flagship reasoning model"),
+        new("gpt-5-mini", "GPT-5 Mini", "Fast and cost-efficient"),
+        new("gpt-5-nano", "GPT-5 Nano", "Ultra-fast, low latency"),
+        new("gpt-4.1", "GPT-4.1", "Strong baseline, 1M context"),
+        new("gpt-4.1-mini", "GPT-4.1 Mini", "Smaller GPT-4.1 model"),
+        new("gpt-4.1-nano", "GPT-4.1 Nano", "Lowest latency GPT-4.1"),
     ];
 
     private readonly IModelPreloadService _preloadService;
@@ -59,8 +69,10 @@ public partial class TranscriptionSettingsViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowCloudUsageHint))]
     private TextCorrectionProvider _correctionProvider = TextCorrectionProvider.Off;
-    [ObservableProperty] private string _correctionCloudModel = "gpt-4o-mini";
-    [ObservableProperty] private bool _isEditingCorrectionModel;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsCustomCorrectionModel))]
+    private string _correctionCloudModel = "gpt-4.1-mini";
+    [ObservableProperty] private bool _isEditingCustomCorrectionModel;
     [ObservableProperty] private bool _correctionGpuAcceleration = true;
 
     // --- Correction local model name ---
@@ -75,6 +87,10 @@ public partial class TranscriptionSettingsViewModel : ObservableObject
     public bool IsCustomCloudModel =>
         Provider == TranscriptionProvider.OpenAI &&
         CloudTranscriptionModels.All(m => m.Id != TranscriptionModel);
+
+    // --- Custom correction model ---
+    public bool IsCustomCorrectionModel =>
+        CloudCorrectionModels.All(m => m.Id != CorrectionCloudModel);
 
     // --- Cloud usage hint ---
     public bool ShowCloudUsageHint =>
@@ -212,12 +228,12 @@ public partial class TranscriptionSettingsViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void StartEditingCorrectionModel() => IsEditingCorrectionModel = true;
+    private void SelectCorrectionCloudModel(string modelId) => ApplyCorrectionModel(modelId);
 
     public void ApplyCorrectionModel(string model)
     {
         CorrectionCloudModel = model;
-        IsEditingCorrectionModel = false;
+        IsEditingCustomCorrectionModel = false;
         _scheduleSave();
     }
 

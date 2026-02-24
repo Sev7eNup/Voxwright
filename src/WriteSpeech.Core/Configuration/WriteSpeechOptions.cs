@@ -80,7 +80,7 @@ public class TextCorrectionOptions
     public TextCorrectionProvider Provider { get; set; } = TextCorrectionProvider.Off;
 
     // Cloud correction
-    public string Model { get; set; } = "gpt-4o-mini";
+    public string Model { get; set; } = "gpt-4.1-mini";
     public string? SystemPrompt { get; set; }
 
     // Local correction

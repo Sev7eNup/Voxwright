@@ -286,7 +286,7 @@ public class TranscriptionSettingsViewModelTests
         vm.ApplyCorrectionModel("gpt-4o");
 
         vm.CorrectionCloudModel.Should().Be("gpt-4o");
-        vm.IsEditingCorrectionModel.Should().BeFalse();
+        vm.IsEditingCustomCorrectionModel.Should().BeFalse();
         _saveCalled.Should().BeTrue();
     }
 
@@ -473,5 +473,65 @@ public class TranscriptionSettingsViewModelTests
         json["OpenAI"]!["ApiKey"]!.GetValue<string>().Should().Be("sk-test1234567890abcdef");
         json["Local"]!["ModelName"]!.GetValue<string>().Should().Be("ggml-small.bin");
         json["TextCorrection"]!["Provider"]!.GetValue<string>().Should().Be("Off");
+    }
+
+    // --- Cloud correction model picker ---
+
+    [Fact]
+    public void CloudCorrectionModels_ContainsExpectedModels()
+    {
+        TranscriptionSettingsViewModel.CloudCorrectionModels.Should().HaveCount(6);
+        TranscriptionSettingsViewModel.CloudCorrectionModels.Select(m => m.Id)
+            .Should().Contain(["gpt-5.2", "gpt-5-mini", "gpt-5-nano", "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano"]);
+    }
+
+    [Fact]
+    public void IsCustomCorrectionModel_PredefinedModel_ReturnsFalse()
+    {
+        var vm = CreateViewModel(o => o.TextCorrection.Model = "gpt-4.1-mini");
+
+        vm.IsCustomCorrectionModel.Should().BeFalse();
+    }
+
+    [Fact]
+    public void IsCustomCorrectionModel_CustomModel_ReturnsTrue()
+    {
+        var vm = CreateViewModel(o => o.TextCorrection.Model = "my-custom-correction-model");
+
+        vm.IsCustomCorrectionModel.Should().BeTrue();
+    }
+
+    [Fact]
+    public void SelectCorrectionCloudModelCommand_UpdatesModelAndSaves()
+    {
+        var vm = CreateViewModel();
+
+        vm.SelectCorrectionCloudModelCommand.Execute("gpt-5.2");
+
+        vm.CorrectionCloudModel.Should().Be("gpt-5.2");
+        _saveCalled.Should().BeTrue();
+    }
+
+    [Fact]
+    public void ApplyCorrectionModel_ClearsEditingCustomCorrectionModel()
+    {
+        var vm = CreateViewModel();
+        vm.IsEditingCustomCorrectionModel = true;
+
+        vm.ApplyCorrectionModel("gpt-4.1");
+
+        vm.IsEditingCustomCorrectionModel.Should().BeFalse();
+        vm.CorrectionCloudModel.Should().Be("gpt-4.1");
+    }
+
+    [Fact]
+    public void IsCustomCorrectionModel_AfterSelectingPredefined_ReturnsFalse()
+    {
+        var vm = CreateViewModel(o => o.TextCorrection.Model = "my-custom-model");
+        vm.IsCustomCorrectionModel.Should().BeTrue();
+
+        vm.ApplyCorrectionModel("gpt-5-mini");
+
+        vm.IsCustomCorrectionModel.Should().BeFalse();
     }
 }
