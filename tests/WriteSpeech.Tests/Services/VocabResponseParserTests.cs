@@ -213,6 +213,90 @@ public class VocabResponseParserTests
         text.Should().Be("First sentence.\nSecond sentence.");
     }
 
+    // --- IsValidVocabEntry filtering ---
+
+    [Fact]
+    public void Parse_FiltersAllLowercaseEntries()
+    {
+        var response = "Text.\n---VOCAB---\nwas\nnoch\nbedeuten\nfinancial informatics\nTensorFlow";
+
+        var (text, vocab) = VocabResponseParser.Parse(response);
+
+        vocab.Should().ContainSingle().Which.Should().Be("TensorFlow");
+    }
+
+    [Fact]
+    public void Parse_FiltersSentencesEndingWithPunctuation()
+    {
+        var response = "Text.\n---VOCAB---\nWas soll das bedeuten?\nDr. Müller";
+
+        var (text, vocab) = VocabResponseParser.Parse(response);
+
+        vocab.Should().ContainSingle().Which.Should().Be("Dr. Müller");
+    }
+
+    [Fact]
+    public void Parse_FiltersEntriesWithMoreThanFourWords()
+    {
+        var response = "Text.\n---VOCAB---\nCRITICAL NEVER change the language please\nFinanz Informatik";
+
+        var (text, vocab) = VocabResponseParser.Parse(response);
+
+        vocab.Should().ContainSingle().Which.Should().Be("Finanz Informatik");
+    }
+
+    [Fact]
+    public void Parse_FiltersPromptLeakage()
+    {
+        var response = "Text.\n---VOCAB---\nCRITICAL: NEVER change the language.\nKubernetes";
+
+        var (text, vocab) = VocabResponseParser.Parse(response);
+
+        vocab.Should().ContainSingle().Which.Should().Be("Kubernetes");
+    }
+
+    [Fact]
+    public void Parse_KeepsMultiWordProperNouns()
+    {
+        var response = "Text.\n---VOCAB---\nDr. Müller\nFinanz Informatik\nSan Francisco";
+
+        var (text, vocab) = VocabResponseParser.Parse(response);
+
+        vocab.Should().HaveCount(3);
+        vocab.Should().Contain("Dr. Müller");
+        vocab.Should().Contain("Finanz Informatik");
+        vocab.Should().Contain("San Francisco");
+    }
+
+    [Fact]
+    public void Parse_KeepsSingleWordAbbreviations()
+    {
+        var response = "Text.\n---VOCAB---\nAI\nCUDA\nGPU";
+
+        var (text, vocab) = VocabResponseParser.Parse(response);
+
+        vocab.Should().HaveCount(3);
+    }
+
+    [Theory]
+    [InlineData("TensorFlow", true)]
+    [InlineData("Dr. Müller", true)]
+    [InlineData("AI", true)]
+    [InlineData("Inc.", true)]
+    [InlineData("Finanz Informatik", true)]
+    [InlineData("San Francisco Bay Area", true)]
+    [InlineData("was", false)]
+    [InlineData("noch", false)]
+    [InlineData("financial informatics", false)]
+    [InlineData("Was soll das bedeuten?", false)]
+    [InlineData("Du sollst es einfach nur wiedergeben.", false)]
+    [InlineData("CRITICAL: NEVER change the language.", false)]
+    [InlineData("This Is A Very Long Phrase That Exceeds Four Words", false)]
+    public void IsValidVocabEntry_ValidatesCorrectly(string entry, bool expected)
+    {
+        VocabResponseParser.IsValidVocabEntry(entry).Should().Be(expected);
+    }
+
     // --- AddExtractedVocabulary ---
 
     [Fact]
