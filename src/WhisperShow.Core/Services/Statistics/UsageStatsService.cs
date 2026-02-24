@@ -28,7 +28,7 @@ public class UsageStatsService : IUsageStatsService
         lock (_lock) return Clone(_stats);
     }
 
-    public void RecordTranscription(double durationSeconds, long audioBytesProcessed, string provider)
+    public void RecordTranscription(double durationSeconds, long audioBytesProcessed, string provider, int wordCount, string correctionProvider)
     {
         EnsureLoaded();
         lock (_lock)
@@ -41,6 +41,16 @@ public class UsageStatsService : IUsageStatsService
 
             if (!_stats.TranscriptionsByProvider.TryAdd(provider, 1))
                 _stats.TranscriptionsByProvider[provider]++;
+
+            _stats.TotalWordsTranscribed += wordCount;
+
+            _stats.LongestRecordingSeconds = Math.Max(_stats.LongestRecordingSeconds, durationSeconds);
+            _stats.ShortestRecordingSeconds = _stats.ShortestRecordingSeconds is null
+                ? durationSeconds
+                : Math.Min(_stats.ShortestRecordingSeconds.Value, durationSeconds);
+
+            if (!_stats.CorrectionsByProvider.TryAdd(correctionProvider, 1))
+                _stats.CorrectionsByProvider[correctionProvider]++;
         }
 
         ScheduleSave();
@@ -124,6 +134,10 @@ public class UsageStatsService : IUsageStatsService
         ErrorCount = s.ErrorCount,
         FirstUsedUtc = s.FirstUsedUtc,
         LastUsedUtc = s.LastUsedUtc,
-        TranscriptionsByProvider = new Dictionary<string, int>(s.TranscriptionsByProvider)
+        TranscriptionsByProvider = new Dictionary<string, int>(s.TranscriptionsByProvider),
+        TotalWordsTranscribed = s.TotalWordsTranscribed,
+        LongestRecordingSeconds = s.LongestRecordingSeconds,
+        ShortestRecordingSeconds = s.ShortestRecordingSeconds,
+        CorrectionsByProvider = new Dictionary<string, int>(s.CorrectionsByProvider)
     };
 }
