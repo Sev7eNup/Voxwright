@@ -1,6 +1,8 @@
+using System.Text.Json.Nodes;
 using FluentAssertions;
 using NSubstitute;
 using WriteSpeech.App.ViewModels.Settings;
+using WriteSpeech.Core.Configuration;
 using WriteSpeech.Core.Services.Snippets;
 using WriteSpeech.Core.Services.TextCorrection;
 
@@ -10,6 +12,7 @@ public class DictionarySnippetsViewModelTests
 {
     private readonly IDictionaryService _dictionaryService;
     private readonly ISnippetService _snippetService;
+    private bool _saveCalled;
 
     public DictionarySnippetsViewModelTests()
     {
@@ -21,8 +24,13 @@ public class DictionarySnippetsViewModelTests
         _snippetService.GetSnippets().Returns([]);
     }
 
-    private DictionarySnippetsViewModel CreateViewModel() =>
-        new(_dictionaryService, _snippetService);
+    private DictionarySnippetsViewModel CreateViewModel(Action<WriteSpeechOptions>? configure = null)
+    {
+        _saveCalled = false;
+        var options = new WriteSpeechOptions();
+        configure?.Invoke(options);
+        return new(_dictionaryService, _snippetService, () => _saveCalled = true, options);
+    }
 
     // --- Dictionary ---
 
@@ -235,5 +243,53 @@ public class DictionarySnippetsViewModelTests
         vm.IsEditingSnippet.Should().BeFalse();
         vm.NewSnippetTrigger.Should().BeEmpty();
         vm.SnippetItems.Should().BeEmpty();
+    }
+
+    // --- AutoAddToDictionary ---
+
+    [Fact]
+    public void Constructor_InitializesAutoAddToDictionary()
+    {
+        var vm = CreateViewModel(o => o.TextCorrection.AutoAddToDictionary = false);
+        vm.AutoAddToDictionary.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Constructor_AutoAddToDictionary_DefaultsToTrue()
+    {
+        var vm = CreateViewModel();
+        vm.AutoAddToDictionary.Should().BeTrue();
+    }
+
+    [Fact]
+    public void ToggleAutoAddToDictionary_TriggersSave()
+    {
+        var vm = CreateViewModel();
+        vm.ToggleAutoAddToDictionaryCommand.Execute(null);
+        _saveCalled.Should().BeTrue();
+    }
+
+    // --- WriteSettings ---
+
+    [Fact]
+    public void WriteSettings_WritesAutoAddToDictionary()
+    {
+        var vm = CreateViewModel(o => o.TextCorrection.AutoAddToDictionary = false);
+        var json = JsonNode.Parse("{}")!;
+
+        vm.WriteSettings(json);
+
+        json["TextCorrection"]!["AutoAddToDictionary"]!.GetValue<bool>().Should().BeFalse();
+    }
+
+    [Fact]
+    public void WriteSettings_WritesAutoAddToDictionary_True()
+    {
+        var vm = CreateViewModel();
+        var json = JsonNode.Parse("{}")!;
+
+        vm.WriteSettings(json);
+
+        json["TextCorrection"]!["AutoAddToDictionary"]!.GetValue<bool>().Should().BeTrue();
     }
 }

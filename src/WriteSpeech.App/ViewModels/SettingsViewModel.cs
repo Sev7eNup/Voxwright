@@ -76,7 +76,7 @@ public partial class SettingsViewModel : ObservableObject
         Integrations = new IntegrationsSettingsViewModel(ScheduleSave, opts);
 
         Statistics = new StatisticsViewModel(statsService);
-        DictionarySnippets = new DictionarySnippetsViewModel(dictionaryService, snippetService);
+        DictionarySnippets = new DictionarySnippetsViewModel(dictionaryService, snippetService, ScheduleSave, opts);
     }
 
     // --- Navigation ---
@@ -103,6 +103,7 @@ public partial class SettingsViewModel : ObservableObject
             System.WriteSettings(section);
             Transcription.WriteSettings(section);
             Integrations.WriteSettings(section);
+            DictionarySnippets.WriteSettings(section);
         });
     }
 
