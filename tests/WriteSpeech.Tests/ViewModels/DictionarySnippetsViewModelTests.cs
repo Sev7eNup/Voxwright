@@ -62,6 +62,21 @@ public class DictionarySnippetsViewModelTests
     }
 
     [Fact]
+    public void RefreshEntries_PicksUpExternallyAddedEntries()
+    {
+        _dictionaryService.GetEntries().Returns(new List<string> { "Alpha" });
+        var vm = CreateViewModel();
+        vm.DictionaryEntries.Should().ContainSingle("Alpha");
+
+        // Simulate external addition (e.g. auto-add from VocabResponseParser)
+        _dictionaryService.GetEntries().Returns(new List<string> { "Alpha", "Beta", "Gamma" });
+
+        vm.RefreshEntries();
+
+        vm.DictionaryEntries.Should().Equal("Alpha", "Beta", "Gamma");
+    }
+
+    [Fact]
     public void RemoveDictionaryEntry_RemovesFromServiceAndCollection()
     {
         _dictionaryService.GetEntries().Returns(new List<string> { "Alpha", "Beta" });

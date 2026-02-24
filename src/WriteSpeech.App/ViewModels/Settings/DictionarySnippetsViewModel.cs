@@ -25,11 +25,11 @@ public partial class DictionarySnippetsViewModel : ObservableObject
         _dictionaryService = dictionaryService;
         _snippetService = snippetService;
 
-        LoadDictionaryEntries();
+        RefreshEntries();
         LoadSnippets();
     }
 
-    private void LoadDictionaryEntries()
+    public void RefreshEntries()
     {
         DictionaryEntries.Clear();
         foreach (var entry in _dictionaryService.GetEntries())
