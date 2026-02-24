@@ -96,7 +96,7 @@ internal static partial class NativeMethods
     [LibraryImport("user32.dll")]
     internal static partial short GetAsyncKeyState(int vKey);
 
-    [LibraryImport("user32.dll", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+    [LibraryImport("user32.dll", SetLastError = true, EntryPoint = "GetWindowTextW", StringMarshalling = StringMarshalling.Utf16)]
     internal static partial int GetWindowText(IntPtr hWnd, [Out] char[] lpString, int nMaxCount);
 
     [LibraryImport("user32.dll", EntryPoint = "GetWindowTextLengthW")]
