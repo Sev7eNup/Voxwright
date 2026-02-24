@@ -270,6 +270,13 @@ public partial class App : Application
             var audioService = _host.Services.GetService<IAudioRecordingService>();
             (audioService as IDisposable)?.Dispose();
 
+            // Dispose GPU model services to release VRAM
+            foreach (var transcription in _host.Services.GetServices<ITranscriptionService>())
+                (transcription as IDisposable)?.Dispose();
+
+            foreach (var correction in _host.Services.GetServices<ITextCorrectionService>())
+                (correction as IDisposable)?.Dispose();
+
             await _host.StopAsync();
             _host.Dispose();
         }
