@@ -94,7 +94,16 @@ public partial class App : Application
                 services.AddSingleton<ITextCorrectionService, LocalTextCorrectionService>();
                 services.AddSingleton<TextCorrectionProviderFactory>();
                 services.AddSingleton<ICombinedTranscriptionCorrectionService, CombinedAudioTranscriptionService>();
-                services.AddSingleton<IGlobalHotkeyService, GlobalHotkeyService>();
+                services.AddSingleton<IGlobalHotkeyService>(sp =>
+                {
+                    var options = sp.GetRequiredService<IOptions<WriteSpeechOptions>>().Value;
+                    var optionsMonitor = sp.GetRequiredService<IOptionsMonitor<WriteSpeechOptions>>();
+                    if (options.Hotkey.Method == "LowLevelHook")
+                        return new LowLevelHookHotkeyService(
+                            sp.GetRequiredService<ILogger<LowLevelHookHotkeyService>>(), optionsMonitor);
+                    return new GlobalHotkeyService(
+                        sp.GetRequiredService<ILogger<GlobalHotkeyService>>(), optionsMonitor);
+                });
                 services.AddHttpClient();
                 services.AddSingleton<ModelDownloadHelper>();
                 services.AddSingleton<IModelManager, ModelManager>();

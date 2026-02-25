@@ -8,6 +8,70 @@
         <Border Background="{DynamicResource CardBgBrush}" CornerRadius="12" Padding="0">
 
             <StackPanel>
+                <!-- Input method row -->
+                <Grid Margin="20,16,20,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <TextBlock Text="Input method" FontSize="13" FontWeight="SemiBold"
+                                   FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                        <TextBlock FontSize="12" FontFamily="Segoe UI Variable, Segoe UI"
+                                   Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,3,0,0">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text" Value="Standard (keyboard only)"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsLowLevelHookMode}" Value="True">
+                                            <Setter Property="Text" Value="Low-level hooks (keyboard + mouse)"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button Style="{StaticResource PillButtonStyle}" Margin="0,0,4,0"
+                                Command="{Binding SetHotkeyMethodCommand}" CommandParameter="RegisterHotKey">
+                            <Button.Content>
+                                <TextBlock Text="Standard">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="FontWeight" Value="Normal"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsLowLevelHookMode}" Value="False">
+                                                    <Setter Property="FontWeight" Value="Bold"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </Button.Content>
+                        </Button>
+                        <Button Style="{StaticResource PillButtonStyle}"
+                                Command="{Binding SetHotkeyMethodCommand}" CommandParameter="LowLevelHook">
+                            <Button.Content>
+                                <TextBlock Text="Advanced">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="FontWeight" Value="Normal"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsLowLevelHookMode}" Value="True">
+                                                    <Setter Property="FontWeight" Value="Bold"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </Button.Content>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Divider -->
+                <Border Height="1" Background="{DynamicResource DividerBrush}" Margin="20,0"/>
+
                 <!-- Keybind shortcuts row -->
                 <Grid Margin="20,16,20,16">
                     <Grid.ColumnDefinitions>

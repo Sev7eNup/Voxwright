@@ -28,15 +28,21 @@ public partial class GeneralSettingsViewModel : ObservableObject
     [ObservableProperty] private bool _isDialogOpen;
     [ObservableProperty] private SettingsDialogType _activeDialog;
 
+    // --- Hotkey method ---
+    [ObservableProperty] private string _hotkeyMethod = "RegisterHotKey";
+    [ObservableProperty] private bool _isLowLevelHookMode;
+
     // --- Toggle hotkey ---
     [ObservableProperty] private string _toggleModifiers = "Control, Shift";
     [ObservableProperty] private string _toggleKey = "Space";
+    [ObservableProperty] private string? _toggleMouseButton;
     [ObservableProperty] private string _toggleDisplayText = "";
     public ObservableCollection<string> ToggleBadges { get; } = [];
 
     // --- Push-to-Talk hotkey ---
     [ObservableProperty] private string _pttModifiers = "Control";
     [ObservableProperty] private string _pttKey = "Space";
+    [ObservableProperty] private string? _pttMouseButton;
     [ObservableProperty] private string _pttDisplayText = "";
     public ObservableCollection<string> PttBadges { get; } = [];
 
@@ -75,10 +81,14 @@ public partial class GeneralSettingsViewModel : ObservableObject
         _dispatcher = dispatcher;
         _scheduleSave = scheduleSave;
 
+        _hotkeyMethod = options.Hotkey.Method;
+        _isLowLevelHookMode = options.Hotkey.Method == "LowLevelHook";
         _toggleModifiers = options.Hotkey.Toggle.Modifiers;
         _toggleKey = options.Hotkey.Toggle.Key;
+        _toggleMouseButton = options.Hotkey.Toggle.MouseButton;
         _pttModifiers = options.Hotkey.PushToTalk.Modifiers;
         _pttKey = options.Hotkey.PushToTalk.Key;
+        _pttMouseButton = options.Hotkey.PushToTalk.MouseButton;
         _selectedMicrophoneIndex = options.Audio.DeviceIndex;
         _selectedLanguageCode = options.Language;
         _isAutoDetectLanguage = options.Language == null;
@@ -111,13 +121,25 @@ public partial class GeneralSettingsViewModel : ObservableObject
             AvailableMicrophones.Add(new MicrophoneInfo(0, "No devices found"));
     }
 
-    private static string FormatKeys(string modifiers, string key)
-        => $"{modifiers.Replace(",", " +").Replace("Control", "Ctrl")} + {key}";
+    internal static string FormatMouseButton(string? mouseButton) => mouseButton switch
+    {
+        "XButton1" => "Mouse 4",
+        "XButton2" => "Mouse 5",
+        "Middle" => "Middle Click",
+        _ => mouseButton ?? ""
+    };
+
+    private static string FormatKeys(string modifiers, string key, string? mouseButton = null)
+    {
+        var trigger = !string.IsNullOrEmpty(mouseButton) ? FormatMouseButton(mouseButton) : key;
+        var mods = modifiers.Replace(",", " +").Replace("Control", "Ctrl");
+        return string.IsNullOrEmpty(mods) ? trigger : $"{mods} + {trigger}";
+    }
 
     private void UpdateDisplayTexts()
     {
-        var toggleKeys = FormatKeys(ToggleModifiers, ToggleKey);
-        var pttKeys = FormatKeys(PttModifiers, PttKey);
+        var toggleKeys = FormatKeys(ToggleModifiers, ToggleKey, ToggleMouseButton);
+        var pttKeys = FormatKeys(PttModifiers, PttKey, PttMouseButton);
         ToggleDisplayText = $"Press {toggleKeys} to start and stop.";
         PttDisplayText = $"Hold {pttKeys} and speak.";
         HotkeyDisplayText = $"Toggle: {toggleKeys} · PTT: {pttKeys}";
@@ -138,18 +160,24 @@ public partial class GeneralSettingsViewModel : ObservableObject
         }
     }
 
-    private static void UpdateBadges(ObservableCollection<string> badges, string modifiers, string key)
+    private static void UpdateBadges(ObservableCollection<string> badges, string modifiers, string key, string? mouseButton = null)
     {
         badges.Clear();
-        foreach (var mod in modifiers.Split(',', StringSplitOptions.TrimEntries))
+        if (!string.IsNullOrEmpty(modifiers))
         {
-            badges.Add(mod == "Control" ? "Ctrl" : mod);
+            foreach (var mod in modifiers.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+            {
+                badges.Add(mod == "Control" ? "Ctrl" : mod);
+            }
         }
-        badges.Add(key);
+        if (!string.IsNullOrEmpty(mouseButton))
+            badges.Add(FormatMouseButton(mouseButton));
+        else if (!string.IsNullOrEmpty(key))
+            badges.Add(key);
     }
 
-    private void UpdateToggleBadges() => UpdateBadges(ToggleBadges, ToggleModifiers, ToggleKey);
-    private void UpdatePttBadges() => UpdateBadges(PttBadges, PttModifiers, PttKey);
+    private void UpdateToggleBadges() => UpdateBadges(ToggleBadges, ToggleModifiers, ToggleKey, ToggleMouseButton);
+    private void UpdatePttBadges() => UpdateBadges(PttBadges, PttModifiers, PttKey, PttMouseButton);
 
     // --- Dialog system ---
 
@@ -193,20 +221,25 @@ public partial class GeneralSettingsViewModel : ObservableObject
     private void StartCapturingPttHotkey() => CapturingHotkey = HotkeyCaptureTarget.PushToTalk;
 
     public void ApplyNewHotkey(string modifiers, string key)
+        => ApplyNewHotkey(modifiers, key, null);
+
+    public void ApplyNewHotkey(string modifiers, string? key, string? mouseButton)
     {
         if (CapturingHotkey == HotkeyCaptureTarget.Toggle)
         {
             ToggleModifiers = modifiers;
-            ToggleKey = key;
+            ToggleKey = key ?? "";
+            ToggleMouseButton = mouseButton;
             UpdateToggleBadges();
-            _hotkeyService.UpdateToggleHotkey(modifiers, key);
+            _hotkeyService.UpdateToggleHotkey(modifiers, key, mouseButton);
         }
         else if (CapturingHotkey == HotkeyCaptureTarget.PushToTalk)
         {
             PttModifiers = modifiers;
-            PttKey = key;
+            PttKey = key ?? "";
+            PttMouseButton = mouseButton;
             UpdatePttBadges();
-            _hotkeyService.UpdatePushToTalkHotkey(modifiers, key);
+            _hotkeyService.UpdatePushToTalkHotkey(modifiers, key, mouseButton);
         }
 
         CapturingHotkey = HotkeyCaptureTarget.None;
@@ -219,14 +252,16 @@ public partial class GeneralSettingsViewModel : ObservableObject
     {
         ToggleModifiers = "Control, Shift";
         ToggleKey = "Space";
+        ToggleMouseButton = null;
         PttModifiers = "Control";
         PttKey = "Space";
+        PttMouseButton = null;
         CapturingHotkey = HotkeyCaptureTarget.None;
         UpdateToggleBadges();
         UpdatePttBadges();
         UpdateDisplayTexts();
-        _hotkeyService.UpdateToggleHotkey("Control, Shift", "Space");
-        _hotkeyService.UpdatePushToTalkHotkey("Control", "Space");
+        _hotkeyService.UpdateToggleHotkey("Control, Shift", "Space", null);
+        _hotkeyService.UpdatePushToTalkHotkey("Control", "Space", null);
         _scheduleSave();
     }
 
@@ -340,17 +375,28 @@ public partial class GeneralSettingsViewModel : ObservableObject
 
     // --- Persistence ---
 
+    [RelayCommand]
+    private void SetHotkeyMethod(string method)
+    {
+        HotkeyMethod = method;
+        IsLowLevelHookMode = method == "LowLevelHook";
+        _scheduleSave();
+    }
+
     public void WriteSettings(JsonNode section)
     {
         section["Language"] = SelectedLanguageCode;
 
         var hotkey = SettingsViewModel.EnsureObject(section, "Hotkey");
+        hotkey["Method"] = HotkeyMethod;
         var toggle = SettingsViewModel.EnsureObject(hotkey, "Toggle");
         toggle["Modifiers"] = ToggleModifiers;
         toggle["Key"] = ToggleKey;
+        toggle["MouseButton"] = ToggleMouseButton;
         var ptt = SettingsViewModel.EnsureObject(hotkey, "PushToTalk");
         ptt["Modifiers"] = PttModifiers;
         ptt["Key"] = PttKey;
+        ptt["MouseButton"] = PttMouseButton;
 
         SettingsViewModel.EnsureObject(section, "Audio")["DeviceIndex"] = SelectedMicrophoneIndex;
     }
