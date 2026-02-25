@@ -14,14 +14,11 @@
         WindowStartupLocation="Manual">
 
     <Window.Resources>
-        <!-- State backgrounds -->
-        <SolidColorBrush x:Key="IdleBackground" Color="#C09B7DFF"/>
-        <SolidColorBrush x:Key="RecordingBackground" Color="#CCEF5350"/>
-        <SolidColorBrush x:Key="CommandModeBackground" Color="#CC5C6BC0"/>
-        <SolidColorBrush x:Key="DefaultBackground" Color="#C0181818"/>
+        <!-- Glass background (matches tray icon accent) -->
+        <SolidColorBrush x:Key="GlassBackground" Color="#C09B7DFF"/>
 
         <!-- Border brushes -->
-        <SolidColorBrush x:Key="IdleBorderBrush" Color="#30FFFFFF"/>
+        <SolidColorBrush x:Key="IdleBorderBrush" Color="#25FFFFFF"/>
         <SolidColorBrush x:Key="RecordingBorderBrush" Color="#CCEF5350"/>
         <SolidColorBrush x:Key="CommandBorderBrush" Color="#CC5C6BC0"/>
 
@@ -126,7 +123,7 @@
 
             <Border x:Name="GlassPill"
                     CornerRadius="20"
-                    Background="{StaticResource IdleBackground}"
+                    Background="{StaticResource GlassBackground}"
                     BorderBrush="{StaticResource IdleBorderBrush}"
                     BorderThickness="1">
                 <Border.Effect>
