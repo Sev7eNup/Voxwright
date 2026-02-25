@@ -310,8 +310,36 @@
                                                 Cursor="Hand" MouseLeftButtonDown="MicrophoneItem_Click"
                                                 Background="{DynamicResource CardBgBrush}"
                                                 BorderThickness="2" BorderBrush="Transparent">
-                                            <TextBlock Text="{Binding Name}" FontSize="13" FontFamily="Segoe UI Variable, Segoe UI"
-                                                       Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding Name}" FontSize="13" FontFamily="Segoe UI Variable, Segoe UI"
+                                                           Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                                <ProgressBar Height="4" Margin="0,8,0,0"
+                                                             Minimum="0" Maximum="1"
+                                                             Value="{Binding DataContext.MicTestLevel, Mode=OneWay,
+                                                                    RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                             Foreground="#4CAF50"
+                                                             Background="{DynamicResource ButtonBgBrush}"
+                                                             BorderThickness="0">
+                                                    <ProgressBar.Visibility>
+                                                        <MultiBinding Converter="{StaticResource MicLevelVisibility}">
+                                                            <Binding Path="DeviceIndex"/>
+                                                            <Binding Path="DataContext.SelectedMicrophoneIndex"
+                                                                     RelativeSource="{RelativeSource AncestorType=ItemsControl}"/>
+                                                            <Binding Path="DataContext.IsMicTesting"
+                                                                     RelativeSource="{RelativeSource AncestorType=ItemsControl}"/>
+                                                        </MultiBinding>
+                                                    </ProgressBar.Visibility>
+                                                    <ProgressBar.Resources>
+                                                        <Style TargetType="ProgressBar">
+                                                            <Style.Resources>
+                                                                <Style TargetType="Border">
+                                                                    <Setter Property="CornerRadius" Value="2"/>
+                                                                </Style>
+                                                            </Style.Resources>
+                                                        </Style>
+                                                    </ProgressBar.Resources>
+                                                </ProgressBar>
+                                            </StackPanel>
                                         </Border>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>

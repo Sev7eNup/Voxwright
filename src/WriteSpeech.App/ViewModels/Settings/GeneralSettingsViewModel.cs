@@ -194,6 +194,7 @@ public partial class GeneralSettingsViewModel : ObservableObject
     {
         ActiveDialog = SettingsDialogType.Microphone;
         IsDialogOpen = true;
+        StartMicTestInternal();
     }
 
     [RelayCommand]
@@ -207,6 +208,9 @@ public partial class GeneralSettingsViewModel : ObservableObject
     [RelayCommand]
     private void CloseDialog()
     {
+        if (ActiveDialog == SettingsDialogType.Microphone && IsMicTesting)
+            StopMicTestInternal();
+
         IsDialogOpen = false;
         ActiveDialog = SettingsDialogType.None;
         CapturingHotkey = HotkeyCaptureTarget.None;
@@ -281,23 +285,10 @@ public partial class GeneralSettingsViewModel : ObservableObject
     {
         SelectedMicrophoneIndex = deviceIndex;
         UpdateDisplayTexts();
-        CloseDialog();
         _scheduleSave();
 
-        if (IsMicTesting)
-        {
-            StopMicTestInternal();
-            StartMicTestInternal();
-        }
-    }
-
-    [RelayCommand]
-    private void ToggleMicTest()
-    {
-        if (IsMicTesting)
-            StopMicTest();
-        else
-            StartMicTestInternal();
+        StopMicTestInternal();
+        StartMicTestInternal();
     }
 
     public void StopMicTest()
