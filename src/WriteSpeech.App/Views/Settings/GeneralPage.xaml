@@ -4,7 +4,7 @@
     <StackPanel DataContext="{Binding General}">
         <TextBlock Text="General" Style="{StaticResource PageTitleStyle}"/>
 
-        <!-- Hotkeys card -->
+        <TextBlock Text="Hotkeys" Style="{StaticResource GroupHeaderStyle}" Margin="4,0,0,8"/>
         <Border Background="{DynamicResource CardBgBrush}" CornerRadius="12" Padding="0">
             <StackPanel>
                 <!-- Input method row -->
@@ -90,8 +90,8 @@
             </StackPanel>
         </Border>
 
-        <!-- Audio & Language card -->
-        <Border Background="{DynamicResource CardBgBrush}" CornerRadius="12" Padding="0" Margin="0,8,0,0">
+        <TextBlock Text="Audio &amp; Language" Style="{StaticResource GroupHeaderStyle}"/>
+        <Border Background="{DynamicResource CardBgBrush}" CornerRadius="12" Padding="0">
             <StackPanel>
                 <!-- Microphone row -->
                 <Grid Margin="20,12,20,12">
