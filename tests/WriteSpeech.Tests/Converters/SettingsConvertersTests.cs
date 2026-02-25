@@ -264,4 +264,38 @@ public class SettingsConvertersTests
         var result = converter.Convert([true, false, false], typeof(Visibility), null!, Culture);
         result.Should().Be(Visibility.Visible);
     }
+
+    // --- MicLevelVisibilityConverter ---
+
+    [Fact]
+    public void MicLevel_SelectedAndTesting_ReturnsVisible()
+    {
+        var converter = new MicLevelVisibilityConverter();
+        var result = converter.Convert([1, 1, true], typeof(Visibility), null!, Culture);
+        result.Should().Be(Visibility.Visible);
+    }
+
+    [Fact]
+    public void MicLevel_NotSelected_ReturnsCollapsed()
+    {
+        var converter = new MicLevelVisibilityConverter();
+        var result = converter.Convert([0, 1, true], typeof(Visibility), null!, Culture);
+        result.Should().Be(Visibility.Collapsed);
+    }
+
+    [Fact]
+    public void MicLevel_NotTesting_ReturnsCollapsed()
+    {
+        var converter = new MicLevelVisibilityConverter();
+        var result = converter.Convert([1, 1, false], typeof(Visibility), null!, Culture);
+        result.Should().Be(Visibility.Collapsed);
+    }
+
+    [Fact]
+    public void MicLevel_InvalidInputs_ReturnsCollapsed()
+    {
+        var converter = new MicLevelVisibilityConverter();
+        var result = converter.Convert(["not", "valid"], typeof(Visibility), null!, Culture);
+        result.Should().Be(Visibility.Collapsed);
+    }
 }

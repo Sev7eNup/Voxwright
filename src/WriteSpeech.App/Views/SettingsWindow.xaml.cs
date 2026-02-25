@@ -124,6 +124,12 @@ public partial class SettingsWindow : Window
             }
         }
 
+        if (e.PropertyName is nameof(GeneralSettingsViewModel.SelectedMicrophoneIndex))
+        {
+            if (_viewModel.General.IsDialogOpen && _viewModel.General.ActiveDialog == SettingsDialogType.Microphone)
+                Dispatcher.BeginInvoke(UpdateMicrophoneHighlight, System.Windows.Threading.DispatcherPriority.Loaded);
+        }
+
         if (e.PropertyName is nameof(GeneralSettingsViewModel.PendingLanguageCode) or nameof(GeneralSettingsViewModel.IsAutoDetectLanguage))
         {
             if (_viewModel.General.IsDialogOpen && _viewModel.General.ActiveDialog == SettingsDialogType.Language)

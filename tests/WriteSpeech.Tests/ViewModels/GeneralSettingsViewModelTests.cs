@@ -124,6 +124,31 @@ public class GeneralSettingsViewModelTests
         _saveCalled.Should().BeTrue();
     }
 
+    [Fact]
+    public void SelectMicrophone_DoesNotCloseDialog()
+    {
+        var vm = CreateViewModel();
+        vm.OpenMicrophoneDialogCommand.Execute(null);
+
+        vm.SelectMicrophone(1);
+
+        vm.IsDialogOpen.Should().BeTrue();
+        vm.ActiveDialog.Should().Be(SettingsDialogType.Microphone);
+        vm.SelectedMicrophoneIndex.Should().Be(1);
+    }
+
+    [Fact]
+    public void CloseDialog_FromMicrophoneDialog_StopsMicTest()
+    {
+        var vm = CreateViewModel();
+        vm.OpenMicrophoneDialogCommand.Execute(null);
+
+        vm.CloseDialogCommand.Execute(null);
+
+        vm.IsMicTesting.Should().BeFalse();
+        vm.IsDialogOpen.Should().BeFalse();
+    }
+
     // --- Language ---
 
     [Fact]

@@ -360,7 +360,7 @@ public class SettingsViewModelTests
     // --- Microphone ---
 
     [Fact]
-    public void SelectMicrophone_UpdatesIndexAndClosesDialog()
+    public void SelectMicrophone_UpdatesIndexAndKeepsDialogOpen()
     {
         var vm = CreateViewModel();
         vm.General.OpenMicrophoneDialogCommand.Execute(null);
@@ -368,7 +368,7 @@ public class SettingsViewModelTests
         vm.General.SelectMicrophone(1);
 
         vm.General.SelectedMicrophoneIndex.Should().Be(1);
-        vm.General.IsDialogOpen.Should().BeFalse();
+        vm.General.IsDialogOpen.Should().BeTrue();
     }
 
     [Fact]

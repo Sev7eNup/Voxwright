@@ -146,3 +146,24 @@ public class EqualityConverter : IMultiValueConverter
     public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
         => throw new NotSupportedException();
 }
+
+/// <summary>Shows mic level bar only for the selected microphone while testing.</summary>
+public class MicLevelVisibilityConverter : IMultiValueConverter
+{
+    public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (values.Length == 3
+            && values[0] is int deviceIndex
+            && values[1] is int selectedIndex
+            && values[2] is bool isTesting)
+        {
+            return deviceIndex == selectedIndex && isTesting
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+        }
+        return Visibility.Collapsed;
+    }
+
+    public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+        => throw new NotSupportedException();
+}
