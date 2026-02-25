@@ -10,6 +10,10 @@ public interface IGlobalHotkeyService : IDisposable
     void Unregister();
     void UpdateToggleHotkey(string modifiers, string key);
     void UpdatePushToTalkHotkey(string modifiers, string key);
+    void UpdateToggleHotkey(string modifiers, string? key, string? mouseButton)
+        => UpdateToggleHotkey(modifiers, key ?? "");
+    void UpdatePushToTalkHotkey(string modifiers, string? key, string? mouseButton)
+        => UpdatePushToTalkHotkey(modifiers, key ?? "");
     void RegisterEscapeHotkey();
     void UnregisterEscapeHotkey();
 }

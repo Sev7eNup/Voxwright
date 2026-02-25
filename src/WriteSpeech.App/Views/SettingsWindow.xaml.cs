@@ -198,6 +198,31 @@ public partial class SettingsWindow : Window
         _viewModel.General.CloseDialogCommand.Execute(null);
     }
 
+    private void Window_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (_viewModel.General.CapturingHotkey == HotkeyCaptureTarget.None) return;
+        if (!_viewModel.General.IsLowLevelHookMode) return;
+
+        string? mouseButton = e.ChangedButton switch
+        {
+            System.Windows.Input.MouseButton.XButton1 => "XButton1",
+            System.Windows.Input.MouseButton.XButton2 => "XButton2",
+            System.Windows.Input.MouseButton.Middle => "Middle",
+            _ => null
+        };
+
+        if (mouseButton == null) return;
+
+        var modifiers = Keyboard.Modifiers;
+        var modList = ParseModifiers(modifiers);
+
+        _viewModel.General.ApplyNewHotkey(
+            modList.Count > 0 ? string.Join(", ", modList) : "",
+            null,
+            mouseButton);
+        e.Handled = true;
+    }
+
     private void RebindToggle_Click(object sender, MouseButtonEventArgs e)
     {
         _viewModel.General.StartCapturingToggleHotkeyCommand.Execute(null);

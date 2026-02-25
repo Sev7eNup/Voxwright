@@ -288,7 +288,7 @@ public class SettingsViewModelTests
         vm.General.ToggleBadges.Should().Equal("Alt", "F1");
         vm.General.HotkeyDisplayText.Should().Contain("Alt");
         vm.General.HotkeyDisplayText.Should().Contain("F1");
-        _hotkeyService.Received(1).UpdateToggleHotkey("Alt", "F1");
+        _hotkeyService.Received(1).UpdateToggleHotkey("Alt", "F1", null);
     }
 
     [Fact]
@@ -318,7 +318,7 @@ public class SettingsViewModelTests
         vm.General.PttKey.Should().Be("F2");
         vm.General.CapturingHotkey.Should().Be(HotkeyCaptureTarget.None);
         vm.General.PttBadges.Should().Equal("Shift", "F2");
-        _hotkeyService.Received(1).UpdatePushToTalkHotkey("Shift", "F2");
+        _hotkeyService.Received(1).UpdatePushToTalkHotkey("Shift", "F2", null);
     }
 
     [Fact]

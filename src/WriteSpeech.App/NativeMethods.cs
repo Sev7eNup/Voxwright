@@ -112,4 +112,69 @@ internal static partial class NativeMethods
     internal const ushort VK_CONTROL = 0x11;
     internal const ushort VK_V = 0x56;
     internal const ushort VK_C = 0x43;
+
+    // --- Low-level hook constants ---
+
+    internal const int WH_KEYBOARD_LL = 13;
+    internal const int WH_MOUSE_LL = 14;
+
+    internal const int WM_KEYDOWN = 0x0100;
+    internal const int WM_KEYUP = 0x0101;
+    internal const int WM_SYSKEYDOWN = 0x0104;
+    internal const int WM_SYSKEYUP = 0x0105;
+
+    internal const int WM_MBUTTONDOWN = 0x0207;
+    internal const int WM_MBUTTONUP = 0x0208;
+    internal const int WM_XBUTTONDOWN = 0x020B;
+    internal const int WM_XBUTTONUP = 0x020C;
+
+    internal const uint XBUTTON1 = 0x0001;
+    internal const uint XBUTTON2 = 0x0002;
+
+    internal const uint LLKHF_INJECTED = 0x10;
+
+    internal const int VK_ESCAPE = 0x1B;
+    internal const int VK_LCONTROL = 0xA2;
+    internal const int VK_RCONTROL = 0xA3;
+    internal const int VK_LSHIFT = 0xA0;
+    internal const int VK_RSHIFT = 0xA1;
+    internal const int VK_LMENU = 0xA4;
+    internal const int VK_RMENU = 0xA5;
+
+    internal delegate IntPtr LowLevelHookProc(int nCode, IntPtr wParam, IntPtr lParam);
+
+    [LibraryImport("user32.dll", SetLastError = true)]
+    internal static partial IntPtr SetWindowsHookExW(
+        int idHook, LowLevelHookProc lpfn, IntPtr hMod, uint dwThreadId);
+
+    [LibraryImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static partial bool UnhookWindowsHookEx(IntPtr hhk);
+
+    [LibraryImport("user32.dll")]
+    internal static partial IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
+
+    [LibraryImport("kernel32.dll", StringMarshalling = StringMarshalling.Utf16)]
+    internal static partial IntPtr GetModuleHandle(string? lpModuleName);
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct KBDLLHOOKSTRUCT
+    {
+        internal uint vkCode;
+        internal uint scanCode;
+        internal uint flags;
+        internal uint time;
+        internal IntPtr dwExtraInfo;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct MSLLHOOKSTRUCT
+    {
+        internal int x;
+        internal int y;
+        internal uint mouseData;
+        internal uint flags;
+        internal uint time;
+        internal IntPtr dwExtraInfo;
+    }
 }

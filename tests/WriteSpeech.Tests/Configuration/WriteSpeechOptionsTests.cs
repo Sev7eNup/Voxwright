@@ -247,4 +247,104 @@ public class WriteSpeechOptionsTests
         result.FailureMessage.Should().Contain("MaxRecordingSeconds");
         result.FailureMessage.Should().Contain("AutoDismissSeconds");
     }
+
+    // --- HotkeyBinding ---
+
+    [Fact]
+    public void HotkeyBinding_IsMouseBinding_True_WhenMouseButtonSet()
+    {
+        var binding = new HotkeyBinding { MouseButton = "XButton1" };
+        binding.IsMouseBinding.Should().BeTrue();
+    }
+
+    [Fact]
+    public void HotkeyBinding_IsMouseBinding_False_WhenMouseButtonNull()
+    {
+        var binding = new HotkeyBinding { Key = "Space" };
+        binding.IsMouseBinding.Should().BeFalse();
+    }
+
+    [Fact]
+    public void HotkeyBinding_IsMouseBinding_False_WhenMouseButtonEmpty()
+    {
+        var binding = new HotkeyBinding { MouseButton = "" };
+        binding.IsMouseBinding.Should().BeFalse();
+    }
+
+    [Fact]
+    public void HotkeyOptions_DefaultMethod_IsRegisterHotKey()
+    {
+        var options = new HotkeyOptions();
+        options.Method.Should().Be("RegisterHotKey");
+    }
+
+    // --- Hotkey method validation ---
+
+    [Fact]
+    public void Validator_InvalidHotkeyMethod_Fails()
+    {
+        var validator = new WriteSpeechOptionsValidator();
+        var options = CreateValidOptions();
+        options.Hotkey.Method = "InvalidMethod";
+
+        var result = validator.Validate(null, options);
+
+        result.Failed.Should().BeTrue();
+        result.FailureMessage.Should().Contain("Hotkey.Method");
+    }
+
+    [Theory]
+    [InlineData("RegisterHotKey")]
+    [InlineData("LowLevelHook")]
+    public void Validator_ValidHotkeyMethod_Succeeds(string method)
+    {
+        var validator = new WriteSpeechOptionsValidator();
+        var options = CreateValidOptions();
+        options.Hotkey.Method = method;
+
+        var result = validator.Validate(null, options);
+
+        result.Succeeded.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Validator_RegisterHotKey_WithMouseBinding_Fails()
+    {
+        var validator = new WriteSpeechOptionsValidator();
+        var options = CreateValidOptions();
+        options.Hotkey.Method = "RegisterHotKey";
+        options.Hotkey.Toggle = new HotkeyBinding { Modifiers = "Control", MouseButton = "XButton1" };
+
+        var result = validator.Validate(null, options);
+
+        result.Failed.Should().BeTrue();
+        result.FailureMessage.Should().Contain("Mouse button");
+    }
+
+    [Fact]
+    public void Validator_RegisterHotKey_WithPttMouseBinding_Fails()
+    {
+        var validator = new WriteSpeechOptionsValidator();
+        var options = CreateValidOptions();
+        options.Hotkey.Method = "RegisterHotKey";
+        options.Hotkey.PushToTalk = new HotkeyBinding { MouseButton = "XButton2" };
+
+        var result = validator.Validate(null, options);
+
+        result.Failed.Should().BeTrue();
+        result.FailureMessage.Should().Contain("Mouse button");
+    }
+
+    [Fact]
+    public void Validator_LowLevelHook_WithMouseBinding_Succeeds()
+    {
+        var validator = new WriteSpeechOptionsValidator();
+        var options = CreateValidOptions();
+        options.Hotkey.Method = "LowLevelHook";
+        options.Hotkey.PushToTalk = new HotkeyBinding { Modifiers = "Control", MouseButton = "XButton1" };
+
+        var result = validator.Validate(null, options);
+
+        result.Succeeded.Should().BeTrue();
+    }
 }

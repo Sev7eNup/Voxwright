@@ -46,6 +46,7 @@ public class LocalWhisperOptions
 
 public class HotkeyOptions
 {
+    public string Method { get; set; } = "RegisterHotKey";
     public HotkeyBinding Toggle { get; set; } = new() { Modifiers = "Control, Shift", Key = "Space" };
     public HotkeyBinding PushToTalk { get; set; } = new() { Modifiers = "Control", Key = "Space" };
 }
@@ -54,6 +55,8 @@ public class HotkeyBinding
 {
     public string Modifiers { get; set; } = "";
     public string Key { get; set; } = "";
+    public string? MouseButton { get; set; }
+    public bool IsMouseBinding => !string.IsNullOrEmpty(MouseButton);
 }
 
 public class AudioOptions
@@ -155,6 +158,17 @@ public class WriteSpeechOptionsValidator : IValidateOptions<WriteSpeechOptions>
         if (options.TextCorrection.Provider == TextCorrectionProvider.Cloud
             && string.IsNullOrWhiteSpace(options.OpenAI.ApiKey))
             failures.Add("Cloud text correction requires an OpenAI API key (OpenAI.ApiKey).");
+
+        if (options.Hotkey.Method is not ("RegisterHotKey" or "LowLevelHook"))
+            failures.Add($"Hotkey.Method must be 'RegisterHotKey' or 'LowLevelHook' (got '{options.Hotkey.Method}').");
+
+        if (options.Hotkey.Method == "RegisterHotKey")
+        {
+            if (options.Hotkey.Toggle.IsMouseBinding)
+                failures.Add("Mouse button bindings require Hotkey.Method = 'LowLevelHook'.");
+            if (options.Hotkey.PushToTalk.IsMouseBinding)
+                failures.Add("Mouse button bindings require Hotkey.Method = 'LowLevelHook'.");
+        }
 
         return failures.Count > 0
             ? ValidateOptionsResult.Fail(failures)
