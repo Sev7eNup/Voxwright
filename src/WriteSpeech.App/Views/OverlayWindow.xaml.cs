@@ -32,6 +32,10 @@ public partial class OverlayWindow : Window
     private Storyboard? _sweepStoryboard;
 
     // Cached brushes
+    private Brush? _idleBackground;
+    private Brush? _recordingBackground;
+    private Brush? _commandModeBackground;
+    private Brush? _defaultBackground;
     private Brush? _idleBorderBrush;
     private Brush? _recordingWaveStroke;
     private Brush? _commandWaveStroke;
@@ -102,6 +106,10 @@ public partial class OverlayWindow : Window
         _sweepStoryboard = (Storyboard)FindResource("SweepAnimation");
 
         // Cache brushes
+        _idleBackground = (Brush)FindResource("IdleBackground");
+        _recordingBackground = (Brush)FindResource("RecordingBackground");
+        _commandModeBackground = (Brush)FindResource("CommandModeBackground");
+        _defaultBackground = (Brush)FindResource("DefaultBackground");
         _idleBorderBrush = (Brush)FindResource("IdleBorderBrush");
         _recordingWaveStroke = (Brush)FindResource("RecordingWaveStroke");
         _commandWaveStroke = (Brush)FindResource("CommandWaveStroke");
@@ -363,6 +371,7 @@ public partial class OverlayWindow : Window
         switch (state)
         {
             case RecordingState.Recording when _viewModel.IsCommandModeActive:
+                GlassPill.Background = _commandModeBackground;
                 StartBorderGlow(
                     Color.FromArgb(0xCC, 0x5C, 0x6B, 0xC0),
                     Color.FromArgb(0x80, 0x5C, 0x6B, 0xC0),
@@ -371,6 +380,7 @@ public partial class OverlayWindow : Window
                 WaveFillTopStop.Color = Color.FromArgb(0x40, 0x5C, 0x6B, 0xC0);
                 break;
             case RecordingState.Recording:
+                GlassPill.Background = _recordingBackground;
                 StartBorderGlow(
                     Color.FromArgb(0xCC, 0xEF, 0x53, 0x50),
                     Color.FromArgb(0x80, 0xEF, 0x53, 0x50),
@@ -378,7 +388,14 @@ public partial class OverlayWindow : Window
                 WaveformLine.Stroke = _recordingWaveStroke;
                 WaveFillTopStop.Color = Color.FromArgb(0x40, 0xEF, 0x53, 0x50);
                 break;
-            default:
+            case RecordingState.Idle:
+                GlassPill.Background = _idleBackground;
+                GlassPill.BorderBrush = _idleBorderBrush;
+                GlassPill.BorderThickness = new Thickness(1);
+                ResetShadowToDefault();
+                break;
+            default: // Transcribing, Result, Error
+                GlassPill.Background = _defaultBackground;
                 GlassPill.BorderBrush = _idleBorderBrush;
                 GlassPill.BorderThickness = new Thickness(1);
                 ResetShadowToDefault();
