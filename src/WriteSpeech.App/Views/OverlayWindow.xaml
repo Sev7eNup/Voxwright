@@ -67,7 +67,7 @@
         <Storyboard x:Key="IdleBreathingAnimation" RepeatBehavior="Forever">
             <DoubleAnimation Storyboard.TargetName="BubbleScale"
                              Storyboard.TargetProperty="ScaleX"
-                             From="1.0" To="1.03" Duration="0:0:1.5"
+                             From="1.0" To="1.07" Duration="0:0:1.5"
                              AutoReverse="True">
                 <DoubleAnimation.EasingFunction>
                     <SineEase EasingMode="EaseInOut"/>
@@ -75,7 +75,7 @@
             </DoubleAnimation>
             <DoubleAnimation Storyboard.TargetName="BubbleScale"
                              Storyboard.TargetProperty="ScaleY"
-                             From="1.0" To="1.03" Duration="0:0:1.5"
+                             From="1.0" To="1.07" Duration="0:0:1.5"
                              AutoReverse="True">
                 <DoubleAnimation.EasingFunction>
                     <SineEase EasingMode="EaseInOut"/>
