@@ -4,9 +4,8 @@
     <StackPanel DataContext="{Binding General}">
         <TextBlock Text="General" Style="{StaticResource PageTitleStyle}"/>
 
-        <!-- Single container with divider lines -->
+        <!-- Hotkeys card -->
         <Border Background="{DynamicResource CardBgBrush}" CornerRadius="12" Padding="0">
-
             <StackPanel>
                 <!-- Input method row -->
                 <Grid Margin="20,12,20,12">
@@ -88,10 +87,12 @@
                     <Button Grid.Column="1" Content="Change" Style="{StaticResource PillButtonStyle}"
                             Command="{Binding OpenHotkeyDialogCommand}" VerticalAlignment="Center"/>
                 </Grid>
+            </StackPanel>
+        </Border>
 
-                <!-- Divider -->
-                <Border Height="1" Background="{DynamicResource DividerBrush}" Margin="20,0"/>
-
+        <!-- Audio & Language card -->
+        <Border Background="{DynamicResource CardBgBrush}" CornerRadius="12" Padding="0" Margin="0,8,0,0">
+            <StackPanel>
                 <!-- Microphone row -->
                 <Grid Margin="20,12,20,12">
                     <Grid.ColumnDefinitions>
