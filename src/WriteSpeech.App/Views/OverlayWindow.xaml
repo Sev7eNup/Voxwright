@@ -14,8 +14,9 @@
         WindowStartupLocation="Manual">
 
     <Window.Resources>
-        <!-- Glass background -->
+        <!-- Backgrounds -->
         <SolidColorBrush x:Key="GlassBackground" Color="#C0181818"/>
+        <SolidColorBrush x:Key="IdleBackground" Color="#C09B7DFF"/>
 
         <!-- Border brushes -->
         <SolidColorBrush x:Key="IdleBorderBrush" Color="#25FFFFFF"/>

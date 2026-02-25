@@ -32,6 +32,8 @@ public partial class OverlayWindow : Window
     private Storyboard? _sweepStoryboard;
 
     // Cached brushes
+    private Brush? _idleBackground;
+    private Brush? _glassBackground;
     private Brush? _idleBorderBrush;
     private Brush? _recordingWaveStroke;
     private Brush? _commandWaveStroke;
@@ -102,6 +104,8 @@ public partial class OverlayWindow : Window
         _sweepStoryboard = (Storyboard)FindResource("SweepAnimation");
 
         // Cache brushes
+        _idleBackground = (Brush)FindResource("IdleBackground");
+        _glassBackground = (Brush)FindResource("GlassBackground");
         _idleBorderBrush = (Brush)FindResource("IdleBorderBrush");
         _recordingWaveStroke = (Brush)FindResource("RecordingWaveStroke");
         _commandWaveStroke = (Brush)FindResource("CommandWaveStroke");
@@ -378,7 +382,14 @@ public partial class OverlayWindow : Window
                 WaveformLine.Stroke = _recordingWaveStroke;
                 WaveFillTopStop.Color = Color.FromArgb(0x40, 0xEF, 0x53, 0x50);
                 break;
-            default:
+            case RecordingState.Idle:
+                GlassPill.Background = _idleBackground;
+                GlassPill.BorderBrush = _idleBorderBrush;
+                GlassPill.BorderThickness = new Thickness(1);
+                ResetShadowToDefault();
+                break;
+            default: // Transcribing, Result, Error
+                GlassPill.Background = _glassBackground;
                 GlassPill.BorderBrush = _idleBorderBrush;
                 GlassPill.BorderThickness = new Thickness(1);
                 ResetShadowToDefault();
