@@ -60,10 +60,18 @@ public class LocalTextCorrectionService : ITextCorrectionService, IDisposable
             if (correctionOpts.AutoAddToDictionary)
                 systemPrompt += TextCorrectionDefaults.VocabExtractionInstruction;
 
-            var languageHint = string.IsNullOrEmpty(language)
-                ? "Keep the SAME language as the input — do NOT translate"
-                : $"Output language MUST be: {language}";
-            var userMessage = $"[{languageHint}]\n{rawText}";
+            string userMessage;
+            if (systemPromptOverride is not null)
+            {
+                userMessage = rawText;
+            }
+            else
+            {
+                var languageHint = string.IsNullOrEmpty(language)
+                    ? "Keep the SAME language as the input — do NOT translate"
+                    : $"Output language MUST be: {language}";
+                userMessage = $"[{languageHint}]\n{rawText}";
+            }
 
             _logger.LogInformation("Running local text correction ({Length} chars, model: {Model})",
                 rawText.Length, correctionOpts.LocalModelName);

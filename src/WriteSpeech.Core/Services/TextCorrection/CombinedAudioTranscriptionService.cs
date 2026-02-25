@@ -71,7 +71,7 @@ public class CombinedAudioTranscriptionService : ICombinedTranscriptionCorrectio
 
             if (options.TextCorrection.AutoAddToDictionary)
                 systemPrompt += TextCorrectionDefaults.VocabExtractionInstruction;
-            var langSuffix = string.IsNullOrEmpty(language)
+            var langSuffix = (systemPromptOverride is not null || string.IsNullOrEmpty(language))
                 ? ""
                 : $"\n[Output language MUST be: {language}]";
 

@@ -53,10 +53,18 @@ public class OpenAiTextCorrectionService : ITextCorrectionService
             if (options.TextCorrection.AutoAddToDictionary)
                 systemPrompt += TextCorrectionDefaults.VocabExtractionInstruction;
 
-            var languageHint = string.IsNullOrEmpty(language)
-                ? "Keep the SAME language as the input — do NOT translate"
-                : $"Output language MUST be: {language}";
-            var userMessage = $"[{languageHint}]\n{rawText}";
+            string userMessage;
+            if (systemPromptOverride is not null)
+            {
+                userMessage = rawText;
+            }
+            else
+            {
+                var languageHint = string.IsNullOrEmpty(language)
+                    ? "Keep the SAME language as the input — do NOT translate"
+                    : $"Output language MUST be: {language}";
+                userMessage = $"[{languageHint}]\n{rawText}";
+            }
 
             _logger.LogInformation("Sending text correction request ({Length} chars, model: {Model})",
                 rawText.Length, options.TextCorrection.Model);
