@@ -28,7 +28,6 @@ public partial class OverlayWindow : Window
     private const int ViewModelWaveformCount = 20;
 
     // Storyboards
-    private Storyboard? _breathingStoryboard;
     private Storyboard? _sweepStoryboard;
 
     // Cached brushes
@@ -100,7 +99,6 @@ public partial class OverlayWindow : Window
         _hotkeyService.Register(handle);
 
         // Cache storyboards
-        _breathingStoryboard = (Storyboard)FindResource("IdleBreathingAnimation");
         _sweepStoryboard = (Storyboard)FindResource("SweepAnimation");
 
         // Cache brushes
@@ -143,7 +141,6 @@ public partial class OverlayWindow : Window
         MouseEnter += (_, _) =>
         {
             if (_viewModel.State != RecordingState.Idle) return;
-            _breathingStoryboard?.Stop(this);
             var scaleUp = new DoubleAnimation(1.06, TimeSpan.FromMilliseconds(200))
             {
                 EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
@@ -159,11 +156,6 @@ public partial class OverlayWindow : Window
             var scaleDown = new DoubleAnimation(1.0, TimeSpan.FromMilliseconds(200))
             {
                 EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
-            };
-            scaleDown.Completed += (_, _) =>
-            {
-                if (_viewModel.State == RecordingState.Idle)
-                    _breathingStoryboard?.Begin(this, true);
             };
             BubbleScale.BeginAnimation(ScaleTransform.ScaleXProperty, scaleDown);
             BubbleScale.BeginAnimation(ScaleTransform.ScaleYProperty, scaleDown);
@@ -319,6 +311,22 @@ public partial class OverlayWindow : Window
         {
             Dispatcher.Invoke(() => UpdateVisualState(_viewModel.State));
         }
+        else if (e.PropertyName == nameof(OverlayViewModel.StreamingText))
+        {
+            Dispatcher.Invoke(UpdateStreamingVisibility);
+        }
+    }
+
+    private void UpdateStreamingVisibility()
+    {
+        if (_viewModel.State != RecordingState.Transcribing) return;
+
+        var hasStreaming = !string.IsNullOrEmpty(_viewModel.StreamingText);
+        SweepPanel.Visibility = hasStreaming ? Visibility.Collapsed : Visibility.Visible;
+        StreamingPanel.Visibility = hasStreaming ? Visibility.Visible : Visibility.Collapsed;
+
+        if (hasStreaming)
+            _sweepStoryboard?.Stop(this);
     }
 
     private void UpdateVisualState(RecordingState state)
@@ -332,7 +340,6 @@ public partial class OverlayWindow : Window
             _hotkeyService.UnregisterEscapeHotkey();
 
         // Stop all running animations
-        _breathingStoryboard?.Stop(this);
         _sweepStoryboard?.Stop(this);
 
         // Hide all panels
@@ -369,17 +376,12 @@ public partial class OverlayWindow : Window
             case RecordingState.Idle:
                 IdlePanel.Visibility = Visibility.Visible;
                 _viewModel.ClearWaveform();
-                var shrink = new DoubleAnimation(0.92, TimeSpan.FromMilliseconds(200))
+                var resetScale = new DoubleAnimation(1.0, TimeSpan.FromMilliseconds(200))
                 {
                     EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
                 };
-                shrink.Completed += (_, _) =>
-                {
-                    if (_viewModel.State == RecordingState.Idle)
-                        _breathingStoryboard?.Begin(this, true);
-                };
-                BubbleScale.BeginAnimation(ScaleTransform.ScaleXProperty, shrink);
-                BubbleScale.BeginAnimation(ScaleTransform.ScaleYProperty, shrink);
+                BubbleScale.BeginAnimation(ScaleTransform.ScaleXProperty, resetScale);
+                BubbleScale.BeginAnimation(ScaleTransform.ScaleYProperty, resetScale);
                 break;
             case RecordingState.Recording:
                 RecordingPanel.Visibility = Visibility.Visible;
@@ -387,6 +389,9 @@ public partial class OverlayWindow : Window
                 break;
             case RecordingState.Transcribing:
                 TranscribingPanel.Visibility = Visibility.Visible;
+                // Reset streaming panels — show sweep by default
+                SweepPanel.Visibility = Visibility.Visible;
+                StreamingPanel.Visibility = Visibility.Collapsed;
                 _sweepStoryboard?.Begin(this, true);
                 AnimateStateTransition();
                 break;
@@ -430,7 +435,10 @@ public partial class OverlayWindow : Window
                 GlassPill.Background = _idleBackground;
                 GlassPill.BorderBrush = _idleBorderBrush;
                 GlassPill.BorderThickness = new Thickness(1);
-                ResetShadowToDefault();
+                // Fade out shadow completely — DropShadowEffect renders in rectangular bitmap
+                // which creates a visible gray box on light backgrounds
+                PillShadow.BeginAnimation(DropShadowEffect.OpacityProperty,
+                    new DoubleAnimation(0, TimeSpan.FromMilliseconds(200)));
                 break;
             default: // Transcribing, Result, Error
                 GlassPill.Background = _glassBackground;
@@ -484,8 +492,8 @@ public partial class OverlayWindow : Window
         var duration = TimeSpan.FromMilliseconds(250);
         var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
 
-        var scaleX = new DoubleAnimation(0.92, 1.0, duration) { EasingFunction = ease };
-        var scaleY = new DoubleAnimation(0.92, 1.0, duration) { EasingFunction = ease };
+        var scaleX = new DoubleAnimation(1.0, duration) { EasingFunction = ease };
+        var scaleY = new DoubleAnimation(1.0, duration) { EasingFunction = ease };
 
         BubbleScale.BeginAnimation(ScaleTransform.ScaleXProperty, scaleX);
         BubbleScale.BeginAnimation(ScaleTransform.ScaleYProperty, scaleY);

@@ -30,6 +30,26 @@ public partial class TranscriptionSettingsViewModel : ObservableObject
         new("gpt-4.1-nano", "GPT-4.1 Nano", "Lowest latency GPT-4.1"),
     ];
 
+    public static IReadOnlyList<CloudModelOption> AnthropicCorrectionModels { get; } =
+    [
+        new("claude-sonnet-4-6", "Claude Sonnet 4.6", "Fast and capable"),
+        new("claude-opus-4-6", "Claude Opus 4.6", "Most capable"),
+        new("claude-haiku-4-5-20251001", "Claude Haiku 4.5", "Fastest"),
+    ];
+
+    public static IReadOnlyList<CloudModelOption> GoogleCorrectionModels { get; } =
+    [
+        new("gemini-2.5-flash", "Gemini 2.5 Flash", "Fast and efficient"),
+        new("gemini-2.5-pro", "Gemini 2.5 Pro", "Most capable"),
+    ];
+
+    public static IReadOnlyList<CloudModelOption> GroqCorrectionModels { get; } =
+    [
+        new("llama-3.3-70b-versatile", "Llama 3.3 70B", "Most capable"),
+        new("llama-3.1-8b-instant", "Llama 3.1 8B", "Ultra-fast"),
+        new("mixtral-8x7b-32768", "Mixtral 8x7B", "Balanced"),
+    ];
+
     private readonly IModelPreloadService _preloadService;
     private readonly ILogger _logger;
     private readonly Action _scheduleSave;
@@ -78,6 +98,24 @@ public partial class TranscriptionSettingsViewModel : ObservableObject
     // --- Correction local model name ---
     [ObservableProperty] private string _correctionLocalModelName = "";
 
+    // --- Anthropic ---
+    [ObservableProperty] private string _anthropicApiKey = "";
+    [ObservableProperty] private string _anthropicApiKeyDisplay = "";
+    [ObservableProperty] private bool _isEditingAnthropicApiKey;
+    [ObservableProperty] private string _anthropicModel = "claude-sonnet-4-6";
+
+    // --- Google ---
+    [ObservableProperty] private string _googleApiKey = "";
+    [ObservableProperty] private string _googleApiKeyDisplay = "";
+    [ObservableProperty] private bool _isEditingGoogleApiKey;
+    [ObservableProperty] private string _googleModel = "gemini-2.5-flash";
+
+    // --- Groq ---
+    [ObservableProperty] private string _groqApiKey = "";
+    [ObservableProperty] private string _groqApiKeyDisplay = "";
+    [ObservableProperty] private bool _isEditingGroqApiKey;
+    [ObservableProperty] private string _groqModel = "llama-3.3-70b-versatile";
+
     // --- Combined Audio Model ---
     [ObservableProperty] private bool _useCombinedAudioModel;
     [ObservableProperty] private string _combinedAudioModel = "gpt-4o-mini-audio-preview";
@@ -94,7 +132,8 @@ public partial class TranscriptionSettingsViewModel : ObservableObject
 
     // --- Cloud usage hint ---
     public bool ShowCloudUsageHint =>
-        Provider == TranscriptionProvider.Local && CorrectionProvider == TextCorrectionProvider.Cloud;
+        Provider == TranscriptionProvider.Local &&
+        CorrectionProvider is TextCorrectionProvider.Cloud or TextCorrectionProvider.OpenAI;
 
     public TranscriptionSettingsViewModel(
         IModelManager modelManager,
@@ -120,10 +159,19 @@ public partial class TranscriptionSettingsViewModel : ObservableObject
         _correctionCloudModel = options.TextCorrection.Model;
         _correctionGpuAcceleration = options.TextCorrection.LocalGpuAcceleration;
         _correctionLocalModelName = options.TextCorrection.LocalModelName;
+        _anthropicApiKey = options.TextCorrection.Anthropic.ApiKey ?? "";
+        _anthropicModel = options.TextCorrection.Anthropic.Model;
+        _googleApiKey = options.TextCorrection.Google.ApiKey ?? "";
+        _googleModel = options.TextCorrection.Google.Model;
+        _groqApiKey = options.TextCorrection.Groq.ApiKey ?? "";
+        _groqModel = options.TextCorrection.Groq.Model;
         _useCombinedAudioModel = options.TextCorrection.UseCombinedAudioModel;
         _combinedAudioModel = options.TextCorrection.CombinedAudioModel;
 
         UpdateApiKeyDisplay();
+        UpdateProviderApiKeyDisplay(AnthropicApiKey, v => AnthropicApiKeyDisplay = v);
+        UpdateProviderApiKeyDisplay(GoogleApiKey, v => GoogleApiKeyDisplay = v);
+        UpdateProviderApiKeyDisplay(GroqApiKey, v => GroqApiKeyDisplay = v);
 
         Models = new ModelManagementViewModel(
             modelManager, correctionModelManager, preloadService, logger, dispatcher, scheduleSave,
@@ -138,6 +186,13 @@ public partial class TranscriptionSettingsViewModel : ObservableObject
         OpenAiApiKeyDisplay = string.IsNullOrEmpty(OpenAiApiKey)
             ? "Not configured"
             : OpenAiApiKey.Length >= 4 ? $"sk-...{OpenAiApiKey[^4..]}" : "sk-...****";
+    }
+
+    private static void UpdateProviderApiKeyDisplay(string key, Action<string> setter)
+    {
+        setter(string.IsNullOrEmpty(key)
+            ? "Not configured"
+            : key.Length >= 4 ? $"...{key[^4..]}" : "...****");
     }
 
     // --- Transcription ---
@@ -245,6 +300,53 @@ public partial class TranscriptionSettingsViewModel : ObservableObject
         _scheduleSave();
     }
 
+    // --- Per-provider API key + model ---
+
+    public void ApplyAnthropicApiKey(string key)
+    {
+        AnthropicApiKey = key;
+        IsEditingAnthropicApiKey = false;
+        UpdateProviderApiKeyDisplay(key, v => AnthropicApiKeyDisplay = v);
+        _scheduleSave();
+    }
+
+    [RelayCommand]
+    private void SelectAnthropicModel(string modelId)
+    {
+        AnthropicModel = modelId;
+        _scheduleSave();
+    }
+
+    public void ApplyGoogleApiKey(string key)
+    {
+        GoogleApiKey = key;
+        IsEditingGoogleApiKey = false;
+        UpdateProviderApiKeyDisplay(key, v => GoogleApiKeyDisplay = v);
+        _scheduleSave();
+    }
+
+    [RelayCommand]
+    private void SelectGoogleModel(string modelId)
+    {
+        GoogleModel = modelId;
+        _scheduleSave();
+    }
+
+    public void ApplyGroqApiKey(string key)
+    {
+        GroqApiKey = key;
+        IsEditingGroqApiKey = false;
+        UpdateProviderApiKeyDisplay(key, v => GroqApiKeyDisplay = v);
+        _scheduleSave();
+    }
+
+    [RelayCommand]
+    private void SelectGroqModel(string modelId)
+    {
+        GroqModel = modelId;
+        _scheduleSave();
+    }
+
     [RelayCommand]
     private void ToggleCombinedAudioModel() => _scheduleSave();
 
@@ -286,5 +388,17 @@ public partial class TranscriptionSettingsViewModel : ObservableObject
         correction["LocalGpuAcceleration"] = CorrectionGpuAcceleration;
         correction["UseCombinedAudioModel"] = UseCombinedAudioModel;
         correction["CombinedAudioModel"] = CombinedAudioModel;
+
+        var anthropic = SettingsViewModel.EnsureObject(correction, "Anthropic");
+        anthropic["ApiKey"] = AnthropicApiKey;
+        anthropic["Model"] = AnthropicModel;
+
+        var google = SettingsViewModel.EnsureObject(correction, "Google");
+        google["ApiKey"] = GoogleApiKey;
+        google["Model"] = GoogleModel;
+
+        var groq = SettingsViewModel.EnsureObject(correction, "Groq");
+        groq["ApiKey"] = GroqApiKey;
+        groq["Model"] = GroqModel;
     }
 }

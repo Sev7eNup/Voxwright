@@ -3,6 +3,71 @@ using WriteSpeech.Core.Configuration;
 
 namespace WriteSpeech.App.Services;
 
+[Flags]
+internal enum ModifierFlags : byte
+{
+    None = 0,
+    Control = 1,
+    Shift = 2,
+    Alt = 4
+}
+
+internal sealed record CachedBinding
+{
+    public uint VirtualKeyCode { get; init; }
+    public ModifierFlags Modifiers { get; init; }
+    public bool IsMouseBinding { get; init; }
+    public string? MouseButton { get; init; }
+    public bool IsValid { get; init; }
+
+    public static CachedBinding FromHotkeyBinding(HotkeyBinding binding)
+    {
+        var mods = ParseModifierFlags(binding.Modifiers);
+
+        if (binding.IsMouseBinding)
+        {
+            return new CachedBinding
+            {
+                IsMouseBinding = true,
+                MouseButton = binding.MouseButton,
+                Modifiers = mods,
+                VirtualKeyCode = 0,
+                IsValid = true
+            };
+        }
+
+        if (!Enum.TryParse<Key>(binding.Key, true, out var key))
+            return new CachedBinding { IsValid = false };
+
+        return new CachedBinding
+        {
+            IsMouseBinding = false,
+            MouseButton = null,
+            Modifiers = mods,
+            VirtualKeyCode = (uint)KeyInterop.VirtualKeyFromKey(key),
+            IsValid = true
+        };
+    }
+
+    internal static ModifierFlags ParseModifierFlags(string modifiers)
+    {
+        if (string.IsNullOrEmpty(modifiers)) return ModifierFlags.None;
+
+        var flags = ModifierFlags.None;
+        foreach (var part in modifiers.Split(',', StringSplitOptions.TrimEntries))
+        {
+            flags |= part switch
+            {
+                "Control" => ModifierFlags.Control,
+                "Shift" => ModifierFlags.Shift,
+                "Alt" => ModifierFlags.Alt,
+                _ => ModifierFlags.None
+            };
+        }
+        return flags;
+    }
+}
+
 internal static class HotkeyMatcher
 {
     internal static (string? Button, bool IsDown) ClassifyMouseMessage(int msg, uint mouseData)
@@ -82,4 +147,53 @@ internal static class HotkeyMatcher
 
     private static bool IsKeyDown(Func<int, short> getKeyState, int vk)
         => (getKeyState(vk) & 0x8000) != 0;
+
+    // --- Cached binding overloads (zero-allocation hot path) ---
+
+    internal static bool MatchesKeyboardBinding(CachedBinding cached, uint vkCode, Func<int, short> getKeyState)
+    {
+        if (!cached.IsValid || cached.IsMouseBinding) return false;
+        if (vkCode != cached.VirtualKeyCode) return false;
+        return AreModifiersPressed(cached.Modifiers, getKeyState);
+    }
+
+    internal static bool MatchesKeyRelease(CachedBinding cached, uint vkCode)
+    {
+        if (!cached.IsValid || cached.IsMouseBinding) return false;
+        return vkCode == cached.VirtualKeyCode;
+    }
+
+    internal static bool MatchesMouseBinding(CachedBinding cached, string? button, Func<int, short> getKeyState)
+    {
+        if (!cached.IsValid || !cached.IsMouseBinding || button == null) return false;
+        if (!string.Equals(cached.MouseButton, button, StringComparison.OrdinalIgnoreCase)) return false;
+        return AreModifiersPressed(cached.Modifiers, getKeyState);
+    }
+
+    internal static bool AreModifiersPressed(ModifierFlags modifiers, Func<int, short> getKeyState)
+    {
+        if (modifiers == ModifierFlags.None) return true;
+
+        if ((modifiers & ModifierFlags.Control) != 0
+            && !IsKeyDown(getKeyState, NativeMethods.VK_LCONTROL)
+            && !IsKeyDown(getKeyState, NativeMethods.VK_RCONTROL))
+            return false;
+
+        if ((modifiers & ModifierFlags.Shift) != 0
+            && !IsKeyDown(getKeyState, NativeMethods.VK_LSHIFT)
+            && !IsKeyDown(getKeyState, NativeMethods.VK_RSHIFT))
+            return false;
+
+        if ((modifiers & ModifierFlags.Alt) != 0
+            && !IsKeyDown(getKeyState, NativeMethods.VK_LMENU)
+            && !IsKeyDown(getKeyState, NativeMethods.VK_RMENU))
+            return false;
+
+        return true;
+    }
+
+    internal static bool RequiresMouseHook(CachedBinding toggle, CachedBinding ptt, bool suppressActions)
+    {
+        return suppressActions || toggle.IsMouseBinding || ptt.IsMouseBinding;
+    }
 }

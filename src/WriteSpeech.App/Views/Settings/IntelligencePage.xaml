@@ -9,7 +9,7 @@
                    FontSize="11.5" FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextSecondaryBrush}"
                    TextWrapping="Wrap" Margin="0,0,0,16"/>
 
-        <!-- Correction provider picker: Off / Cloud / Local -->
+        <!-- Correction provider picker: 6 cards in 2 rows -->
         <Grid Margin="0,0,0,4">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
@@ -18,9 +18,14 @@
                 <ColumnDefinition Width="8"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="8"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
 
             <!-- Off card -->
-            <Border Grid.Column="0" Tag="Off" MouseLeftButtonDown="CorrectionProviderCard_Click"
+            <Border Grid.Row="0" Grid.Column="0" Tag="Off" MouseLeftButtonDown="CorrectionProviderCard_Click"
                     Cursor="Hand" BorderThickness="2"
                     Background="{DynamicResource CardBgBrush}" CornerRadius="12" Padding="16,12">
                 <Border.Style>
@@ -43,15 +48,15 @@
                 </Grid>
             </Border>
 
-            <!-- Cloud card -->
-            <Border Grid.Column="2" Tag="Cloud" MouseLeftButtonDown="CorrectionProviderCard_Click"
+            <!-- OpenAI card -->
+            <Border Grid.Row="0" Grid.Column="2" Tag="OpenAI" MouseLeftButtonDown="CorrectionProviderCard_Click"
                     Cursor="Hand" BorderThickness="2"
                     Background="{DynamicResource CardBgBrush}" CornerRadius="12" Padding="16,12">
                 <Border.Style>
                     <Style TargetType="Border">
                         <Setter Property="BorderBrush" Value="Transparent"/>
                         <Style.Triggers>
-                            <DataTrigger Binding="{Binding CorrectionProvider}" Value="Cloud">
+                            <DataTrigger Binding="{Binding CorrectionProvider}" Value="OpenAI">
                                 <Setter Property="BorderBrush" Value="{DynamicResource SelectedBorderBrush}"/>
                             </DataTrigger>
                         </Style.Triggers>
@@ -59,21 +64,108 @@
                 </Border.Style>
                 <Grid>
                     <StackPanel>
-                        <TextBlock Text="Cloud" FontSize="12.5" FontWeight="SemiBold"
+                        <TextBlock Text="OpenAI" FontSize="12.5" FontWeight="SemiBold"
                                    FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                        <TextBlock Text="OpenAI" FontSize="10.5"
+                        <TextBlock Text="GPT" FontSize="10.5"
                                    FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextSecondaryBrush}"
                                    Margin="0,2,0,0"/>
                     </StackPanel>
                     <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="11.5"
                                Foreground="{DynamicResource SelectedBorderBrush}"
                                HorizontalAlignment="Right" VerticalAlignment="Top"
-                               Visibility="{Binding CorrectionProvider, Converter={StaticResource StringToVisibility}, ConverterParameter=Cloud}"/>
+                               Visibility="{Binding CorrectionProvider, Converter={StaticResource StringToVisibility}, ConverterParameter=OpenAI}"/>
+                </Grid>
+            </Border>
+
+            <!-- Anthropic card -->
+            <Border Grid.Row="0" Grid.Column="4" Tag="Anthropic" MouseLeftButtonDown="CorrectionProviderCard_Click"
+                    Cursor="Hand" BorderThickness="2"
+                    Background="{DynamicResource CardBgBrush}" CornerRadius="12" Padding="16,12">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="BorderBrush" Value="Transparent"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding CorrectionProvider}" Value="Anthropic">
+                                <Setter Property="BorderBrush" Value="{DynamicResource SelectedBorderBrush}"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <Grid>
+                    <StackPanel>
+                        <TextBlock Text="Anthropic" FontSize="12.5" FontWeight="SemiBold"
+                                   FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                        <TextBlock Text="Claude" FontSize="10.5"
+                                   FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextSecondaryBrush}"
+                                   Margin="0,2,0,0"/>
+                    </StackPanel>
+                    <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="11.5"
+                               Foreground="{DynamicResource SelectedBorderBrush}"
+                               HorizontalAlignment="Right" VerticalAlignment="Top"
+                               Visibility="{Binding CorrectionProvider, Converter={StaticResource StringToVisibility}, ConverterParameter=Anthropic}"/>
+                </Grid>
+            </Border>
+
+            <!-- Google card -->
+            <Border Grid.Row="2" Grid.Column="0" Tag="Google" MouseLeftButtonDown="CorrectionProviderCard_Click"
+                    Cursor="Hand" BorderThickness="2"
+                    Background="{DynamicResource CardBgBrush}" CornerRadius="12" Padding="16,12">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="BorderBrush" Value="Transparent"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding CorrectionProvider}" Value="Google">
+                                <Setter Property="BorderBrush" Value="{DynamicResource SelectedBorderBrush}"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <Grid>
+                    <StackPanel>
+                        <TextBlock Text="Google" FontSize="12.5" FontWeight="SemiBold"
+                                   FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                        <TextBlock Text="Gemini" FontSize="10.5"
+                                   FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextSecondaryBrush}"
+                                   Margin="0,2,0,0"/>
+                    </StackPanel>
+                    <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="11.5"
+                               Foreground="{DynamicResource SelectedBorderBrush}"
+                               HorizontalAlignment="Right" VerticalAlignment="Top"
+                               Visibility="{Binding CorrectionProvider, Converter={StaticResource StringToVisibility}, ConverterParameter=Google}"/>
+                </Grid>
+            </Border>
+
+            <!-- Groq card -->
+            <Border Grid.Row="2" Grid.Column="2" Tag="Groq" MouseLeftButtonDown="CorrectionProviderCard_Click"
+                    Cursor="Hand" BorderThickness="2"
+                    Background="{DynamicResource CardBgBrush}" CornerRadius="12" Padding="16,12">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="BorderBrush" Value="Transparent"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding CorrectionProvider}" Value="Groq">
+                                <Setter Property="BorderBrush" Value="{DynamicResource SelectedBorderBrush}"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <Grid>
+                    <StackPanel>
+                        <TextBlock Text="Groq" FontSize="12.5" FontWeight="SemiBold"
+                                   FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                        <TextBlock Text="Llama / Mixtral" FontSize="10.5"
+                                   FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextSecondaryBrush}"
+                                   Margin="0,2,0,0"/>
+                    </StackPanel>
+                    <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="11.5"
+                               Foreground="{DynamicResource SelectedBorderBrush}"
+                               HorizontalAlignment="Right" VerticalAlignment="Top"
+                               Visibility="{Binding CorrectionProvider, Converter={StaticResource StringToVisibility}, ConverterParameter=Groq}"/>
                 </Grid>
             </Border>
 
             <!-- Local card -->
-            <Border Grid.Column="4" Tag="Local" MouseLeftButtonDown="CorrectionProviderCard_Click"
+            <Border Grid.Row="2" Grid.Column="4" Tag="Local" MouseLeftButtonDown="CorrectionProviderCard_Click"
                     Cursor="Hand" BorderThickness="2"
                     Background="{DynamicResource CardBgBrush}" CornerRadius="12" Padding="16,12">
                 <Border.Style>
@@ -122,11 +214,11 @@
             </Grid>
         </Border>
 
-        <!-- Cloud correction settings -->
-        <StackPanel Visibility="{Binding CorrectionProvider, Converter={StaticResource StringToVisibility}, ConverterParameter=Cloud}"
+        <!-- ═══════════════ OpenAI correction settings ═══════════════ -->
+        <StackPanel Visibility="{Binding CorrectionProvider, Converter={StaticResource StringToVisibility}, ConverterParameter=OpenAI}"
                     Margin="0,8,0,0">
-            <TextBlock Text="Cloud settings" Style="{StaticResource GroupHeaderStyle}"/>
-            <StackPanel Margin="0,0,0,0">
+            <TextBlock Text="OpenAI settings" Style="{StaticResource GroupHeaderStyle}"/>
+            <StackPanel>
                 <TextBlock Text="Model" FontSize="12.5" FontWeight="SemiBold"
                            FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"
                            Margin="0,0,0,8"/>
@@ -207,7 +299,220 @@
             </StackPanel>
         </StackPanel>
 
-        <!-- Local correction settings -->
+        <!-- ═══════════════ Anthropic correction settings ═══════════════ -->
+        <StackPanel Visibility="{Binding CorrectionProvider, Converter={StaticResource StringToVisibility}, ConverterParameter=Anthropic}"
+                    Margin="0,8,0,0">
+            <TextBlock Text="Anthropic settings" Style="{StaticResource GroupHeaderStyle}"/>
+
+            <!-- API Key -->
+            <Border Background="{DynamicResource CardBgBrush}" CornerRadius="12" Padding="16,12" Margin="0,0,0,8"
+                    Cursor="Hand" MouseLeftButtonDown="AnthropicApiKey_Click">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal"
+                                Visibility="{Binding IsEditingAnthropicApiKey, Converter={StaticResource InverseBoolToVisibility}}">
+                        <TextBlock Text="API Key" FontSize="12.5" FontWeight="SemiBold"
+                                   FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"
+                                   VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding AnthropicApiKeyDisplay}" FontSize="11.5"
+                                   FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextSecondaryBrush}"
+                                   VerticalAlignment="Center" Margin="12,0,0,0"/>
+                    </StackPanel>
+                    <StackPanel Visibility="{Binding IsEditingAnthropicApiKey, Converter={StaticResource BoolToVisibility}}">
+                        <TextBlock Text="API Key" FontSize="12.5" FontWeight="SemiBold"
+                                   FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"
+                                   Margin="0,0,0,6"/>
+                        <TextBox Text="{Binding AnthropicApiKey}" Style="{StaticResource SettingsTextBoxStyle}"
+                                 KeyDown="AnthropicApiKeyTextBox_KeyDown"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Model -->
+            <TextBlock Text="Model" FontSize="12.5" FontWeight="SemiBold"
+                       FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"
+                       Margin="0,0,0,8"/>
+            <ItemsControl ItemsSource="{x:Static local:TranscriptionSettingsViewModel.AnthropicCorrectionModels}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Margin="0,0,0,4" Padding="12,8" Cursor="Hand"
+                                Background="{DynamicResource CardBgBrush}" CornerRadius="8"
+                                BorderThickness="2"
+                                MouseLeftButtonDown="AnthropicModelCard_Click" Tag="{Binding Id}">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="BorderBrush" Value="Transparent"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Value="True">
+                                            <DataTrigger.Binding>
+                                                <MultiBinding Converter="{StaticResource EqualityConverter}">
+                                                    <Binding Path="Id"/>
+                                                    <Binding Path="DataContext.AnthropicModel"
+                                                             RelativeSource="{RelativeSource AncestorType=ItemsControl}"/>
+                                                </MultiBinding>
+                                            </DataTrigger.Binding>
+                                            <Setter Property="BorderBrush" Value="{DynamicResource SelectedBorderBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding DisplayName}" FontSize="11.5" FontWeight="SemiBold"
+                                           FontFamily="Segoe UI Variable, Segoe UI"
+                                           Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding Description}" FontSize="10.5"
+                                           FontFamily="Segoe UI Variable, Segoe UI"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                           VerticalAlignment="Center" Margin="8,0,0,0"/>
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+
+        <!-- ═══════════════ Google correction settings ═══════════════ -->
+        <StackPanel Visibility="{Binding CorrectionProvider, Converter={StaticResource StringToVisibility}, ConverterParameter=Google}"
+                    Margin="0,8,0,0">
+            <TextBlock Text="Google settings" Style="{StaticResource GroupHeaderStyle}"/>
+
+            <!-- API Key -->
+            <Border Background="{DynamicResource CardBgBrush}" CornerRadius="12" Padding="16,12" Margin="0,0,0,8"
+                    Cursor="Hand" MouseLeftButtonDown="GoogleApiKey_Click">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal"
+                                Visibility="{Binding IsEditingGoogleApiKey, Converter={StaticResource InverseBoolToVisibility}}">
+                        <TextBlock Text="API Key" FontSize="12.5" FontWeight="SemiBold"
+                                   FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"
+                                   VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding GoogleApiKeyDisplay}" FontSize="11.5"
+                                   FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextSecondaryBrush}"
+                                   VerticalAlignment="Center" Margin="12,0,0,0"/>
+                    </StackPanel>
+                    <StackPanel Visibility="{Binding IsEditingGoogleApiKey, Converter={StaticResource BoolToVisibility}}">
+                        <TextBlock Text="API Key" FontSize="12.5" FontWeight="SemiBold"
+                                   FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"
+                                   Margin="0,0,0,6"/>
+                        <TextBox Text="{Binding GoogleApiKey}" Style="{StaticResource SettingsTextBoxStyle}"
+                                 KeyDown="GoogleApiKeyTextBox_KeyDown"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Model -->
+            <TextBlock Text="Model" FontSize="12.5" FontWeight="SemiBold"
+                       FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"
+                       Margin="0,0,0,8"/>
+            <ItemsControl ItemsSource="{x:Static local:TranscriptionSettingsViewModel.GoogleCorrectionModels}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Margin="0,0,0,4" Padding="12,8" Cursor="Hand"
+                                Background="{DynamicResource CardBgBrush}" CornerRadius="8"
+                                BorderThickness="2"
+                                MouseLeftButtonDown="GoogleModelCard_Click" Tag="{Binding Id}">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="BorderBrush" Value="Transparent"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Value="True">
+                                            <DataTrigger.Binding>
+                                                <MultiBinding Converter="{StaticResource EqualityConverter}">
+                                                    <Binding Path="Id"/>
+                                                    <Binding Path="DataContext.GoogleModel"
+                                                             RelativeSource="{RelativeSource AncestorType=ItemsControl}"/>
+                                                </MultiBinding>
+                                            </DataTrigger.Binding>
+                                            <Setter Property="BorderBrush" Value="{DynamicResource SelectedBorderBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding DisplayName}" FontSize="11.5" FontWeight="SemiBold"
+                                           FontFamily="Segoe UI Variable, Segoe UI"
+                                           Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding Description}" FontSize="10.5"
+                                           FontFamily="Segoe UI Variable, Segoe UI"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                           VerticalAlignment="Center" Margin="8,0,0,0"/>
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+
+        <!-- ═══════════════ Groq correction settings ═══════════════ -->
+        <StackPanel Visibility="{Binding CorrectionProvider, Converter={StaticResource StringToVisibility}, ConverterParameter=Groq}"
+                    Margin="0,8,0,0">
+            <TextBlock Text="Groq settings" Style="{StaticResource GroupHeaderStyle}"/>
+
+            <!-- API Key -->
+            <Border Background="{DynamicResource CardBgBrush}" CornerRadius="12" Padding="16,12" Margin="0,0,0,8"
+                    Cursor="Hand" MouseLeftButtonDown="GroqApiKey_Click">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal"
+                                Visibility="{Binding IsEditingGroqApiKey, Converter={StaticResource InverseBoolToVisibility}}">
+                        <TextBlock Text="API Key" FontSize="12.5" FontWeight="SemiBold"
+                                   FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"
+                                   VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding GroqApiKeyDisplay}" FontSize="11.5"
+                                   FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextSecondaryBrush}"
+                                   VerticalAlignment="Center" Margin="12,0,0,0"/>
+                    </StackPanel>
+                    <StackPanel Visibility="{Binding IsEditingGroqApiKey, Converter={StaticResource BoolToVisibility}}">
+                        <TextBlock Text="API Key" FontSize="12.5" FontWeight="SemiBold"
+                                   FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"
+                                   Margin="0,0,0,6"/>
+                        <TextBox Text="{Binding GroqApiKey}" Style="{StaticResource SettingsTextBoxStyle}"
+                                 KeyDown="GroqApiKeyTextBox_KeyDown"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Model -->
+            <TextBlock Text="Model" FontSize="12.5" FontWeight="SemiBold"
+                       FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}"
+                       Margin="0,0,0,8"/>
+            <ItemsControl ItemsSource="{x:Static local:TranscriptionSettingsViewModel.GroqCorrectionModels}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Margin="0,0,0,4" Padding="12,8" Cursor="Hand"
+                                Background="{DynamicResource CardBgBrush}" CornerRadius="8"
+                                BorderThickness="2"
+                                MouseLeftButtonDown="GroqModelCard_Click" Tag="{Binding Id}">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="BorderBrush" Value="Transparent"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Value="True">
+                                            <DataTrigger.Binding>
+                                                <MultiBinding Converter="{StaticResource EqualityConverter}">
+                                                    <Binding Path="Id"/>
+                                                    <Binding Path="DataContext.GroqModel"
+                                                             RelativeSource="{RelativeSource AncestorType=ItemsControl}"/>
+                                                </MultiBinding>
+                                            </DataTrigger.Binding>
+                                            <Setter Property="BorderBrush" Value="{DynamicResource SelectedBorderBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding DisplayName}" FontSize="11.5" FontWeight="SemiBold"
+                                           FontFamily="Segoe UI Variable, Segoe UI"
+                                           Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding Description}" FontSize="10.5"
+                                           FontFamily="Segoe UI Variable, Segoe UI"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                           VerticalAlignment="Center" Margin="8,0,0,0"/>
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+
+        <!-- ═══════════════ Local correction settings ═══════════════ -->
         <StackPanel Visibility="{Binding CorrectionProvider, Converter={StaticResource StringToVisibility}, ConverterParameter=Local}"
                     Margin="0,8,0,0">
             <TextBlock Text="Local settings" Style="{StaticResource GroupHeaderStyle}"/>
@@ -387,7 +692,7 @@
                            VerticalAlignment="Top" Margin="0,0,10,0"/>
                 <TextBlock Grid.Column="1" TextWrapping="Wrap" FontSize="11.5" FontFamily="Segoe UI Variable, Segoe UI"
                            Foreground="{DynamicResource TextSecondaryBrush}"
-                           Text="Cloud text correction requires an OpenAI API key. Configure it in Models → Cloud settings."/>
+                           Text="OpenAI text correction uses the shared API key. Configure it in Models → Cloud settings."/>
             </Grid>
         </Border>
     </StackPanel>

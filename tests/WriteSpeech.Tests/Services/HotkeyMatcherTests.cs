@@ -265,4 +265,252 @@ public class HotkeyMatcherTests
         var result = HotkeyMatcher.MatchesKeyRelease(binding, 0x20);
         result.Should().BeFalse();
     }
+
+    // --- CachedBinding construction ---
+
+    [Fact]
+    public void CachedBinding_FromKeyboardBinding_SetsVirtualKeyCode()
+    {
+        var binding = new HotkeyBinding { Key = "Space", Modifiers = "Control" };
+
+        var cached = CachedBinding.FromHotkeyBinding(binding);
+
+        cached.IsValid.Should().BeTrue();
+        cached.IsMouseBinding.Should().BeFalse();
+        cached.VirtualKeyCode.Should().Be(0x20); // VK_SPACE
+        cached.Modifiers.Should().Be(ModifierFlags.Control);
+    }
+
+    [Fact]
+    public void CachedBinding_FromMouseBinding_SetsMouseButton()
+    {
+        var binding = new HotkeyBinding { MouseButton = "XButton1", Modifiers = "Control, Shift" };
+
+        var cached = CachedBinding.FromHotkeyBinding(binding);
+
+        cached.IsValid.Should().BeTrue();
+        cached.IsMouseBinding.Should().BeTrue();
+        cached.MouseButton.Should().Be("XButton1");
+        cached.Modifiers.Should().Be(ModifierFlags.Control | ModifierFlags.Shift);
+    }
+
+    [Fact]
+    public void CachedBinding_FromInvalidKey_ReturnsInvalid()
+    {
+        var binding = new HotkeyBinding { Key = "NotAKey", Modifiers = "Control" };
+
+        var cached = CachedBinding.FromHotkeyBinding(binding);
+
+        cached.IsValid.Should().BeFalse();
+    }
+
+    [Fact]
+    public void CachedBinding_EmptyModifiers_ReturnsNone()
+    {
+        var binding = new HotkeyBinding { Key = "Space", Modifiers = "" };
+
+        var cached = CachedBinding.FromHotkeyBinding(binding);
+
+        cached.Modifiers.Should().Be(ModifierFlags.None);
+    }
+
+    [Fact]
+    public void CachedBinding_MultipleModifiers_ParsesAll()
+    {
+        var binding = new HotkeyBinding { Key = "Space", Modifiers = "Control, Shift, Alt" };
+
+        var cached = CachedBinding.FromHotkeyBinding(binding);
+
+        cached.Modifiers.Should().Be(ModifierFlags.Control | ModifierFlags.Shift | ModifierFlags.Alt);
+    }
+
+    [Fact]
+    public void CachedBinding_SingleModifier_ParsesCorrectly()
+    {
+        var binding = new HotkeyBinding { Key = "Space", Modifiers = "Alt" };
+
+        var cached = CachedBinding.FromHotkeyBinding(binding);
+
+        cached.Modifiers.Should().Be(ModifierFlags.Alt);
+    }
+
+    // --- Cached MatchesKeyboardBinding ---
+
+    [Fact]
+    public void MatchesKeyboardBinding_Cached_CorrectVkAndModifiers_ReturnsTrue()
+    {
+        var cached = CachedBinding.FromHotkeyBinding(
+            new HotkeyBinding { Key = "Space", Modifiers = "Control" });
+        short KeyState(int vk) => vk == NativeMethods.VK_LCONTROL
+            ? unchecked((short)0x8000) : (short)0;
+
+        var result = HotkeyMatcher.MatchesKeyboardBinding(cached, 0x20, KeyState);
+        result.Should().BeTrue();
+    }
+
+    [Fact]
+    public void MatchesKeyboardBinding_Cached_WrongVk_ReturnsFalse()
+    {
+        var cached = CachedBinding.FromHotkeyBinding(
+            new HotkeyBinding { Key = "Space", Modifiers = "Control" });
+        short KeyState(int vk) => vk == NativeMethods.VK_LCONTROL
+            ? unchecked((short)0x8000) : (short)0;
+
+        var result = HotkeyMatcher.MatchesKeyboardBinding(cached, 0x41, KeyState); // VK_A
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void MatchesKeyboardBinding_Cached_MouseBinding_ReturnsFalse()
+    {
+        var cached = CachedBinding.FromHotkeyBinding(
+            new HotkeyBinding { MouseButton = "XButton1", Modifiers = "Control" });
+
+        var result = HotkeyMatcher.MatchesKeyboardBinding(cached, 0x20, _ => unchecked((short)0x8000));
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void MatchesKeyboardBinding_Cached_Invalid_ReturnsFalse()
+    {
+        var cached = CachedBinding.FromHotkeyBinding(
+            new HotkeyBinding { Key = "NotAKey", Modifiers = "Control" });
+
+        var result = HotkeyMatcher.MatchesKeyboardBinding(cached, 0x20, _ => unchecked((short)0x8000));
+        result.Should().BeFalse();
+    }
+
+    // --- Cached MatchesMouseBinding ---
+
+    [Fact]
+    public void MatchesMouseBinding_Cached_CorrectButtonAndModifiers_ReturnsTrue()
+    {
+        var cached = CachedBinding.FromHotkeyBinding(
+            new HotkeyBinding { MouseButton = "XButton1", Modifiers = "Control" });
+        short KeyState(int vk) => vk == NativeMethods.VK_LCONTROL
+            ? unchecked((short)0x8000) : (short)0;
+
+        var result = HotkeyMatcher.MatchesMouseBinding(cached, "XButton1", KeyState);
+        result.Should().BeTrue();
+    }
+
+    [Fact]
+    public void MatchesMouseBinding_Cached_WrongButton_ReturnsFalse()
+    {
+        var cached = CachedBinding.FromHotkeyBinding(
+            new HotkeyBinding { MouseButton = "XButton1", Modifiers = "Control" });
+        short KeyState(int vk) => vk == NativeMethods.VK_LCONTROL
+            ? unchecked((short)0x8000) : (short)0;
+
+        var result = HotkeyMatcher.MatchesMouseBinding(cached, "XButton2", KeyState);
+        result.Should().BeFalse();
+    }
+
+    // --- Cached MatchesKeyRelease ---
+
+    [Fact]
+    public void MatchesKeyRelease_Cached_CorrectVk_ReturnsTrue()
+    {
+        var cached = CachedBinding.FromHotkeyBinding(
+            new HotkeyBinding { Key = "Space", Modifiers = "Control" });
+
+        var result = HotkeyMatcher.MatchesKeyRelease(cached, 0x20);
+        result.Should().BeTrue();
+    }
+
+    [Fact]
+    public void MatchesKeyRelease_Cached_WrongVk_ReturnsFalse()
+    {
+        var cached = CachedBinding.FromHotkeyBinding(
+            new HotkeyBinding { Key = "Space", Modifiers = "Control" });
+
+        var result = HotkeyMatcher.MatchesKeyRelease(cached, 0x41); // VK_A
+        result.Should().BeFalse();
+    }
+
+    // --- ModifierFlags AreModifiersPressed ---
+
+    [Fact]
+    public void AreModifiersPressed_Flags_None_ReturnsTrue()
+    {
+        var result = HotkeyMatcher.AreModifiersPressed(ModifierFlags.None, _ => 0);
+        result.Should().BeTrue();
+    }
+
+    [Fact]
+    public void AreModifiersPressed_Flags_ControlPressed_ReturnsTrue()
+    {
+        short KeyState(int vk) => vk == NativeMethods.VK_LCONTROL
+            ? unchecked((short)0x8000) : (short)0;
+
+        var result = HotkeyMatcher.AreModifiersPressed(ModifierFlags.Control, KeyState);
+        result.Should().BeTrue();
+    }
+
+    [Fact]
+    public void AreModifiersPressed_Flags_ControlNotPressed_ReturnsFalse()
+    {
+        var result = HotkeyMatcher.AreModifiersPressed(ModifierFlags.Control, _ => 0);
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void AreModifiersPressed_Flags_MultipleModifiers_AllPressed_ReturnsTrue()
+    {
+        short KeyState(int vk) => vk is NativeMethods.VK_LCONTROL or NativeMethods.VK_LSHIFT
+            ? unchecked((short)0x8000) : (short)0;
+
+        var result = HotkeyMatcher.AreModifiersPressed(
+            ModifierFlags.Control | ModifierFlags.Shift, KeyState);
+        result.Should().BeTrue();
+    }
+
+    [Fact]
+    public void AreModifiersPressed_Flags_MultipleModifiers_OneMissing_ReturnsFalse()
+    {
+        short KeyState(int vk) => vk == NativeMethods.VK_LCONTROL
+            ? unchecked((short)0x8000) : (short)0;
+
+        var result = HotkeyMatcher.AreModifiersPressed(
+            ModifierFlags.Control | ModifierFlags.Shift, KeyState);
+        result.Should().BeFalse();
+    }
+
+    // --- RequiresMouseHook ---
+
+    [Fact]
+    public void RequiresMouseHook_NoMouseBindings_NotSuppressed_ReturnsFalse()
+    {
+        var toggle = CachedBinding.FromHotkeyBinding(new HotkeyBinding { Key = "Space", Modifiers = "Control" });
+        var ptt = CachedBinding.FromHotkeyBinding(new HotkeyBinding { Key = "Space", Modifiers = "" });
+
+        HotkeyMatcher.RequiresMouseHook(toggle, ptt, suppressActions: false).Should().BeFalse();
+    }
+
+    [Fact]
+    public void RequiresMouseHook_ToggleIsMouseBinding_ReturnsTrue()
+    {
+        var toggle = CachedBinding.FromHotkeyBinding(new HotkeyBinding { MouseButton = "XButton1", Modifiers = "Control" });
+        var ptt = CachedBinding.FromHotkeyBinding(new HotkeyBinding { Key = "Space", Modifiers = "" });
+
+        HotkeyMatcher.RequiresMouseHook(toggle, ptt, suppressActions: false).Should().BeTrue();
+    }
+
+    [Fact]
+    public void RequiresMouseHook_PttIsMouseBinding_ReturnsTrue()
+    {
+        var toggle = CachedBinding.FromHotkeyBinding(new HotkeyBinding { Key = "Space", Modifiers = "Control" });
+        var ptt = CachedBinding.FromHotkeyBinding(new HotkeyBinding { MouseButton = "Middle", Modifiers = "" });
+
+        HotkeyMatcher.RequiresMouseHook(toggle, ptt, suppressActions: false).Should().BeTrue();
+    }
+
+    [Fact]
+    public void RequiresMouseHook_SuppressedActions_ReturnsTrue()
+    {
+        var toggle = CachedBinding.FromHotkeyBinding(new HotkeyBinding { Key = "Space", Modifiers = "Control" });
+        var ptt = CachedBinding.FromHotkeyBinding(new HotkeyBinding { Key = "Space", Modifiers = "" });
+
+        HotkeyMatcher.RequiresMouseHook(toggle, ptt, suppressActions: true).Should().BeTrue();
+    }
 }

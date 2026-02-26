@@ -10,10 +10,14 @@ namespace WriteSpeech.App.Services;
 public class LowLevelHookHotkeyService : IGlobalHotkeyService
 {
     private const int MinPttHoldMs = 300;
+    private const uint WM_APP_INSTALL_MOUSE_HOOK = 0x8001;
+    private const uint WM_APP_UNINSTALL_MOUSE_HOOK = 0x8002;
 
     private readonly ILogger<LowLevelHookHotkeyService> _logger;
     private HotkeyBinding _toggleBinding;
     private HotkeyBinding _pttBinding;
+    private CachedBinding _cachedToggle;
+    private CachedBinding _cachedPtt;
     private bool _escapeRegistered;
     private bool _isPttActive;
     private long _pttPressTimestamp;
@@ -21,7 +25,13 @@ public class LowLevelHookHotkeyService : IGlobalHotkeyService
 
     private IntPtr _keyboardHookHandle;
     private IntPtr _mouseHookHandle;
+    private IntPtr _moduleHandle;
     private SynchronizationContext? _syncContext;
+
+    // Dedicated hook thread
+    private Thread? _hookThread;
+    private uint _hookThreadId;
+    private readonly ManualResetEventSlim _hookThreadReady = new();
 
     // Must hold references to prevent GC collection of delegates passed to unmanaged code
     private readonly NativeMethods.LowLevelHookProc _keyboardHookDelegate;
@@ -32,7 +42,17 @@ public class LowLevelHookHotkeyService : IGlobalHotkeyService
     public event EventHandler? PushToTalkHotkeyReleased;
     public event EventHandler? EscapePressed;
     public event EventHandler<MouseButtonCapturedEventArgs>? MouseButtonCaptured;
-    public bool SuppressActions { get; set; }
+
+    private bool _suppressActions;
+    public bool SuppressActions
+    {
+        get => _suppressActions;
+        set
+        {
+            _suppressActions = value;
+            UpdateMouseHookState();
+        }
+    }
 
     public LowLevelHookHotkeyService(
         ILogger<LowLevelHookHotkeyService> logger,
@@ -41,6 +61,8 @@ public class LowLevelHookHotkeyService : IGlobalHotkeyService
         _logger = logger;
         _toggleBinding = optionsMonitor.CurrentValue.Hotkey.Toggle;
         _pttBinding = optionsMonitor.CurrentValue.Hotkey.PushToTalk;
+        _cachedToggle = CachedBinding.FromHotkeyBinding(_toggleBinding);
+        _cachedPtt = CachedBinding.FromHotkeyBinding(_pttBinding);
 
         _keyboardHookDelegate = KeyboardHookCallback;
         _mouseHookDelegate = MouseHookCallback;
@@ -48,44 +70,121 @@ public class LowLevelHookHotkeyService : IGlobalHotkeyService
 
     public void Register(IntPtr windowHandle)
     {
+        // Capture the UI SynchronizationContext for event posting
         _syncContext = SynchronizationContext.Current;
-        var moduleHandle = NativeMethods.GetModuleHandle(null);
 
+        _hookThread = new Thread(HookThreadProc)
+        {
+            Name = "LowLevelHookThread",
+            IsBackground = true
+        };
+        _hookThread.Start();
+
+        // Wait for the hook thread to be ready (hooks installed, message pump running)
+        _hookThreadReady.Wait(TimeSpan.FromSeconds(5));
+
+        _logger.LogInformation("Low-level hooks installed on dedicated thread (KB: {KB}, Mouse: {Mouse})",
+            _keyboardHookHandle != IntPtr.Zero,
+            _mouseHookHandle != IntPtr.Zero);
+    }
+
+    private void HookThreadProc()
+    {
+        _hookThreadId = NativeMethods.GetCurrentThreadId();
+        _moduleHandle = NativeMethods.GetModuleHandle(null);
+
+        // Install keyboard hook (always needed)
         _keyboardHookHandle = NativeMethods.SetWindowsHookExW(
-            NativeMethods.WH_KEYBOARD_LL, _keyboardHookDelegate, moduleHandle, 0);
+            NativeMethods.WH_KEYBOARD_LL, _keyboardHookDelegate, _moduleHandle, 0);
 
         if (_keyboardHookHandle == IntPtr.Zero)
             _logger.LogWarning("Failed to install WH_KEYBOARD_LL hook. Error: {Error}",
                 Marshal.GetLastWin32Error());
 
-        // Always install mouse hook — needed for capture UI and mouse button bindings
-        _mouseHookHandle = NativeMethods.SetWindowsHookExW(
-            NativeMethods.WH_MOUSE_LL, _mouseHookDelegate, moduleHandle, 0);
+        // Only install mouse hook if currently needed
+        if (HotkeyMatcher.RequiresMouseHook(_cachedToggle, _cachedPtt, _suppressActions))
+            InstallMouseHook();
 
-        if (_mouseHookHandle == IntPtr.Zero)
-            _logger.LogWarning("Failed to install WH_MOUSE_LL hook. Error: {Error}",
-                Marshal.GetLastWin32Error());
+        // Signal that hooks are ready
+        _hookThreadReady.Set();
 
-        _logger.LogInformation("Low-level hooks installed (KB: {KB}, Mouse: {Mouse})",
-            _keyboardHookHandle != IntPtr.Zero,
-            _mouseHookHandle != IntPtr.Zero);
-    }
+        // Run message pump — hooks require an active message loop on the installing thread
+        while (NativeMethods.GetMessage(out var msg, IntPtr.Zero, 0, 0) > 0)
+        {
+            if (msg.message == WM_APP_INSTALL_MOUSE_HOOK)
+            {
+                if (_mouseHookHandle == IntPtr.Zero)
+                    InstallMouseHook();
+            }
+            else if (msg.message == WM_APP_UNINSTALL_MOUSE_HOOK)
+            {
+                UninstallMouseHook();
+            }
+            else
+            {
+                NativeMethods.TranslateMessage(in msg);
+                NativeMethods.DispatchMessage(in msg);
+            }
+        }
 
-    public void Unregister()
-    {
+        // Cleanup hooks on this thread (must be unhooked from the same thread)
         if (_keyboardHookHandle != IntPtr.Zero)
         {
             NativeMethods.UnhookWindowsHookEx(_keyboardHookHandle);
             _keyboardHookHandle = IntPtr.Zero;
         }
 
+        UninstallMouseHook();
+    }
+
+    private void InstallMouseHook()
+    {
+        if (_mouseHookHandle != IntPtr.Zero || _moduleHandle == IntPtr.Zero) return;
+
+        _mouseHookHandle = NativeMethods.SetWindowsHookExW(
+            NativeMethods.WH_MOUSE_LL, _mouseHookDelegate, _moduleHandle, 0);
+
+        if (_mouseHookHandle == IntPtr.Zero)
+            _logger.LogWarning("Failed to install WH_MOUSE_LL hook. Error: {Error}",
+                Marshal.GetLastWin32Error());
+        else
+            _logger.LogDebug("Mouse hook installed on demand");
+    }
+
+    private void UninstallMouseHook()
+    {
         if (_mouseHookHandle != IntPtr.Zero)
         {
             NativeMethods.UnhookWindowsHookEx(_mouseHookHandle);
             _mouseHookHandle = IntPtr.Zero;
+            _logger.LogDebug("Mouse hook removed (no longer needed)");
+        }
+    }
+
+    private void UpdateMouseHookState()
+    {
+        if (_hookThreadId == 0) return;
+
+        var needed = HotkeyMatcher.RequiresMouseHook(_cachedToggle, _cachedPtt, _suppressActions);
+
+        if (needed && _mouseHookHandle == IntPtr.Zero)
+            NativeMethods.PostThreadMessage(_hookThreadId, WM_APP_INSTALL_MOUSE_HOOK, IntPtr.Zero, IntPtr.Zero);
+        else if (!needed && _mouseHookHandle != IntPtr.Zero)
+            NativeMethods.PostThreadMessage(_hookThreadId, WM_APP_UNINSTALL_MOUSE_HOOK, IntPtr.Zero, IntPtr.Zero);
+    }
+
+    public void Unregister()
+    {
+        if (_hookThreadId != 0)
+        {
+            NativeMethods.PostThreadMessage(_hookThreadId, (uint)NativeMethods.WM_QUIT, IntPtr.Zero, IntPtr.Zero);
+            _hookThread?.Join(TimeSpan.FromSeconds(3));
+            _hookThread = null;
+            _hookThreadId = 0;
         }
 
         _syncContext = null;
+        _hookThreadReady.Reset();
         _logger.LogInformation("Low-level hooks removed");
     }
 
@@ -96,24 +195,32 @@ public class LowLevelHookHotkeyService : IGlobalHotkeyService
     public void UpdateToggleHotkey(string modifiers, string key)
     {
         _toggleBinding = new HotkeyBinding { Modifiers = modifiers, Key = key };
+        _cachedToggle = CachedBinding.FromHotkeyBinding(_toggleBinding);
+        UpdateMouseHookState();
         _logger.LogInformation("Toggle hotkey updated to {Modifiers}+{Key}", modifiers, key);
     }
 
     public void UpdateToggleHotkey(string modifiers, string? key, string? mouseButton)
     {
         _toggleBinding = new HotkeyBinding { Modifiers = modifiers, Key = key ?? "", MouseButton = mouseButton };
+        _cachedToggle = CachedBinding.FromHotkeyBinding(_toggleBinding);
+        UpdateMouseHookState();
         _logger.LogInformation("Toggle hotkey updated to {Modifiers}+{Key}/{Mouse}", modifiers, key, mouseButton);
     }
 
     public void UpdatePushToTalkHotkey(string modifiers, string key)
     {
         _pttBinding = new HotkeyBinding { Modifiers = modifiers, Key = key };
+        _cachedPtt = CachedBinding.FromHotkeyBinding(_pttBinding);
+        UpdateMouseHookState();
         _logger.LogInformation("PTT hotkey updated to {Modifiers}+{Key}", modifiers, key);
     }
 
     public void UpdatePushToTalkHotkey(string modifiers, string? key, string? mouseButton)
     {
         _pttBinding = new HotkeyBinding { Modifiers = modifiers, Key = key ?? "", MouseButton = mouseButton };
+        _cachedPtt = CachedBinding.FromHotkeyBinding(_pttBinding);
+        UpdateMouseHookState();
         _logger.LogInformation("PTT hotkey updated to {Modifiers}+{Key}/{Mouse}", modifiers, key, mouseButton);
     }
 
@@ -123,7 +230,7 @@ public class LowLevelHookHotkeyService : IGlobalHotkeyService
 
     private IntPtr KeyboardHookCallback(int nCode, IntPtr wParam, IntPtr lParam)
     {
-        if (nCode >= 0 && !SuppressActions)
+        if (nCode >= 0 && !_suppressActions)
         {
             var hookStruct = Marshal.PtrToStructure<NativeMethods.KBDLLHOOKSTRUCT>(lParam);
 
@@ -139,23 +246,27 @@ public class LowLevelHookHotkeyService : IGlobalHotkeyService
                     _syncContext?.Post(_ => EscapePressed?.Invoke(this, EventArgs.Empty), null);
                 }
 
+                // Read cached bindings once (atomic reference reads)
+                var toggle = _cachedToggle;
+                var ptt = _cachedPtt;
+
                 // Toggle hotkey (keyboard-based)
-                if (isDown && !_toggleBinding.IsMouseBinding
-                    && HotkeyMatcher.MatchesKeyboardBinding(_toggleBinding, hookStruct.vkCode, NativeMethods.GetAsyncKeyState))
+                if (isDown && !toggle.IsMouseBinding
+                    && HotkeyMatcher.MatchesKeyboardBinding(toggle, hookStruct.vkCode, NativeMethods.GetAsyncKeyState))
                 {
                     _syncContext?.Post(_ => ToggleHotkeyPressed?.Invoke(this, EventArgs.Empty), null);
                 }
 
                 // PTT hotkey (keyboard-based)
-                if (!_pttBinding.IsMouseBinding)
+                if (!ptt.IsMouseBinding)
                 {
                     if (isDown && !_isPttActive
-                        && HotkeyMatcher.MatchesKeyboardBinding(_pttBinding, hookStruct.vkCode, NativeMethods.GetAsyncKeyState))
+                        && HotkeyMatcher.MatchesKeyboardBinding(ptt, hookStruct.vkCode, NativeMethods.GetAsyncKeyState))
                     {
                         _isPttActive = true;
                         _syncContext?.Post(_ => PushToTalkHotkeyPressed?.Invoke(this, EventArgs.Empty), null);
                     }
-                    else if (isUp && _isPttActive && HotkeyMatcher.MatchesKeyRelease(_pttBinding, hookStruct.vkCode))
+                    else if (isUp && _isPttActive && HotkeyMatcher.MatchesKeyRelease(ptt, hookStruct.vkCode))
                     {
                         _isPttActive = false;
                         _syncContext?.Post(_ => PushToTalkHotkeyReleased?.Invoke(this, EventArgs.Empty), null);
@@ -171,57 +282,67 @@ public class LowLevelHookHotkeyService : IGlobalHotkeyService
     {
         if (nCode >= 0)
         {
-            var hookStruct = Marshal.PtrToStructure<NativeMethods.MSLLHOOKSTRUCT>(lParam);
             var msg = wParam.ToInt32();
-            var (button, isDown) = HotkeyMatcher.ClassifyMouseMessage(msg, hookStruct.mouseData);
 
-            if (button != null)
+            // Fast path: only process middle/x-button messages, skip movement and left/right clicks
+            if (msg is NativeMethods.WM_MBUTTONDOWN or NativeMethods.WM_MBUTTONUP
+                or NativeMethods.WM_XBUTTONDOWN or NativeMethods.WM_XBUTTONUP)
             {
-                // When suppressed (capture mode), route to capture event instead
-                if (SuppressActions)
-                {
-                    if (isDown)
-                        _syncContext?.Post(_ => MouseButtonCaptured?.Invoke(this, new MouseButtonCapturedEventArgs(button)), null);
+                var hookStruct = Marshal.PtrToStructure<NativeMethods.MSLLHOOKSTRUCT>(lParam);
+                var (button, isDown) = HotkeyMatcher.ClassifyMouseMessage(msg, hookStruct.mouseData);
 
-                    return NativeMethods.CallNextHookEx(_mouseHookHandle, nCode, wParam, lParam);
-                }
-
-                // Toggle hotkey (mouse-based)
-                if (isDown && _toggleBinding.IsMouseBinding
-                    && HotkeyMatcher.MatchesMouseBinding(_toggleBinding, button, NativeMethods.GetAsyncKeyState))
+                if (button != null)
                 {
-                    _syncContext?.Post(_ => ToggleHotkeyPressed?.Invoke(this, EventArgs.Empty), null);
-                }
-
-                // PTT hotkey (mouse-based)
-                if (_pttBinding.IsMouseBinding)
-                {
-                    if (isDown && !_isPttActive
-                        && HotkeyMatcher.MatchesMouseBinding(_pttBinding, button, NativeMethods.GetAsyncKeyState))
+                    // When suppressed (capture mode), route to capture event instead
+                    if (_suppressActions)
                     {
-                        _isPttActive = true;
-                        _pttPressTimestamp = Environment.TickCount64;
-                        _syncContext?.Post(_ => PushToTalkHotkeyPressed?.Invoke(this, EventArgs.Empty), null);
+                        if (isDown)
+                            _syncContext?.Post(_ => MouseButtonCaptured?.Invoke(this, new MouseButtonCapturedEventArgs(button)), null);
+
+                        return NativeMethods.CallNextHookEx(_mouseHookHandle, nCode, wParam, lParam);
                     }
-                    else if (!isDown && _isPttActive
-                        && string.Equals(_pttBinding.MouseButton, button, StringComparison.OrdinalIgnoreCase))
+
+                    // Read cached bindings once (atomic reference reads)
+                    var toggle = _cachedToggle;
+                    var ptt = _cachedPtt;
+
+                    // Toggle hotkey (mouse-based)
+                    if (isDown && toggle.IsMouseBinding
+                        && HotkeyMatcher.MatchesMouseBinding(toggle, button, NativeMethods.GetAsyncKeyState))
                     {
-                        var elapsed = Environment.TickCount64 - _pttPressTimestamp;
-                        if (elapsed < MinPttHoldMs)
+                        _syncContext?.Post(_ => ToggleHotkeyPressed?.Invoke(this, EventArgs.Empty), null);
+                    }
+
+                    // PTT hotkey (mouse-based)
+                    if (ptt.IsMouseBinding)
+                    {
+                        if (isDown && !_isPttActive
+                            && HotkeyMatcher.MatchesMouseBinding(ptt, button, NativeMethods.GetAsyncKeyState))
                         {
-                            // Delay release to ensure minimum recording duration
-                            var delay = MinPttHoldMs - (int)elapsed;
-                            Task.Delay(delay).ContinueWith(_ =>
-                                _syncContext?.Post(_ =>
-                                {
-                                    _isPttActive = false;
-                                    PushToTalkHotkeyReleased?.Invoke(this, EventArgs.Empty);
-                                }, null));
+                            _isPttActive = true;
+                            _pttPressTimestamp = Environment.TickCount64;
+                            _syncContext?.Post(_ => PushToTalkHotkeyPressed?.Invoke(this, EventArgs.Empty), null);
                         }
-                        else
+                        else if (!isDown && _isPttActive
+                            && string.Equals(ptt.MouseButton, button, StringComparison.OrdinalIgnoreCase))
                         {
-                            _isPttActive = false;
-                            _syncContext?.Post(_ => PushToTalkHotkeyReleased?.Invoke(this, EventArgs.Empty), null);
+                            var elapsed = Environment.TickCount64 - _pttPressTimestamp;
+                            if (elapsed < MinPttHoldMs)
+                            {
+                                // Delay release to ensure minimum recording duration
+                                var delay = MinPttHoldMs - (int)elapsed;
+                                Task.Delay(delay).ContinueWith(_ =>
+                                    _syncContext?.Post(_ =>
+                                    {
+                                        _isPttActive = false;
+                                        PushToTalkHotkeyReleased?.Invoke(this, EventArgs.Empty);
+                                    }, null));
+                            }
+                            else
+                            {
+                                _isPttActive = false;
+                                _syncContext?.Post(_ => PushToTalkHotkeyReleased?.Invoke(this, EventArgs.Empty), null);
+                            }
                         }
                     }
                 }
@@ -236,5 +357,6 @@ public class LowLevelHookHotkeyService : IGlobalHotkeyService
         if (_disposed) return;
         _disposed = true;
         Unregister();
+        _hookThreadReady.Dispose();
     }
 }

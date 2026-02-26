@@ -1,5 +1,7 @@
+using System.ClientModel;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using OpenAI;
 using OpenAI.Chat;
 using WriteSpeech.Core.Configuration;
 using WriteSpeech.Core.Models;
@@ -7,35 +9,39 @@ using WriteSpeech.Core.Services.IDE;
 
 namespace WriteSpeech.Core.Services.TextCorrection;
 
-public class OpenAiTextCorrectionService : CloudTextCorrectionServiceBase
+public class GoogleTextCorrectionService : CloudTextCorrectionServiceBase
 {
-    private readonly OpenAiClientFactory _clientFactory;
+    public override TextCorrectionProvider ProviderType => TextCorrectionProvider.Google;
 
-    public override TextCorrectionProvider ProviderType => TextCorrectionProvider.OpenAI;
-
-    public OpenAiTextCorrectionService(
-        ILogger<OpenAiTextCorrectionService> logger,
+    public GoogleTextCorrectionService(
+        ILogger<GoogleTextCorrectionService> logger,
         IOptionsMonitor<WriteSpeechOptions> optionsMonitor,
         IDictionaryService dictionaryService,
-        IIDEContextService ideContextService,
-        OpenAiClientFactory clientFactory)
+        IIDEContextService ideContextService)
         : base(logger, optionsMonitor, dictionaryService, ideContextService)
     {
-        _clientFactory = clientFactory;
     }
 
     protected override async Task<string?> SendCorrectionRequestAsync(
         string systemPrompt, string userMessage, CancellationToken ct)
     {
-        var options = OptionsMonitor.CurrentValue;
+        var google = OptionsMonitor.CurrentValue.TextCorrection.Google;
 
-        if (string.IsNullOrWhiteSpace(options.OpenAI.ApiKey))
+        if (string.IsNullOrWhiteSpace(google.ApiKey))
         {
-            Logger.LogWarning("OpenAI API key not configured, skipping text correction");
+            Logger.LogWarning("Google API key not configured, skipping text correction");
             return null;
         }
 
-        var chatClient = _clientFactory.GetChatClient(options.TextCorrection.Model);
+        var clientOptions = new OpenAIClientOptions();
+        if (!string.IsNullOrEmpty(google.Endpoint))
+            clientOptions.Endpoint = new Uri(google.Endpoint);
+
+        var client = new OpenAIClient(
+            credential: new ApiKeyCredential(google.ApiKey),
+            options: clientOptions);
+
+        var chatClient = client.GetChatClient(google.Model);
 
         var result = await chatClient.CompleteChatAsync(
             [
