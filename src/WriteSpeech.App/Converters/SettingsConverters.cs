@@ -41,7 +41,13 @@ public class ProviderToVisibilityConverter : IValueConverter
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
         if (value is TranscriptionProvider provider && parameter is string expected)
-            return provider.ToString() == expected ? Visibility.Visible : Visibility.Collapsed;
+        {
+            var providerStr = provider.ToString();
+            // Support pipe-separated values, e.g. "Local|Parakeet"
+            return expected.Split('|').Any(v => v == providerStr)
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+        }
         return Visibility.Collapsed;
     }
 

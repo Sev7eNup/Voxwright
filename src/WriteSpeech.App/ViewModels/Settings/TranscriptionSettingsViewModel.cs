@@ -87,7 +87,6 @@ public partial class TranscriptionSettingsViewModel : ObservableObject
     [ObservableProperty] private bool _gpuAcceleration = true;
 
     // --- Parakeet ---
-    [ObservableProperty] private bool _parakeetGpuAcceleration = true;
     [ObservableProperty] private int _parakeetNumThreads = 4;
 
     // --- Text Correction ---
@@ -160,7 +159,6 @@ public partial class TranscriptionSettingsViewModel : ObservableObject
         _openAiModelName = options.OpenAI.Model;
         _localModelName = options.Local.ModelName;
         _parakeetModelName = options.Parakeet.ModelName;
-        _parakeetGpuAcceleration = options.Parakeet.GpuAcceleration;
         _parakeetNumThreads = options.Parakeet.NumThreads;
         _transcriptionModel = options.Provider switch
         {
@@ -195,7 +193,8 @@ public partial class TranscriptionSettingsViewModel : ObservableObject
             () => CorrectionLocalModelName,
             name => CorrectionLocalModelName = name,
             () => _parakeetModelName,
-            name => { _parakeetModelName = name; });
+            name => { _parakeetModelName = name; },
+            provider => { Provider = provider; });
     }
 
     private void UpdateApiKeyDisplay()
@@ -239,6 +238,16 @@ public partial class TranscriptionSettingsViewModel : ObservableObject
     [RelayCommand]
     private void SelectProvider(string providerName)
     {
+        if (providerName == "Local" && Provider is TranscriptionProvider.Local or TranscriptionProvider.Parakeet)
+            return; // Already showing the local section — don't reset provider
+
+        if (providerName == "Local")
+        {
+            // Default to Local (Whisper) when switching from Cloud
+            ApplyProvider(TranscriptionProvider.Local);
+            return;
+        }
+
         if (Enum.TryParse<TranscriptionProvider>(providerName, out var provider))
             ApplyProvider(provider);
     }
@@ -283,13 +292,6 @@ public partial class TranscriptionSettingsViewModel : ObservableObject
     private void ToggleGpuAcceleration()
     {
         GpuAcceleration = !GpuAcceleration;
-        _scheduleSave();
-    }
-
-    [RelayCommand]
-    private void ToggleParakeetGpuAcceleration()
-    {
-        ParakeetGpuAcceleration = !ParakeetGpuAcceleration;
         _scheduleSave();
     }
 
@@ -413,7 +415,7 @@ public partial class TranscriptionSettingsViewModel : ObservableObject
 
         var parakeet = SettingsViewModel.EnsureObject(section, "Parakeet");
         parakeet["ModelName"] = _parakeetModelName;
-        parakeet["GpuAcceleration"] = ParakeetGpuAcceleration;
+        parakeet["GpuAcceleration"] = GpuAcceleration;
         parakeet["NumThreads"] = ParakeetNumThreads;
 
         var correction = SettingsViewModel.EnsureObject(section, "TextCorrection");

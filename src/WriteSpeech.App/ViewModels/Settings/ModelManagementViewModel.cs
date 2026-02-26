@@ -26,6 +26,7 @@ public partial class ModelManagementViewModel : ObservableObject
     private Action<string> _setCorrectionLocalModelName;
     private Func<string> _getParakeetModelName;
     private Action<string> _setParakeetModelName;
+    private Action<TranscriptionProvider> _setProvider;
 
     public ObservableCollection<ModelItemViewModel> ModelItems { get; } = [];
     public ObservableCollection<CorrectionModelItemViewModel> CorrectionModelItems { get; } = [];
@@ -44,7 +45,8 @@ public partial class ModelManagementViewModel : ObservableObject
         Func<string> getCorrectionLocalModelName,
         Action<string> setCorrectionLocalModelName,
         Func<string> getParakeetModelName,
-        Action<string> setParakeetModelName)
+        Action<string> setParakeetModelName,
+        Action<TranscriptionProvider> setProvider)
     {
         _modelManager = modelManager;
         _correctionModelManager = correctionModelManager;
@@ -59,6 +61,7 @@ public partial class ModelManagementViewModel : ObservableObject
         _setCorrectionLocalModelName = setCorrectionLocalModelName;
         _getParakeetModelName = getParakeetModelName;
         _setParakeetModelName = setParakeetModelName;
+        _setProvider = setProvider;
     }
 
     // --- Whisper Models ---
@@ -126,9 +129,16 @@ public partial class ModelManagementViewModel : ObservableObject
             m.IsActive = false;
             if (m.IsDownloaded) m.StatusText = "Downloaded";
         }
+        // Deactivate any active Parakeet model
+        foreach (var m in ParakeetModelItems)
+        {
+            m.IsActive = false;
+            if (m.IsDownloaded) m.StatusText = "Downloaded";
+        }
         item.IsActive = true;
         item.StatusText = "Active";
         _setTranscriptionModel(item.FileName);
+        _setProvider(TranscriptionProvider.Local);
         _scheduleSave();
         _preloadService.PreloadTranscriptionModel(item.FileName);
     }
@@ -311,9 +321,16 @@ public partial class ModelManagementViewModel : ObservableObject
             m.IsActive = false;
             if (m.IsDownloaded) m.StatusText = "Downloaded";
         }
+        // Deactivate any active Whisper model
+        foreach (var m in ModelItems)
+        {
+            m.IsActive = false;
+            if (m.IsDownloaded) m.StatusText = "Downloaded";
+        }
         item.IsActive = true;
         item.StatusText = "Active";
         _setParakeetModelName(item.DirectoryName);
+        _setProvider(TranscriptionProvider.Parakeet);
         _scheduleSave();
     }
 

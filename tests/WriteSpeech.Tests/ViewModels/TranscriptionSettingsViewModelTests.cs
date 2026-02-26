@@ -795,27 +795,28 @@ public class TranscriptionSettingsViewModelTests
     }
 
     [Fact]
-    public void Constructor_ParakeetProvider_LoadsGpuAcceleration()
+    public void Constructor_ParakeetProvider_LoadsNumThreads()
     {
         var vm = CreateViewModel(o =>
         {
             o.Provider = TranscriptionProvider.Parakeet;
-            o.Parakeet.GpuAcceleration = false;
             o.Parakeet.NumThreads = 8;
         });
 
-        vm.ParakeetGpuAcceleration.Should().BeFalse();
         vm.ParakeetNumThreads.Should().Be(8);
     }
 
     [Fact]
-    public void SelectProvider_Parakeet_SchedulesSave()
+    public void SelectProvider_Local_WhenParakeet_KeepsParakeet()
     {
-        var vm = CreateViewModel();
-        vm.SelectProviderCommand.Execute("Parakeet");
+        var vm = CreateViewModel(o => o.Provider = TranscriptionProvider.Parakeet);
+        _saveCalled = false;
 
+        vm.SelectProviderCommand.Execute("Local");
+
+        // Clicking "Local" card when already Parakeet should not change the provider
         vm.Provider.Should().Be(TranscriptionProvider.Parakeet);
-        _saveCalled.Should().BeTrue();
+        _saveCalled.Should().BeFalse();
     }
 
     [Fact]
@@ -833,33 +834,21 @@ public class TranscriptionSettingsViewModelTests
     }
 
     [Fact]
-    public void ToggleParakeetGpuAcceleration_TogglesAndSaves()
-    {
-        var vm = CreateViewModel();
-        var initial = vm.ParakeetGpuAcceleration;
-
-        vm.ToggleParakeetGpuAccelerationCommand.Execute(null);
-
-        vm.ParakeetGpuAcceleration.Should().Be(!initial);
-        _saveCalled.Should().BeTrue();
-    }
-
-    [Fact]
-    public void WriteSettings_IncludesParakeetSection()
+    public void GpuAcceleration_SharedForLocalAndParakeet_WritesBoth()
     {
         var vm = CreateViewModel(o =>
         {
             o.Provider = TranscriptionProvider.Parakeet;
             o.Parakeet.ModelName = "sherpa-onnx-nemo-parakeet-tdt-0.6b-v2-int8";
         });
-        vm.ParakeetGpuAcceleration = false;
+        vm.GpuAcceleration = false;
         vm.ParakeetNumThreads = 8;
 
         var json = JsonNode.Parse("{}")!;
         vm.WriteSettings(json);
 
         json["Provider"]!.GetValue<string>().Should().Be("Parakeet");
-        json["Parakeet"]!["ModelName"]!.GetValue<string>().Should().Be("sherpa-onnx-nemo-parakeet-tdt-0.6b-v2-int8");
+        json["Local"]!["GpuAcceleration"]!.GetValue<bool>().Should().BeFalse();
         json["Parakeet"]!["GpuAcceleration"]!.GetValue<bool>().Should().BeFalse();
         json["Parakeet"]!["NumThreads"]!.GetValue<int>().Should().Be(8);
     }

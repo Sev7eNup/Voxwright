@@ -20,6 +20,7 @@ public class ModelManagementViewModelTests
     private string _transcriptionModel = "ggml-small.bin";
     private string _correctionLocalModelName = "gemma-2b.gguf";
     private string _parakeetModelName = "sherpa-onnx-nemo-parakeet-tdt-0.6b-v2-int8";
+    private TranscriptionProvider _provider = TranscriptionProvider.Local;
     private bool _saveCalled;
 
     public ModelManagementViewModelTests()
@@ -50,7 +51,8 @@ public class ModelManagementViewModelTests
             () => _correctionLocalModelName,
             value => _correctionLocalModelName = value,
             () => _parakeetModelName,
-            value => _parakeetModelName = value);
+            value => _parakeetModelName = value,
+            provider => _provider = provider);
 
     // --- Whisper Models ---
 
