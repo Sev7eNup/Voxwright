@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Whisper.net;
@@ -7,7 +8,7 @@ using WriteSpeech.Core.Models;
 
 namespace WriteSpeech.Core.Services.Transcription;
 
-public class LocalTranscriptionService : ITranscriptionService, IDisposable
+public class LocalTranscriptionService : ITranscriptionService, IStreamingTranscriptionService, IDisposable
 {
     private readonly ILogger<LocalTranscriptionService> _logger;
     private readonly IOptionsMonitor<WriteSpeechOptions> _optionsMonitor;
@@ -43,6 +44,29 @@ public class LocalTranscriptionService : ITranscriptionService, IDisposable
         string? language = null,
         CancellationToken cancellationToken = default)
     {
+        var segments = new List<string>();
+
+        await foreach (var segment in TranscribeStreamingAsync(audioData, language, cancellationToken))
+        {
+            segments.Add(segment);
+        }
+
+        var text = string.Join("", segments).Trim();
+
+        _logger.LogInformation("Local transcription completed: {Length} chars", text.Length);
+
+        return new TranscriptionResult
+        {
+            Text = text,
+            Language = language
+        };
+    }
+
+    public async IAsyncEnumerable<string> TranscribeStreamingAsync(
+        byte[] audioData,
+        string? language = null,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
         var localOpts = _optionsMonitor.CurrentValue.Local;
 
         var modelPath = GetModelPath(localOpts)
@@ -59,22 +83,10 @@ public class LocalTranscriptionService : ITranscriptionService, IDisposable
         _logger.LogInformation("Processing audio locally ({Size} bytes, model: {Model})",
             audioData.Length, localOpts.ModelName);
 
-        var segments = new List<string>();
-
         await foreach (var segment in processor.ProcessAsync(stream, cancellationToken))
         {
-            segments.Add(segment.Text);
+            yield return segment.Text;
         }
-
-        var text = string.Join(" ", segments).Trim();
-
-        _logger.LogInformation("Local transcription completed: {Length} chars", text.Length);
-
-        return new TranscriptionResult
-        {
-            Text = text,
-            Language = language
-        };
     }
 
     public void Preload()

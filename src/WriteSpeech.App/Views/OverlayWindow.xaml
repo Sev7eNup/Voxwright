@@ -63,26 +63,6 @@
             </Setter>
         </Style>
 
-        <!-- Idle breathing animation -->
-        <Storyboard x:Key="IdleBreathingAnimation" RepeatBehavior="Forever">
-            <DoubleAnimation Storyboard.TargetName="BubbleScale"
-                             Storyboard.TargetProperty="ScaleX"
-                             From="1.0" To="1.07" Duration="0:0:1.5"
-                             AutoReverse="True">
-                <DoubleAnimation.EasingFunction>
-                    <SineEase EasingMode="EaseInOut"/>
-                </DoubleAnimation.EasingFunction>
-            </DoubleAnimation>
-            <DoubleAnimation Storyboard.TargetName="BubbleScale"
-                             Storyboard.TargetProperty="ScaleY"
-                             From="1.0" To="1.07" Duration="0:0:1.5"
-                             AutoReverse="True">
-                <DoubleAnimation.EasingFunction>
-                    <SineEase EasingMode="EaseInOut"/>
-                </DoubleAnimation.EasingFunction>
-            </DoubleAnimation>
-        </Storyboard>
-
         <!-- Transcribing sweep animation -->
         <Storyboard x:Key="SweepAnimation" RepeatBehavior="Forever">
             <DoubleAnimationUsingKeyFrames
@@ -123,7 +103,7 @@
             </Grid.RenderTransform>
 
             <Border x:Name="GlassPill"
-                    CornerRadius="20"
+                    CornerRadius="23"
                     Background="{StaticResource GlassBackground}"
                     BorderBrush="{StaticResource IdleBorderBrush}"
                     BorderThickness="1">
@@ -236,9 +216,10 @@
 
                     <!-- Transcribing State -->
                     <Grid x:Name="TranscribingPanel" Visibility="Collapsed"
-                          MinWidth="56" Height="44">
-                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <!-- Sweeping progress bar -->
+                          MinWidth="56" MinHeight="44">
+                        <!-- Sweep animation (shown when no streaming text) -->
+                        <StackPanel x:Name="SweepPanel"
+                                    HorizontalAlignment="Center" VerticalAlignment="Center">
                             <Border CornerRadius="2" Width="40" Height="4"
                                     Background="#15FFFFFF" ClipToBounds="True"
                                     Margin="8,0,8,0">
@@ -256,6 +237,18 @@
                                        FontSize="9" FontFamily="Segoe UI"
                                        HorizontalAlignment="Center"
                                        Margin="6,4,6,0"/>
+                        </StackPanel>
+                        <!-- Streaming text (shown when segments arrive) -->
+                        <StackPanel x:Name="StreamingPanel" Visibility="Collapsed"
+                                    Margin="10,6" MinWidth="150" MaxWidth="500">
+                            <TextBlock Text="{Binding StreamingText}" TextWrapping="Wrap"
+                                       Foreground="{StaticResource TextBrush}" FontSize="11"
+                                       MaxHeight="300"/>
+                            <TextBlock Text="{Binding StatusText}"
+                                       Foreground="{StaticResource SubtleBrush}"
+                                       FontSize="9" FontFamily="Segoe UI"
+                                       HorizontalAlignment="Right"
+                                       Margin="0,4,0,0"/>
                         </StackPanel>
                     </Grid>
 

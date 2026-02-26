@@ -97,6 +97,9 @@ public partial class App : Application
                 services.AddSingleton<ITextInsertionService, TextInsertionService>();
                 services.AddSingleton<ISelectedTextService, SelectedTextService>();
                 services.AddSingleton<ITextCorrectionService, OpenAiTextCorrectionService>();
+                services.AddSingleton<ITextCorrectionService, AnthropicTextCorrectionService>();
+                services.AddSingleton<ITextCorrectionService, GoogleTextCorrectionService>();
+                services.AddSingleton<ITextCorrectionService, GroqTextCorrectionService>();
                 services.AddSingleton<ITextCorrectionService, LocalTextCorrectionService>();
                 services.AddSingleton<TextCorrectionProviderFactory>();
                 services.AddSingleton<ICombinedTranscriptionCorrectionService, CombinedAudioTranscriptionService>();

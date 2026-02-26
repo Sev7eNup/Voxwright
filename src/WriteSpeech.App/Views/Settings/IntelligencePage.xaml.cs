@@ -17,13 +17,15 @@ public partial class IntelligencePage : UserControl
 
     private void CorrectionProviderCard_Click(object sender, MouseButtonEventArgs e)
     {
-        if (sender is System.Windows.Controls.Border border && border.Tag is string providerName)
+        if (sender is Border border && border.Tag is string providerName)
             ViewModel.SelectCorrectionProviderCommand.Execute(providerName);
     }
 
+    // --- OpenAI model selection ---
+
     private void CorrectionCloudModelCard_Click(object sender, MouseButtonEventArgs e)
     {
-        if (sender is System.Windows.Controls.Border border && border.Tag is string modelId)
+        if (sender is Border border && border.Tag is string modelId)
         {
             ViewModel.SelectCorrectionCloudModelCommand.Execute(modelId);
             ViewModel.IsEditingCustomCorrectionModel = false;
@@ -49,5 +51,86 @@ public partial class IntelligencePage : UserControl
             ViewModel.IsEditingCustomCorrectionModel = false;
             e.Handled = true;
         }
+    }
+
+    // --- Anthropic ---
+
+    private void AnthropicApiKey_Click(object sender, MouseButtonEventArgs e)
+    {
+        ViewModel.IsEditingAnthropicApiKey = true;
+    }
+
+    private void AnthropicApiKeyTextBox_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter && sender is TextBox tb)
+        {
+            ViewModel.ApplyAnthropicApiKey(tb.Text);
+            e.Handled = true;
+        }
+        else if (e.Key == Key.Escape)
+        {
+            ViewModel.IsEditingAnthropicApiKey = false;
+            e.Handled = true;
+        }
+    }
+
+    private void AnthropicModelCard_Click(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is Border border && border.Tag is string modelId)
+            ViewModel.SelectAnthropicModelCommand.Execute(modelId);
+    }
+
+    // --- Google ---
+
+    private void GoogleApiKey_Click(object sender, MouseButtonEventArgs e)
+    {
+        ViewModel.IsEditingGoogleApiKey = true;
+    }
+
+    private void GoogleApiKeyTextBox_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter && sender is TextBox tb)
+        {
+            ViewModel.ApplyGoogleApiKey(tb.Text);
+            e.Handled = true;
+        }
+        else if (e.Key == Key.Escape)
+        {
+            ViewModel.IsEditingGoogleApiKey = false;
+            e.Handled = true;
+        }
+    }
+
+    private void GoogleModelCard_Click(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is Border border && border.Tag is string modelId)
+            ViewModel.SelectGoogleModelCommand.Execute(modelId);
+    }
+
+    // --- Groq ---
+
+    private void GroqApiKey_Click(object sender, MouseButtonEventArgs e)
+    {
+        ViewModel.IsEditingGroqApiKey = true;
+    }
+
+    private void GroqApiKeyTextBox_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter && sender is TextBox tb)
+        {
+            ViewModel.ApplyGroqApiKey(tb.Text);
+            e.Handled = true;
+        }
+        else if (e.Key == Key.Escape)
+        {
+            ViewModel.IsEditingGroqApiKey = false;
+            e.Handled = true;
+        }
+    }
+
+    private void GroqModelCard_Click(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is Border border && border.Tag is string modelId)
+            ViewModel.SelectGroqModelCommand.Execute(modelId);
     }
 }

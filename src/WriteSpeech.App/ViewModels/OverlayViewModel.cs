@@ -83,6 +83,9 @@ public partial class OverlayViewModel : ObservableObject, IDisposable
     private string _statusText = string.Empty;
 
     [ObservableProperty]
+    private string? _streamingText;
+
+    [ObservableProperty]
     private bool _isCommandModeActive;
 
     // --- Overlay position ---
@@ -280,6 +283,7 @@ public partial class OverlayViewModel : ObservableObject, IDisposable
 
         try
         {
+            StreamingText = null;
             State = RecordingState.Transcribing;
             var audioData = await _audioService.StopRecordingAsync();
 
@@ -403,9 +407,28 @@ public partial class OverlayViewModel : ObservableObject, IDisposable
     {
         var provider = _providerFactory.GetProvider(Options.Provider);
         StatusText = provider.IsModelLoaded ? "Transcribing..." : "Loading transcription model...";
-        var result = await provider.TranscribeAsync(audioData, Options.Language, ct);
 
-        var text = result.Text;
+        string text;
+
+        // Use streaming when available (local Whisper yields segments progressively)
+        if (provider is IStreamingTranscriptionService streamer)
+        {
+            var sb = new System.Text.StringBuilder();
+            await foreach (var segment in streamer.TranscribeStreamingAsync(audioData, Options.Language, ct))
+            {
+                sb.Append(segment);
+                _dispatcher.Invoke(() => StreamingText = sb.ToString().Trim());
+            }
+            text = sb.ToString().Trim();
+        }
+        else
+        {
+            var result = await provider.TranscribeAsync(audioData, Options.Language, ct);
+            text = result.Text;
+        }
+
+        // Clear streaming preview before correction phase
+        _dispatcher.Invoke(() => StreamingText = null);
 
         var corrector = _correctionFactory.GetProvider(Options.TextCorrection.Provider);
         _logger.LogInformation("Text correction: {Provider}", Options.TextCorrection.Provider);
@@ -464,6 +487,7 @@ public partial class OverlayViewModel : ObservableObject, IDisposable
         CancelAutoDismissTimer();
         var previousState = State;
         TranscribedText = null;
+        StreamingText = null;
         ErrorMessage = null;
         _selectedText = null;
         _isCommandMode = false;

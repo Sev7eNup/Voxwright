@@ -83,9 +83,22 @@ public class TextCorrectionOptions
 {
     public TextCorrectionProvider Provider { get; set; } = TextCorrectionProvider.Off;
 
-    // Cloud correction
+    // OpenAI correction (uses shared OpenAI.ApiKey)
     public string Model { get; set; } = "gpt-4.1-mini";
     public string? SystemPrompt { get; set; }
+
+    // Per-provider configs
+    public AnthropicCorrectionOptions Anthropic { get; set; } = new();
+    public OpenAiCompatibleCorrectionOptions Google { get; set; } = new()
+    {
+        Endpoint = "https://generativelanguage.googleapis.com/v1beta/openai/",
+        Model = "gemini-2.5-flash"
+    };
+    public OpenAiCompatibleCorrectionOptions Groq { get; set; } = new()
+    {
+        Endpoint = "https://api.groq.com/openai/v1",
+        Model = "llama-3.3-70b-versatile"
+    };
 
     // Local correction
     public string LocalModelName { get; set; } = "";
@@ -106,6 +119,19 @@ public class TextCorrectionOptions
     // Correction modes
     public string? ActiveMode { get; set; }
     public bool AutoSwitchMode { get; set; } = true;
+}
+
+public class AnthropicCorrectionOptions
+{
+    public string? ApiKey { get; set; }
+    public string Model { get; set; } = "claude-sonnet-4-6";
+}
+
+public class OpenAiCompatibleCorrectionOptions
+{
+    public string? ApiKey { get; set; }
+    public string? Endpoint { get; set; }
+    public string Model { get; set; } = "";
 }
 
 public class AppOptions
@@ -155,9 +181,21 @@ public class WriteSpeechOptionsValidator : IValidateOptions<WriteSpeechOptions>
             && string.IsNullOrWhiteSpace(options.OpenAI.ApiKey))
             failures.Add("OpenAI transcription provider requires an API key (OpenAI.ApiKey).");
 
-        if (options.TextCorrection.Provider == TextCorrectionProvider.Cloud
+        if (options.TextCorrection.Provider is TextCorrectionProvider.Cloud or TextCorrectionProvider.OpenAI
             && string.IsNullOrWhiteSpace(options.OpenAI.ApiKey))
-            failures.Add("Cloud text correction requires an OpenAI API key (OpenAI.ApiKey).");
+            failures.Add("OpenAI text correction requires an API key (OpenAI.ApiKey).");
+
+        if (options.TextCorrection.Provider == TextCorrectionProvider.Anthropic
+            && string.IsNullOrWhiteSpace(options.TextCorrection.Anthropic.ApiKey))
+            failures.Add("Anthropic text correction requires an API key (TextCorrection.Anthropic.ApiKey).");
+
+        if (options.TextCorrection.Provider == TextCorrectionProvider.Google
+            && string.IsNullOrWhiteSpace(options.TextCorrection.Google.ApiKey))
+            failures.Add("Google text correction requires an API key (TextCorrection.Google.ApiKey).");
+
+        if (options.TextCorrection.Provider == TextCorrectionProvider.Groq
+            && string.IsNullOrWhiteSpace(options.TextCorrection.Groq.ApiKey))
+            failures.Add("Groq text correction requires an API key (TextCorrection.Groq.ApiKey).");
 
         if (options.Hotkey.Method is not ("RegisterHotKey" or "LowLevelHook"))
             failures.Add($"Hotkey.Method must be 'RegisterHotKey' or 'LowLevelHook' (got '{options.Hotkey.Method}').");

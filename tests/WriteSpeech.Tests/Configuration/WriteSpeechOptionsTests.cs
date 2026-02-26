@@ -75,6 +75,35 @@ public class WriteSpeechOptionsTests
     }
 
     [Fact]
+    public void AnthropicCorrectionOptions_DefaultValues()
+    {
+        var options = new AnthropicCorrectionOptions();
+
+        options.ApiKey.Should().BeNull();
+        options.Model.Should().Be("claude-sonnet-4-6");
+    }
+
+    [Fact]
+    public void GoogleCorrectionOptions_DefaultValues()
+    {
+        var options = new TextCorrectionOptions();
+
+        options.Google.Endpoint.Should().Be("https://generativelanguage.googleapis.com/v1beta/openai/");
+        options.Google.Model.Should().Be("gemini-2.5-flash");
+        options.Google.ApiKey.Should().BeNull();
+    }
+
+    [Fact]
+    public void GroqCorrectionOptions_DefaultValues()
+    {
+        var options = new TextCorrectionOptions();
+
+        options.Groq.Endpoint.Should().Be("https://api.groq.com/openai/v1");
+        options.Groq.Model.Should().Be("llama-3.3-70b-versatile");
+        options.Groq.ApiKey.Should().BeNull();
+    }
+
+    [Fact]
     public void GetModelDirectory_WithCustomDir_ReturnsCustom()
     {
         var options = new LocalWhisperOptions { ModelDirectory = @"C:\models" };
@@ -346,5 +375,102 @@ public class WriteSpeechOptionsTests
         var result = validator.Validate(null, options);
 
         result.Succeeded.Should().BeTrue();
+    }
+
+    // --- Per-provider API key validation ---
+
+    [Fact]
+    public void Validator_AnthropicProvider_RequiresApiKey()
+    {
+        var validator = new WriteSpeechOptionsValidator();
+        var options = CreateValidOptions();
+        options.TextCorrection.Provider = TextCorrectionProvider.Anthropic;
+        options.TextCorrection.Anthropic.ApiKey = null;
+
+        var result = validator.Validate(null, options);
+
+        result.Failed.Should().BeTrue();
+        result.FailureMessage.Should().Contain("Anthropic");
+    }
+
+    [Fact]
+    public void Validator_AnthropicProvider_WithApiKey_Succeeds()
+    {
+        var validator = new WriteSpeechOptionsValidator();
+        var options = CreateValidOptions();
+        options.TextCorrection.Provider = TextCorrectionProvider.Anthropic;
+        options.TextCorrection.Anthropic.ApiKey = "sk-ant-test";
+
+        var result = validator.Validate(null, options);
+
+        result.Succeeded.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Validator_GoogleProvider_RequiresApiKey()
+    {
+        var validator = new WriteSpeechOptionsValidator();
+        var options = CreateValidOptions();
+        options.TextCorrection.Provider = TextCorrectionProvider.Google;
+        options.TextCorrection.Google.ApiKey = null;
+
+        var result = validator.Validate(null, options);
+
+        result.Failed.Should().BeTrue();
+        result.FailureMessage.Should().Contain("Google");
+    }
+
+    [Fact]
+    public void Validator_GoogleProvider_WithApiKey_Succeeds()
+    {
+        var validator = new WriteSpeechOptionsValidator();
+        var options = CreateValidOptions();
+        options.TextCorrection.Provider = TextCorrectionProvider.Google;
+        options.TextCorrection.Google.ApiKey = "AIzaSy-test";
+
+        var result = validator.Validate(null, options);
+
+        result.Succeeded.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Validator_GroqProvider_RequiresApiKey()
+    {
+        var validator = new WriteSpeechOptionsValidator();
+        var options = CreateValidOptions();
+        options.TextCorrection.Provider = TextCorrectionProvider.Groq;
+        options.TextCorrection.Groq.ApiKey = null;
+
+        var result = validator.Validate(null, options);
+
+        result.Failed.Should().BeTrue();
+        result.FailureMessage.Should().Contain("Groq");
+    }
+
+    [Fact]
+    public void Validator_GroqProvider_WithApiKey_Succeeds()
+    {
+        var validator = new WriteSpeechOptionsValidator();
+        var options = CreateValidOptions();
+        options.TextCorrection.Provider = TextCorrectionProvider.Groq;
+        options.TextCorrection.Groq.ApiKey = "gsk-test";
+
+        var result = validator.Validate(null, options);
+
+        result.Succeeded.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Validator_OpenAIProvider_RequiresApiKey()
+    {
+        var validator = new WriteSpeechOptionsValidator();
+        var options = CreateValidOptions();
+        options.TextCorrection.Provider = TextCorrectionProvider.OpenAI;
+        options.OpenAI.ApiKey = null;
+
+        var result = validator.Validate(null, options);
+
+        result.Failed.Should().BeTrue();
+        result.FailureMessage.Should().Contain("ApiKey");
     }
 }

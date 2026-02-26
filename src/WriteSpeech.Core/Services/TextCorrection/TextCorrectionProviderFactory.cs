@@ -15,6 +15,10 @@ public class TextCorrectionProviderFactory
     {
         if (provider == TextCorrectionProvider.Off) return null;
 
+        // Legacy "Cloud" maps to OpenAI
+        if (provider == TextCorrectionProvider.Cloud)
+            provider = TextCorrectionProvider.OpenAI;
+
         return _providerMap.TryGetValue(provider, out var service)
             ? service
             : throw new ArgumentOutOfRangeException(nameof(provider), provider, "Unknown text correction provider");

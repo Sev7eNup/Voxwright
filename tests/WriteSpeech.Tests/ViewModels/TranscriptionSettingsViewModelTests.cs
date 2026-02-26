@@ -534,4 +534,247 @@ public class TranscriptionSettingsViewModelTests
 
         vm.IsCustomCorrectionModel.Should().BeFalse();
     }
+
+    // --- New provider model lists ---
+
+    [Fact]
+    public void AnthropicCorrectionModels_ContainsExpectedModels()
+    {
+        TranscriptionSettingsViewModel.AnthropicCorrectionModels.Should().HaveCount(3);
+        TranscriptionSettingsViewModel.AnthropicCorrectionModels.Select(m => m.Id)
+            .Should().Contain(["claude-sonnet-4-6", "claude-opus-4-6", "claude-haiku-4-5-20251001"]);
+    }
+
+    [Fact]
+    public void GoogleCorrectionModels_ContainsExpectedModels()
+    {
+        TranscriptionSettingsViewModel.GoogleCorrectionModels.Should().HaveCount(2);
+        TranscriptionSettingsViewModel.GoogleCorrectionModels.Select(m => m.Id)
+            .Should().Contain(["gemini-2.5-flash", "gemini-2.5-pro"]);
+    }
+
+    [Fact]
+    public void GroqCorrectionModels_ContainsExpectedModels()
+    {
+        TranscriptionSettingsViewModel.GroqCorrectionModels.Should().HaveCount(3);
+        TranscriptionSettingsViewModel.GroqCorrectionModels.Select(m => m.Id)
+            .Should().Contain(["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768"]);
+    }
+
+    // --- Per-provider initialization ---
+
+    [Fact]
+    public void Constructor_InitializesAnthropicProperties()
+    {
+        var vm = CreateViewModel(o =>
+        {
+            o.TextCorrection.Anthropic.ApiKey = "sk-ant-test1234";
+            o.TextCorrection.Anthropic.Model = "claude-opus-4-6";
+        });
+
+        vm.AnthropicApiKey.Should().Be("sk-ant-test1234");
+        vm.AnthropicModel.Should().Be("claude-opus-4-6");
+        vm.AnthropicApiKeyDisplay.Should().Be("...1234");
+    }
+
+    [Fact]
+    public void Constructor_InitializesGoogleProperties()
+    {
+        var vm = CreateViewModel(o =>
+        {
+            o.TextCorrection.Google.ApiKey = "AIzaSy-testkey1";
+            o.TextCorrection.Google.Model = "gemini-2.5-pro";
+        });
+
+        vm.GoogleApiKey.Should().Be("AIzaSy-testkey1");
+        vm.GoogleModel.Should().Be("gemini-2.5-pro");
+        vm.GoogleApiKeyDisplay.Should().Be("...key1");
+    }
+
+    [Fact]
+    public void Constructor_InitializesGroqProperties()
+    {
+        var vm = CreateViewModel(o =>
+        {
+            o.TextCorrection.Groq.ApiKey = "gsk-testgroq1234";
+            o.TextCorrection.Groq.Model = "llama-3.1-8b-instant";
+        });
+
+        vm.GroqApiKey.Should().Be("gsk-testgroq1234");
+        vm.GroqModel.Should().Be("llama-3.1-8b-instant");
+        vm.GroqApiKeyDisplay.Should().Be("...1234");
+    }
+
+    [Fact]
+    public void Constructor_EmptyProviderApiKey_ShowsNotConfigured()
+    {
+        var vm = CreateViewModel();
+
+        vm.AnthropicApiKeyDisplay.Should().Be("Not configured");
+        vm.GoogleApiKeyDisplay.Should().Be("Not configured");
+        vm.GroqApiKeyDisplay.Should().Be("Not configured");
+    }
+
+    // --- Per-provider API key apply ---
+
+    [Fact]
+    public void ApplyAnthropicApiKey_SetsValueAndTriggersSave()
+    {
+        var vm = CreateViewModel();
+
+        vm.ApplyAnthropicApiKey("sk-ant-newkey1234");
+
+        vm.AnthropicApiKey.Should().Be("sk-ant-newkey1234");
+        vm.AnthropicApiKeyDisplay.Should().Be("...1234");
+        vm.IsEditingAnthropicApiKey.Should().BeFalse();
+        _saveCalled.Should().BeTrue();
+    }
+
+    [Fact]
+    public void ApplyGoogleApiKey_SetsValueAndTriggersSave()
+    {
+        var vm = CreateViewModel();
+
+        vm.ApplyGoogleApiKey("AIzaSy-newkey5678");
+
+        vm.GoogleApiKey.Should().Be("AIzaSy-newkey5678");
+        vm.GoogleApiKeyDisplay.Should().Be("...5678");
+        vm.IsEditingGoogleApiKey.Should().BeFalse();
+        _saveCalled.Should().BeTrue();
+    }
+
+    [Fact]
+    public void ApplyGroqApiKey_SetsValueAndTriggersSave()
+    {
+        var vm = CreateViewModel();
+
+        vm.ApplyGroqApiKey("gsk-newgroqkey9012");
+
+        vm.GroqApiKey.Should().Be("gsk-newgroqkey9012");
+        vm.GroqApiKeyDisplay.Should().Be("...9012");
+        vm.IsEditingGroqApiKey.Should().BeFalse();
+        _saveCalled.Should().BeTrue();
+    }
+
+    // --- Per-provider model selection ---
+
+    [Fact]
+    public void SelectAnthropicModelCommand_UpdatesModelAndSaves()
+    {
+        var vm = CreateViewModel();
+
+        vm.SelectAnthropicModelCommand.Execute("claude-opus-4-6");
+
+        vm.AnthropicModel.Should().Be("claude-opus-4-6");
+        _saveCalled.Should().BeTrue();
+    }
+
+    [Fact]
+    public void SelectGoogleModelCommand_UpdatesModelAndSaves()
+    {
+        var vm = CreateViewModel();
+
+        vm.SelectGoogleModelCommand.Execute("gemini-2.5-pro");
+
+        vm.GoogleModel.Should().Be("gemini-2.5-pro");
+        _saveCalled.Should().BeTrue();
+    }
+
+    [Fact]
+    public void SelectGroqModelCommand_UpdatesModelAndSaves()
+    {
+        var vm = CreateViewModel();
+
+        vm.SelectGroqModelCommand.Execute("mixtral-8x7b-32768");
+
+        vm.GroqModel.Should().Be("mixtral-8x7b-32768");
+        _saveCalled.Should().BeTrue();
+    }
+
+    // --- Per-provider correction provider selection ---
+
+    [Fact]
+    public void SelectCorrectionProvider_Anthropic_TriggersSave()
+    {
+        var vm = CreateViewModel();
+
+        vm.SelectCorrectionProviderCommand.Execute("Anthropic");
+
+        vm.CorrectionProvider.Should().Be(TextCorrectionProvider.Anthropic);
+        _saveCalled.Should().BeTrue();
+    }
+
+    [Fact]
+    public void SelectCorrectionProvider_Google_TriggersSave()
+    {
+        var vm = CreateViewModel();
+
+        vm.SelectCorrectionProviderCommand.Execute("Google");
+
+        vm.CorrectionProvider.Should().Be(TextCorrectionProvider.Google);
+        _saveCalled.Should().BeTrue();
+    }
+
+    [Fact]
+    public void SelectCorrectionProvider_Groq_TriggersSave()
+    {
+        var vm = CreateViewModel();
+
+        vm.SelectCorrectionProviderCommand.Execute("Groq");
+
+        vm.CorrectionProvider.Should().Be(TextCorrectionProvider.Groq);
+        _saveCalled.Should().BeTrue();
+    }
+
+    // --- ShowCloudUsageHint with OpenAI enum ---
+
+    [Fact]
+    public void ShowCloudUsageHint_LocalProviderOpenAICorrection_ReturnsTrue()
+    {
+        var vm = CreateViewModel(o =>
+        {
+            o.Provider = TranscriptionProvider.Local;
+            o.TextCorrection.Provider = TextCorrectionProvider.OpenAI;
+        });
+
+        vm.ShowCloudUsageHint.Should().BeTrue();
+    }
+
+    [Fact]
+    public void ShowCloudUsageHint_LocalProviderAnthropicCorrection_ReturnsFalse()
+    {
+        var vm = CreateViewModel(o =>
+        {
+            o.Provider = TranscriptionProvider.Local;
+            o.TextCorrection.Provider = TextCorrectionProvider.Anthropic;
+        });
+
+        vm.ShowCloudUsageHint.Should().BeFalse();
+    }
+
+    // --- WriteSettings with new providers ---
+
+    [Fact]
+    public void WriteSettings_WritesProviderSettings()
+    {
+        var vm = CreateViewModel(o =>
+        {
+            o.TextCorrection.Anthropic.ApiKey = "sk-ant-test";
+            o.TextCorrection.Anthropic.Model = "claude-opus-4-6";
+            o.TextCorrection.Google.ApiKey = "AIzaSy-test";
+            o.TextCorrection.Google.Model = "gemini-2.5-pro";
+            o.TextCorrection.Groq.ApiKey = "gsk-test";
+            o.TextCorrection.Groq.Model = "mixtral-8x7b-32768";
+        });
+
+        var json = JsonNode.Parse("{}")!;
+        vm.WriteSettings(json);
+
+        json["TextCorrection"]!["Anthropic"]!["ApiKey"]!.GetValue<string>().Should().Be("sk-ant-test");
+        json["TextCorrection"]!["Anthropic"]!["Model"]!.GetValue<string>().Should().Be("claude-opus-4-6");
+        json["TextCorrection"]!["Google"]!["ApiKey"]!.GetValue<string>().Should().Be("AIzaSy-test");
+        json["TextCorrection"]!["Google"]!["Model"]!.GetValue<string>().Should().Be("gemini-2.5-pro");
+        json["TextCorrection"]!["Groq"]!["ApiKey"]!.GetValue<string>().Should().Be("gsk-test");
+        json["TextCorrection"]!["Groq"]!["Model"]!.GetValue<string>().Should().Be("mixtral-8x7b-32768");
+    }
 }
