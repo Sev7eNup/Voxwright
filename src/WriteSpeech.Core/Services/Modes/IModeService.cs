@@ -9,8 +9,8 @@ public interface IModeService : IDisposable
     string? ActiveModeName { get; }
     bool AutoSwitchEnabled { get; set; }
 
-    void AddMode(string name, string systemPrompt, IReadOnlyList<string> appPatterns);
-    void UpdateMode(string oldName, string newName, string systemPrompt, IReadOnlyList<string> appPatterns);
+    void AddMode(string name, string systemPrompt, IReadOnlyList<string> appPatterns, string? targetLanguage = null);
+    void UpdateMode(string oldName, string newName, string systemPrompt, IReadOnlyList<string> appPatterns, string? targetLanguage = null);
     void RemoveMode(string name);
     void SetActiveMode(string? name);
 
@@ -25,6 +25,12 @@ public interface IModeService : IDisposable
     /// Returns null when the Default mode is active.
     /// </summary>
     string? ResolveCombinedSystemPrompt(string? processName);
+
+    /// <summary>
+    /// Returns the target language for translation if the resolved mode has one configured.
+    /// Returns null when no translation is needed.
+    /// </summary>
+    string? ResolveTargetLanguage(string? processName);
 
     Task LoadAsync();
 }

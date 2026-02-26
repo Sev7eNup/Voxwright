@@ -17,6 +17,7 @@ public partial class ModesSettingsViewModel : ObservableObject
     [ObservableProperty] private string _newModeName = "";
     [ObservableProperty] private string _newModePrompt = "";
     [ObservableProperty] private string _newModeAppPatterns = "";
+    [ObservableProperty] private string _newModeTargetLanguage = "";
     [ObservableProperty] private bool _isEditing;
     [ObservableProperty] private string? _editingOriginalName;
 
@@ -38,7 +39,8 @@ public partial class ModesSettingsViewModel : ObservableObject
                 m.SystemPrompt,
                 string.Join(", ", m.AppPatterns),
                 m.IsBuiltIn,
-                !AutoSwitchEnabled && m.Name.Equals(active, StringComparison.OrdinalIgnoreCase))));
+                !AutoSwitchEnabled && m.Name.Equals(active, StringComparison.OrdinalIgnoreCase),
+                m.TargetLanguage)));
         AutoSwitchEnabled = _modeService.AutoSwitchEnabled;
     }
 
@@ -59,14 +61,15 @@ public partial class ModesSettingsViewModel : ObservableObject
             return;
 
         var patterns = ParseAppPatterns(NewModeAppPatterns);
+        var targetLang = string.IsNullOrWhiteSpace(NewModeTargetLanguage) ? null : NewModeTargetLanguage.Trim();
 
         if (IsEditing && EditingOriginalName is not null)
         {
-            _modeService.UpdateMode(EditingOriginalName, NewModeName, NewModePrompt, patterns);
+            _modeService.UpdateMode(EditingOriginalName, NewModeName, NewModePrompt, patterns, targetLang);
         }
         else
         {
-            _modeService.AddMode(NewModeName, NewModePrompt, patterns);
+            _modeService.AddMode(NewModeName, NewModePrompt, patterns, targetLang);
         }
 
         ClearEditor();
@@ -80,6 +83,7 @@ public partial class ModesSettingsViewModel : ObservableObject
         NewModeName = item.Name;
         NewModePrompt = item.SystemPrompt;
         NewModeAppPatterns = item.AppPatterns;
+        NewModeTargetLanguage = item.TargetLanguage ?? "";
         IsEditing = true;
         EditingOriginalName = item.Name;
     }
@@ -110,6 +114,7 @@ public partial class ModesSettingsViewModel : ObservableObject
         NewModeName = "";
         NewModePrompt = "";
         NewModeAppPatterns = "";
+        NewModeTargetLanguage = "";
         IsEditing = false;
         EditingOriginalName = null;
     }
@@ -121,4 +126,4 @@ public partial class ModesSettingsViewModel : ObservableObject
                    .Where(s => s.Length > 0).ToList();
 }
 
-public record ModeItem(string Name, string SystemPrompt, string AppPatterns, bool IsBuiltIn, bool IsActive);
+public record ModeItem(string Name, string SystemPrompt, string AppPatterns, bool IsBuiltIn, bool IsActive, string? TargetLanguage = null);

@@ -313,7 +313,8 @@ public partial class OverlayViewModel : ObservableObject, IDisposable
                         combinedPrompt = _modeService.ResolveCombinedSystemPrompt(_activeProcessName);
                     }
 
-                    text = await _combinedService.TranscribeAndCorrectAsync(audioData, Options.Language, combinedPrompt, ct);
+                    var combinedTargetLang = _modeService.ResolveTargetLanguage(_activeProcessName);
+                    text = await _combinedService.TranscribeAndCorrectAsync(audioData, Options.Language, combinedPrompt, combinedTargetLang, ct);
                     correctionProvider = "Combined";
                 }
                 catch (OperationCanceledException) { return; }
@@ -412,7 +413,8 @@ public partial class OverlayViewModel : ObservableObject, IDisposable
         {
             StatusText = corrector.IsModelLoaded ? "Correcting text..." : "Loading correction model...";
             var modePrompt = _modeService.ResolveSystemPrompt(_activeProcessName);
-            text = await corrector.CorrectAsync(text, Options.Language, modePrompt, ct);
+            var targetLanguage = _modeService.ResolveTargetLanguage(_activeProcessName);
+            text = await corrector.CorrectAsync(text, Options.Language, modePrompt, targetLanguage, ct);
         }
 
         return text;
@@ -432,7 +434,7 @@ public partial class OverlayViewModel : ObservableObject, IDisposable
         }
 
         var userMessage = $"Selected text:\n{selectedText}\n\nVoice command: {voiceCommand}";
-        return await corrector.CorrectAsync(userMessage, Options.Language, TextCorrectionDefaults.VoiceCommandSystemPrompt, ct);
+        return await corrector.CorrectAsync(userMessage, Options.Language, TextCorrectionDefaults.VoiceCommandSystemPrompt, targetLanguage: null, ct);
     }
 
     [RelayCommand]

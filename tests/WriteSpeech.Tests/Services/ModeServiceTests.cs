@@ -43,15 +43,15 @@ public class ModeServiceTests : IDisposable
     public void GetModes_ReturnsBuiltInModes()
     {
         var modes = _service.GetModes();
-        modes.Should().HaveCount(5);
-        modes.Select(m => m.Name).Should().Contain(["Default", "Email", "Message", "Code", "Note"]);
+        modes.Should().HaveCount(6);
+        modes.Select(m => m.Name).Should().Contain(["Default", "Email", "Message", "Code", "Note", "Translate"]);
     }
 
     [Fact]
     public void GetModes_AllBuiltInModesAreMarkedAsBuiltIn()
     {
         var modes = _service.GetModes();
-        modes.Where(m => m.IsBuiltIn).Should().HaveCount(5);
+        modes.Where(m => m.IsBuiltIn).Should().HaveCount(6);
     }
 
     // --- AddMode ---
@@ -62,7 +62,7 @@ public class ModeServiceTests : IDisposable
         _service.AddMode("MyMode", "My prompt", ["myapp"]);
 
         var modes = _service.GetModes();
-        modes.Should().HaveCount(6);
+        modes.Should().HaveCount(7);
         var custom = modes.First(m => m.Name == "MyMode");
         custom.IsBuiltIn.Should().BeFalse();
         custom.SystemPrompt.Should().Be("My prompt");
@@ -74,7 +74,7 @@ public class ModeServiceTests : IDisposable
     {
         _service.AddMode("Email", "duplicate", []);
 
-        _service.GetModes().Should().HaveCount(5);
+        _service.GetModes().Should().HaveCount(6);
     }
 
     [Fact]
@@ -83,7 +83,7 @@ public class ModeServiceTests : IDisposable
         _service.AddMode("", "prompt", []);
         _service.AddMode("  ", "prompt", []);
 
-        _service.GetModes().Should().HaveCount(5);
+        _service.GetModes().Should().HaveCount(6);
     }
 
     [Fact]
@@ -91,7 +91,7 @@ public class ModeServiceTests : IDisposable
     {
         _service.AddMode("Test", "", []);
 
-        _service.GetModes().Should().HaveCount(5);
+        _service.GetModes().Should().HaveCount(6);
     }
 
     // --- RemoveMode ---
@@ -100,11 +100,11 @@ public class ModeServiceTests : IDisposable
     public void RemoveMode_RemovesCustomMode()
     {
         _service.AddMode("Custom", "prompt", []);
-        _service.GetModes().Should().HaveCount(6);
+        _service.GetModes().Should().HaveCount(7);
 
         _service.RemoveMode("Custom");
 
-        _service.GetModes().Should().HaveCount(5);
+        _service.GetModes().Should().HaveCount(6);
     }
 
     [Fact]
@@ -112,7 +112,7 @@ public class ModeServiceTests : IDisposable
     {
         _service.RemoveMode("Email");
 
-        _service.GetModes().Should().HaveCount(5);
+        _service.GetModes().Should().HaveCount(6);
         _service.GetModes().Should().Contain(m => m.Name == "Email");
     }
 
@@ -402,5 +402,100 @@ public class ModeServiceTests : IDisposable
         _service.RemoveMode("Default");
 
         fired.Should().BeFalse();
+    }
+
+    // --- TargetLanguage ---
+
+    [Fact]
+    public void GetModes_TranslateModeHasTargetLanguage()
+    {
+        var translate = _service.GetModes().First(m => m.Name == "Translate");
+        translate.TargetLanguage.Should().Be("English");
+        translate.IsBuiltIn.Should().BeTrue();
+    }
+
+    [Fact]
+    public void ResolveTargetLanguage_TranslateMode_ReturnsLanguage()
+    {
+        _service.AutoSwitchEnabled = false;
+        _service.SetActiveMode("Translate");
+
+        _service.ResolveTargetLanguage(null).Should().Be("English");
+    }
+
+    [Fact]
+    public void ResolveTargetLanguage_NonTranslateMode_ReturnsNull()
+    {
+        _service.AutoSwitchEnabled = false;
+        _service.SetActiveMode("Email");
+
+        _service.ResolveTargetLanguage(null).Should().BeNull();
+    }
+
+    [Fact]
+    public void ResolveTargetLanguage_DefaultMode_ReturnsNull()
+    {
+        _service.AutoSwitchEnabled = false;
+        _service.SetActiveMode(null);
+
+        _service.ResolveTargetLanguage(null).Should().BeNull();
+    }
+
+    [Fact]
+    public void AddMode_WithTargetLanguage_StoresIt()
+    {
+        _service.AddMode("MyTranslate", "translate prompt", [], "French");
+
+        var mode = _service.GetModes().First(m => m.Name == "MyTranslate");
+        mode.TargetLanguage.Should().Be("French");
+    }
+
+    [Fact]
+    public void UpdateMode_CanSetTargetLanguage()
+    {
+        _service.AddMode("Custom", "prompt", []);
+        _service.UpdateMode("Custom", "Custom", "prompt", [], "Spanish");
+
+        var mode = _service.GetModes().First(m => m.Name == "Custom");
+        mode.TargetLanguage.Should().Be("Spanish");
+    }
+
+    [Fact]
+    public void UpdateMode_CanClearTargetLanguage()
+    {
+        _service.AddMode("Custom", "prompt", [], "German");
+        _service.UpdateMode("Custom", "Custom", "prompt", [], null);
+
+        var mode = _service.GetModes().First(m => m.Name == "Custom");
+        mode.TargetLanguage.Should().BeNull();
+    }
+
+    // --- Prompt content ---
+
+    [Fact]
+    public void BuiltInPrompts_ContainFillerWordRemoval()
+    {
+        var modes = _service.GetModes().Where(m => m.IsBuiltIn && m.Name != "Default");
+        foreach (var mode in modes)
+        {
+            mode.SystemPrompt.Should().Contain("filler words", because: $"{mode.Name} mode should contain filler word removal");
+        }
+    }
+
+    [Fact]
+    public void BuiltInPrompts_ContainSelfCorrectionInstruction()
+    {
+        var modes = _service.GetModes().Where(m => m.IsBuiltIn && m.Name != "Default");
+        foreach (var mode in modes)
+        {
+            mode.SystemPrompt.Should().Contain("corrects themselves", because: $"{mode.Name} mode should contain self-correction instruction");
+        }
+    }
+
+    [Fact]
+    public void TranslatePrompt_DoesNotContainNeverTranslate()
+    {
+        var translate = _service.GetModes().First(m => m.Name == "Translate");
+        translate.SystemPrompt.Should().NotContain("NEVER translate");
     }
 }

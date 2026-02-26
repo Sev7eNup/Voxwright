@@ -129,7 +129,7 @@ public class FileTranscriptionViewModelTests
             .Returns(new byte[1000]);
         _transcriptionProvider.TranscribeAsync(Arg.Any<byte[]>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
             .Returns(new TranscriptionResult { Text = "raw text" });
-        _textCorrectionService.CorrectAsync(Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
+        _textCorrectionService.CorrectAsync(Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
             .Returns("corrected text");
 
         var vm = CreateViewModel(o => o.TextCorrection.Provider = TextCorrectionProvider.Cloud);

@@ -100,6 +100,10 @@
                          Style="{StaticResource SettingsTextBoxStyle}"
                          MinWidth="0" MaxWidth="9999" Tag="App patterns (comma-separated, e.g. Outlook, Teams)"
                          Margin="0,8,0,0" VerticalAlignment="Center"/>
+                <TextBox Text="{Binding NewModeTargetLanguage, UpdateSourceTrigger=PropertyChanged}"
+                         Style="{StaticResource SettingsTextBoxStyle}"
+                         MinWidth="0" MaxWidth="9999" Tag="Target language for translation (e.g. English, German)"
+                         Margin="0,8,0,0" VerticalAlignment="Center"/>
                 <TextBox Text="{Binding NewModePrompt, UpdateSourceTrigger=PropertyChanged}"
                          Style="{StaticResource SettingsTextBoxStyle}"
                          MinWidth="0" MaxWidth="9999" Tag="System prompt"
@@ -139,6 +143,17 @@
                                             VerticalAlignment="Center">
                                         <TextBlock Text="built-in" FontSize="10" FontFamily="Segoe UI Variable, Segoe UI"
                                                    Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                    </Border>
+                                    <!-- Target language badge -->
+                                    <Border Visibility="{Binding TargetLanguage, Converter={StaticResource StringNotEmptyToVisibility}}"
+                                            Background="{DynamicResource BadgeBgBrush}"
+                                            BorderBrush="{DynamicResource BadgeBorderBrush}"
+                                            BorderThickness="1" CornerRadius="4" Padding="6,1" Margin="8,0,0,0"
+                                            VerticalAlignment="Center">
+                                        <TextBlock FontSize="10" FontFamily="Segoe UI Variable, Segoe UI"
+                                                   Foreground="{DynamicResource TextSecondaryBrush}">
+                                            <Run Text="→ "/><Run Text="{Binding TargetLanguage, Mode=OneWay}"/>
+                                        </TextBlock>
                                     </Border>
                                     <!-- Active indicator -->
                                     <Border Visibility="{Binding IsActive, Converter={StaticResource BoolToVisibility}}"
