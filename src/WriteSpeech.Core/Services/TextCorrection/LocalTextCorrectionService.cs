@@ -36,7 +36,7 @@ public class LocalTextCorrectionService : ITextCorrectionService, IDisposable
         _ideContextService = ideContextService;
     }
 
-    public async Task<string> CorrectAsync(string rawText, string? language, string? systemPromptOverride = null, CancellationToken ct = default)
+    public async Task<string> CorrectAsync(string rawText, string? language, string? systemPromptOverride = null, string? targetLanguage = null, CancellationToken ct = default)
     {
         try
         {
@@ -64,6 +64,10 @@ public class LocalTextCorrectionService : ITextCorrectionService, IDisposable
             if (systemPromptOverride is not null)
             {
                 userMessage = rawText;
+            }
+            else if (!string.IsNullOrEmpty(targetLanguage))
+            {
+                userMessage = $"[Translate to: {targetLanguage}]\n{rawText}";
             }
             else
             {

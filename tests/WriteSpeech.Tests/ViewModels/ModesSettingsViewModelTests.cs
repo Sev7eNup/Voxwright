@@ -44,8 +44,8 @@ public class ModesSettingsViewModelTests : IDisposable
     {
         var vm = CreateViewModel();
 
-        vm.Modes.Should().HaveCount(5);
-        vm.Modes.Select(m => m.Name).Should().Contain(["Default", "Email", "Message", "Code", "Note"]);
+        vm.Modes.Should().HaveCount(6);
+        vm.Modes.Select(m => m.Name).Should().Contain(["Default", "Email", "Message", "Code", "Note", "Translate"]);
     }
 
     [Fact]
@@ -65,7 +65,7 @@ public class ModesSettingsViewModelTests : IDisposable
 
         vm.SaveModeCommand.Execute(null);
 
-        vm.Modes.Should().HaveCount(6);
+        vm.Modes.Should().HaveCount(7);
         var custom = vm.Modes.First(m => m.Name == "Custom");
         custom.IsBuiltIn.Should().BeFalse();
         custom.AppPatterns.Should().Be("myapp, otherapp");
@@ -94,12 +94,12 @@ public class ModesSettingsViewModelTests : IDisposable
         vm.NewModeName = "Custom";
         vm.NewModePrompt = "prompt";
         vm.SaveModeCommand.Execute(null);
-        vm.Modes.Should().HaveCount(6);
+        vm.Modes.Should().HaveCount(7);
 
         var custom = vm.Modes.First(m => m.Name == "Custom");
         vm.RemoveModeCommand.Execute(custom);
 
-        vm.Modes.Should().HaveCount(5);
+        vm.Modes.Should().HaveCount(6);
     }
 
     [Fact]
@@ -110,7 +110,7 @@ public class ModesSettingsViewModelTests : IDisposable
         var email = vm.Modes.First(m => m.Name == "Email");
         vm.RemoveModeCommand.Execute(email);
 
-        vm.Modes.Should().HaveCount(5);
+        vm.Modes.Should().HaveCount(6);
     }
 
     [Fact]
@@ -155,5 +155,64 @@ public class ModesSettingsViewModelTests : IDisposable
         vm.ToggleAutoSwitchCommand.Execute(null);
 
         _modeService.AutoSwitchEnabled.Should().BeFalse();
+    }
+
+    // --- TargetLanguage ---
+
+    [Fact]
+    public void Constructor_TranslateModeHasTargetLanguage()
+    {
+        var vm = CreateViewModel();
+        var translate = vm.Modes.First(m => m.Name == "Translate");
+        translate.TargetLanguage.Should().Be("English");
+    }
+
+    [Fact]
+    public void EditModeCommand_PopulatesTargetLanguage()
+    {
+        var vm = CreateViewModel();
+        var translate = vm.Modes.First(m => m.Name == "Translate");
+        vm.EditModeCommand.Execute(translate);
+
+        vm.NewModeTargetLanguage.Should().Be("English");
+    }
+
+    [Fact]
+    public void SaveModeCommand_WithTargetLanguage_PassesToService()
+    {
+        var vm = CreateViewModel();
+        vm.NewModeName = "MyTranslate";
+        vm.NewModePrompt = "translate prompt";
+        vm.NewModeTargetLanguage = "French";
+
+        vm.SaveModeCommand.Execute(null);
+
+        var mode = _modeService.GetModes().First(m => m.Name == "MyTranslate");
+        mode.TargetLanguage.Should().Be("French");
+    }
+
+    [Fact]
+    public void SaveModeCommand_EmptyTargetLanguage_StoresNull()
+    {
+        var vm = CreateViewModel();
+        vm.NewModeName = "Custom";
+        vm.NewModePrompt = "prompt";
+        vm.NewModeTargetLanguage = "";
+
+        vm.SaveModeCommand.Execute(null);
+
+        var mode = _modeService.GetModes().First(m => m.Name == "Custom");
+        mode.TargetLanguage.Should().BeNull();
+    }
+
+    [Fact]
+    public void CancelEditCommand_ClearsTargetLanguage()
+    {
+        var vm = CreateViewModel();
+        vm.NewModeTargetLanguage = "German";
+
+        vm.CancelEditCommand.Execute(null);
+
+        vm.NewModeTargetLanguage.Should().BeEmpty();
     }
 }

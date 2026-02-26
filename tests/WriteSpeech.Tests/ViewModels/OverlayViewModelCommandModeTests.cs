@@ -158,7 +158,7 @@ public class OverlayViewModelCommandModeTests : IDisposable
         _audioService.StopRecordingAsync().Returns(new byte[2000]);
         _transcriptionProvider.TranscribeAsync(Arg.Any<byte[]>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
             .Returns(new TranscriptionResult { Text = "make it shorter" });
-        _textCorrectionService.CorrectAsync(Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
+        _textCorrectionService.CorrectAsync(Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
             .Returns("Short text");
 
         var vm = CreateViewModel(o => o.TextCorrection.Provider = TextCorrectionProvider.Cloud);
@@ -171,6 +171,7 @@ public class OverlayViewModelCommandModeTests : IDisposable
             Arg.Is<string>(s => s.Contains("Original text") && s.Contains("make it shorter")),
             Arg.Any<string?>(),
             Arg.Is<string>(s => s.Contains("text transformation")),
+            Arg.Any<string?>(),
             Arg.Any<CancellationToken>());
     }
 
@@ -181,7 +182,7 @@ public class OverlayViewModelCommandModeTests : IDisposable
         _audioService.StopRecordingAsync().Returns(new byte[2000]);
         _transcriptionProvider.TranscribeAsync(Arg.Any<byte[]>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
             .Returns(new TranscriptionResult { Text = "rephrase" });
-        _textCorrectionService.CorrectAsync(Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
+        _textCorrectionService.CorrectAsync(Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
             .Returns("Rephrased text");
 
         var vm = CreateViewModel(o => o.TextCorrection.Provider = TextCorrectionProvider.Cloud);
@@ -249,7 +250,7 @@ public class OverlayViewModelCommandModeTests : IDisposable
         _audioService.StopRecordingAsync().Returns(new byte[2000]);
         _combinedService.IsAvailable.Returns(true);
         _combinedService.TranscribeAndCorrectAsync(
-                Arg.Any<byte[]>(), Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
+                Arg.Any<byte[]>(), Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
             .Returns("Transformed result");
 
         var vm = CreateViewModel(o =>
@@ -265,6 +266,7 @@ public class OverlayViewModelCommandModeTests : IDisposable
             Arg.Any<byte[]>(),
             Arg.Any<string?>(),
             Arg.Is<string>(s => s.Contains("Original text to transform") && s.Contains("transformation")),
+            Arg.Any<string?>(),
             Arg.Any<CancellationToken>());
     }
 
@@ -275,7 +277,7 @@ public class OverlayViewModelCommandModeTests : IDisposable
         _audioService.StopRecordingAsync().Returns(new byte[2000]);
         _transcriptionProvider.TranscribeAsync(Arg.Any<byte[]>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
             .Returns(new TranscriptionResult { Text = "translate to English" });
-        _textCorrectionService.CorrectAsync(Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
+        _textCorrectionService.CorrectAsync(Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
             .Returns("Hi there");
 
         var vm = CreateViewModel(o => o.TextCorrection.Provider = TextCorrectionProvider.Cloud);

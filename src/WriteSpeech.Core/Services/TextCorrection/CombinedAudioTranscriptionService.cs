@@ -47,7 +47,7 @@ public class CombinedAudioTranscriptionService : ICombinedTranscriptionCorrectio
     }
 
     public async Task<string> TranscribeAndCorrectAsync(
-        byte[] audioData, string? language, string? systemPromptOverride = null, CancellationToken ct = default)
+        byte[] audioData, string? language, string? systemPromptOverride = null, string? targetLanguage = null, CancellationToken ct = default)
     {
         try
         {
@@ -71,9 +71,16 @@ public class CombinedAudioTranscriptionService : ICombinedTranscriptionCorrectio
 
             if (options.TextCorrection.AutoAddToDictionary)
                 systemPrompt += TextCorrectionDefaults.VocabExtractionInstruction;
-            var langSuffix = (systemPromptOverride is not null || string.IsNullOrEmpty(language))
-                ? ""
-                : $"\n[Output language MUST be: {language}]";
+
+            string langSuffix;
+            if (systemPromptOverride is not null)
+                langSuffix = "";
+            else if (!string.IsNullOrEmpty(targetLanguage))
+                langSuffix = $"\n[Translate to: {targetLanguage}]";
+            else if (!string.IsNullOrEmpty(language))
+                langSuffix = $"\n[Output language MUST be: {language}]";
+            else
+                langSuffix = "";
 
             var chatOptions = new ChatCompletionOptions
             {

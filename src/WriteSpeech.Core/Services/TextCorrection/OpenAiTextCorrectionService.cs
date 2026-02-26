@@ -32,7 +32,7 @@ public class OpenAiTextCorrectionService : ITextCorrectionService
         _clientFactory = clientFactory;
     }
 
-    public async Task<string> CorrectAsync(string rawText, string? language, string? systemPromptOverride = null, CancellationToken ct = default)
+    public async Task<string> CorrectAsync(string rawText, string? language, string? systemPromptOverride = null, string? targetLanguage = null, CancellationToken ct = default)
     {
         try
         {
@@ -57,6 +57,10 @@ public class OpenAiTextCorrectionService : ITextCorrectionService
             if (systemPromptOverride is not null)
             {
                 userMessage = rawText;
+            }
+            else if (!string.IsNullOrEmpty(targetLanguage))
+            {
+                userMessage = $"[Translate to: {targetLanguage}]\n{rawText}";
             }
             else
             {

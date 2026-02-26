@@ -51,7 +51,7 @@ public class ModeService : IModeService
         lock (_lock) return _modes.ToList();
     }
 
-    public void AddMode(string name, string systemPrompt, IReadOnlyList<string> appPatterns)
+    public void AddMode(string name, string systemPrompt, IReadOnlyList<string> appPatterns, string? targetLanguage = null)
     {
         if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(systemPrompt)) return;
         name = name.Trim();
@@ -60,14 +60,14 @@ public class ModeService : IModeService
         lock (_lock)
         {
             if (_modes.Any(m => m.Name.Equals(name, StringComparison.OrdinalIgnoreCase))) return;
-            _modes.Add(new CorrectionMode(name, systemPrompt.Trim(), appPatterns, IsBuiltIn: false));
+            _modes.Add(new CorrectionMode(name, systemPrompt.Trim(), appPatterns, IsBuiltIn: false, TargetLanguage: targetLanguage));
         }
 
         _saveHelper.Schedule();
         ModesChanged?.Invoke();
     }
 
-    public void UpdateMode(string oldName, string newName, string systemPrompt, IReadOnlyList<string> appPatterns)
+    public void UpdateMode(string oldName, string newName, string systemPrompt, IReadOnlyList<string> appPatterns, string? targetLanguage = null)
     {
         if (string.IsNullOrWhiteSpace(newName) || string.IsNullOrWhiteSpace(systemPrompt)) return;
         newName = newName.Trim();
@@ -89,7 +89,8 @@ public class ModeService : IModeService
                 existing.IsBuiltIn ? existing.Name : newName,
                 systemPrompt.Trim(),
                 appPatterns,
-                existing.IsBuiltIn);
+                existing.IsBuiltIn,
+                targetLanguage);
 
             // Update active mode name if it was renamed
             if (_activeModeName is not null
@@ -142,6 +143,12 @@ public class ModeService : IModeService
         return ResolveSystemPrompt(processName);
     }
 
+    public string? ResolveTargetLanguage(string? processName)
+    {
+        var mode = ResolveMode(processName);
+        return mode?.TargetLanguage;
+    }
+
     public async Task LoadAsync()
     {
         try
@@ -173,7 +180,8 @@ public class ModeService : IModeService
                                 _modes[builtInIndex] = existing with
                                 {
                                     SystemPrompt = savedMode.SystemPrompt,
-                                    AppPatterns = savedMode.AppPatterns ?? existing.AppPatterns
+                                    AppPatterns = savedMode.AppPatterns ?? existing.AppPatterns,
+                                    TargetLanguage = savedMode.TargetLanguage ?? existing.TargetLanguage
                                 };
                             }
                             else
@@ -183,7 +191,8 @@ public class ModeService : IModeService
                                     savedMode.Name,
                                     savedMode.SystemPrompt,
                                     savedMode.AppPatterns ?? [],
-                                    IsBuiltIn: false));
+                                    IsBuiltIn: false,
+                                    TargetLanguage: savedMode.TargetLanguage));
                             }
                         }
                     }
@@ -243,14 +252,14 @@ public class ModeService : IModeService
             {
                 toSave = _modes
                     .Where(m => !m.IsBuiltIn || HasBeenModified(m))
-                    .Select(m => new SavedMode(m.Name, m.SystemPrompt, m.AppPatterns.ToList()))
+                    .Select(m => new SavedMode(m.Name, m.SystemPrompt, m.AppPatterns.ToList(), m.TargetLanguage))
                     .ToList();
 
                 // Also save custom modes
                 toSave.AddRange(_modes
                     .Where(m => !m.IsBuiltIn)
                     .Where(m => !toSave.Any(s => s.Name.Equals(m.Name, StringComparison.OrdinalIgnoreCase)))
-                    .Select(m => new SavedMode(m.Name, m.SystemPrompt, m.AppPatterns.ToList())));
+                    .Select(m => new SavedMode(m.Name, m.SystemPrompt, m.AppPatterns.ToList(), m.TargetLanguage)));
             }
 
             var data = new ModeFileData(toSave);
@@ -270,7 +279,8 @@ public class ModeService : IModeService
             .FirstOrDefault(b => b.Name.Equals(mode.Name, StringComparison.OrdinalIgnoreCase));
         if (builtIn is null) return true;
         return builtIn.SystemPrompt != mode.SystemPrompt
-            || !builtIn.AppPatterns.SequenceEqual(mode.AppPatterns);
+            || !builtIn.AppPatterns.SequenceEqual(mode.AppPatterns)
+            || builtIn.TargetLanguage != mode.TargetLanguage;
     }
 
     private void EnsureLoaded()
@@ -286,6 +296,6 @@ public class ModeService : IModeService
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
-    private record SavedMode(string Name, string SystemPrompt, List<string>? AppPatterns);
+    private record SavedMode(string Name, string SystemPrompt, List<string>? AppPatterns, string? TargetLanguage = null);
     private record ModeFileData(List<SavedMode> Modes);
 }
