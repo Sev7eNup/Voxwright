@@ -377,83 +377,17 @@ public class WriteSpeechOptionsTests
         result.Succeeded.Should().BeTrue();
     }
 
-    // --- Per-provider API key validation ---
+    // --- Per-provider validation (API keys validated at service usage time, not startup) ---
 
-    [Fact]
-    public void Validator_AnthropicProvider_RequiresApiKey()
+    [Theory]
+    [InlineData(TextCorrectionProvider.Anthropic)]
+    [InlineData(TextCorrectionProvider.Google)]
+    [InlineData(TextCorrectionProvider.Groq)]
+    public void Validator_CloudProvider_WithoutApiKey_Succeeds(TextCorrectionProvider provider)
     {
         var validator = new WriteSpeechOptionsValidator();
         var options = CreateValidOptions();
-        options.TextCorrection.Provider = TextCorrectionProvider.Anthropic;
-        options.TextCorrection.Anthropic.ApiKey = null;
-
-        var result = validator.Validate(null, options);
-
-        result.Failed.Should().BeTrue();
-        result.FailureMessage.Should().Contain("Anthropic");
-    }
-
-    [Fact]
-    public void Validator_AnthropicProvider_WithApiKey_Succeeds()
-    {
-        var validator = new WriteSpeechOptionsValidator();
-        var options = CreateValidOptions();
-        options.TextCorrection.Provider = TextCorrectionProvider.Anthropic;
-        options.TextCorrection.Anthropic.ApiKey = "sk-ant-test";
-
-        var result = validator.Validate(null, options);
-
-        result.Succeeded.Should().BeTrue();
-    }
-
-    [Fact]
-    public void Validator_GoogleProvider_RequiresApiKey()
-    {
-        var validator = new WriteSpeechOptionsValidator();
-        var options = CreateValidOptions();
-        options.TextCorrection.Provider = TextCorrectionProvider.Google;
-        options.TextCorrection.Google.ApiKey = null;
-
-        var result = validator.Validate(null, options);
-
-        result.Failed.Should().BeTrue();
-        result.FailureMessage.Should().Contain("Google");
-    }
-
-    [Fact]
-    public void Validator_GoogleProvider_WithApiKey_Succeeds()
-    {
-        var validator = new WriteSpeechOptionsValidator();
-        var options = CreateValidOptions();
-        options.TextCorrection.Provider = TextCorrectionProvider.Google;
-        options.TextCorrection.Google.ApiKey = "AIzaSy-test";
-
-        var result = validator.Validate(null, options);
-
-        result.Succeeded.Should().BeTrue();
-    }
-
-    [Fact]
-    public void Validator_GroqProvider_RequiresApiKey()
-    {
-        var validator = new WriteSpeechOptionsValidator();
-        var options = CreateValidOptions();
-        options.TextCorrection.Provider = TextCorrectionProvider.Groq;
-        options.TextCorrection.Groq.ApiKey = null;
-
-        var result = validator.Validate(null, options);
-
-        result.Failed.Should().BeTrue();
-        result.FailureMessage.Should().Contain("Groq");
-    }
-
-    [Fact]
-    public void Validator_GroqProvider_WithApiKey_Succeeds()
-    {
-        var validator = new WriteSpeechOptionsValidator();
-        var options = CreateValidOptions();
-        options.TextCorrection.Provider = TextCorrectionProvider.Groq;
-        options.TextCorrection.Groq.ApiKey = "gsk-test";
+        options.TextCorrection.Provider = provider;
 
         var result = validator.Validate(null, options);
 

@@ -204,17 +204,8 @@ public class WriteSpeechOptionsValidator : IValidateOptions<WriteSpeechOptions>
             && string.IsNullOrWhiteSpace(options.OpenAI.ApiKey))
             failures.Add("OpenAI text correction requires an API key (OpenAI.ApiKey).");
 
-        if (options.TextCorrection.Provider == TextCorrectionProvider.Anthropic
-            && string.IsNullOrWhiteSpace(options.TextCorrection.Anthropic.ApiKey))
-            failures.Add("Anthropic text correction requires an API key (TextCorrection.Anthropic.ApiKey).");
-
-        if (options.TextCorrection.Provider == TextCorrectionProvider.Google
-            && string.IsNullOrWhiteSpace(options.TextCorrection.Google.ApiKey))
-            failures.Add("Google text correction requires an API key (TextCorrection.Google.ApiKey).");
-
-        if (options.TextCorrection.Provider == TextCorrectionProvider.Groq
-            && string.IsNullOrWhiteSpace(options.TextCorrection.Groq.ApiKey))
-            failures.Add("Groq text correction requires an API key (TextCorrection.Groq.ApiKey).");
+        // Note: Anthropic/Google/Groq API keys are NOT validated here — the user must be able
+        // to start the app and configure keys in Settings. Services handle missing keys at usage time.
 
         if (options.Hotkey.Method is not ("RegisterHotKey" or "LowLevelHook"))
             failures.Add($"Hotkey.Method must be 'RegisterHotKey' or 'LowLevelHook' (got '{options.Hotkey.Method}').");
