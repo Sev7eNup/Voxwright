@@ -42,5 +42,9 @@ ggml-*.bin
 ## VS Code
 .vscode/
 
+## Publish & Installer output
+publish/
+output/
+
 ## Claude Code
 .claude/
