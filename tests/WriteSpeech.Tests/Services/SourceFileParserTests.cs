@@ -270,6 +270,63 @@ public class SourceFileParserTests
         }
     }
 
+    // --- M1: Sensitive identifier deny-list ---
+
+    [Theory]
+    [InlineData("apiKey")]
+    [InlineData("ApiKey")]
+    [InlineData("APIKEY")]
+    [InlineData("api_key")]
+    [InlineData("secret")]
+    [InlineData("secretKey")]
+    [InlineData("password")]
+    [InlineData("token")]
+    [InlineData("accesstoken")]
+    [InlineData("access_token")]
+    [InlineData("credential")]
+    [InlineData("privatekey")]
+    [InlineData("private_key")]
+    [InlineData("connectionstring")]
+    [InlineData("client_secret")]
+    [InlineData("masterkey")]
+    public void IsSensitiveIdentifier_ReturnsTrueForSensitiveNames(string identifier)
+    {
+        SourceFileParser.IsSensitiveIdentifier(identifier).Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData("UserService")]
+    [InlineData("GetData")]
+    [InlineData("Configuration")]
+    [InlineData("HttpClient")]
+    [InlineData("TokenType")]
+    public void IsSensitiveIdentifier_ReturnsFalseForNormalNames(string identifier)
+    {
+        SourceFileParser.IsSensitiveIdentifier(identifier).Should().BeFalse();
+    }
+
+    [Fact]
+    public void ExtractIdentifiersFromContent_FiltersSensitiveIdentifiers()
+    {
+        var code = """
+            public class AuthService
+            {
+                private string apiKey;
+                private string secretKey;
+                private string connectionString;
+                public string UserName { get; set; }
+            }
+            """;
+
+        var identifiers = SourceFileParser.ExtractIdentifiersFromContent(code);
+
+        identifiers.Should().Contain("AuthService");
+        identifiers.Should().Contain("UserName");
+        identifiers.Should().NotContain("apiKey");
+        identifiers.Should().NotContain("secretKey");
+        identifiers.Should().NotContain("connectionString");
+    }
+
     [Fact]
     public void CollectFileNames_ReturnsSortedResults()
     {

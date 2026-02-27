@@ -50,6 +50,9 @@ public partial class App : Application
             return;
         }
 
+        // Ensure appsettings.json exists (create from template on first run)
+        EnsureAppSettings();
+
         // Migrate data from old app name before anything else
         MigrateAppDataFolder();
         CleanupOldRegistryEntry();
@@ -281,6 +284,25 @@ public partial class App : Application
         {
             Environment.SetEnvironmentVariable("PATH", string.Join(";", additions) + ";" + currentPath);
             Log.Information("Added CUDA library paths: {Paths}", string.Join(", ", additions));
+        }
+    }
+
+    private static void EnsureAppSettings()
+    {
+        var baseDir = AppDomain.CurrentDomain.BaseDirectory;
+        var settingsPath = Path.Combine(baseDir, "appsettings.json");
+        var templatePath = Path.Combine(baseDir, "appsettings.template.json");
+
+        if (!File.Exists(settingsPath) && File.Exists(templatePath))
+        {
+            try
+            {
+                File.Copy(templatePath, settingsPath);
+            }
+            catch
+            {
+                // Best-effort; app still works without appsettings.json (defaults apply)
+            }
         }
     }
 

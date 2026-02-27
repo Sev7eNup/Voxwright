@@ -32,6 +32,12 @@ public abstract class CloudTextCorrectionServiceBase : ITextCorrectionService
         IdeContextService = ideContextService;
     }
 
+    /// <summary>
+    /// Maximum character length for text sent to cloud correction APIs.
+    /// Prevents excessive token usage from very long transcriptions or selected text.
+    /// </summary>
+    internal const int MaxInputLength = 50_000;
+
     public async Task<string> CorrectAsync(
         string rawText,
         string? language,
@@ -41,6 +47,13 @@ public abstract class CloudTextCorrectionServiceBase : ITextCorrectionService
     {
         try
         {
+            if (rawText.Length > MaxInputLength)
+            {
+                Logger.LogWarning("Input text exceeds maximum length ({Length} > {Max}), truncating",
+                    rawText.Length, MaxInputLength);
+                rawText = rawText[..MaxInputLength];
+            }
+
             var options = OptionsMonitor.CurrentValue;
             var (systemPrompt, userMessage) = BuildPrompt(options, rawText, language, systemPromptOverride, targetLanguage);
 
@@ -84,18 +97,18 @@ public abstract class CloudTextCorrectionServiceBase : ITextCorrectionService
         string userMessage;
         if (!string.IsNullOrEmpty(targetLanguage))
         {
-            userMessage = $"[Translate to: {targetLanguage}]\n{rawText}";
+            userMessage = $"[Translate to: {targetLanguage}]\n<transcription>{rawText}</transcription>";
         }
         else if (systemPromptOverride is not null)
         {
-            userMessage = rawText;
+            userMessage = $"<transcription>{rawText}</transcription>";
         }
         else
         {
             var languageHint = string.IsNullOrEmpty(language)
                 ? "Keep the SAME language as the input — do NOT translate"
                 : $"Output language MUST be: {language}";
-            userMessage = $"[{languageHint}]\n{rawText}";
+            userMessage = $"[{languageHint}]\n<transcription>{rawText}</transcription>";
         }
 
         return (systemPrompt, userMessage);

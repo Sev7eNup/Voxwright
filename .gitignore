@@ -27,6 +27,7 @@ TestResult.xml
 
 ## User-specific files
 *.env
+**/appsettings.json
 appsettings.Development.json
 appsettings.Local.json
 

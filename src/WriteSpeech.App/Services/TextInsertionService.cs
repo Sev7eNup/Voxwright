@@ -22,62 +22,69 @@ public class TextInsertionService : ITextInsertionService
 
         try
         {
-            // Save and restore clipboard on the STA thread
-            Application.Current.Dispatcher.Invoke(() =>
-            {
-                try { previousClipboard = Clipboard.GetDataObject(); } catch { /* clipboard may be locked */ }
-                Clipboard.SetText(text);
-            });
-        }
-        catch (COMException ex)
-        {
-            _logger.LogError(ex, "Failed to set clipboard text");
-            throw;
-        }
-
-        // Brief delay for clipboard to settle
-        await Task.Delay(50);
-
-        // Simulate Ctrl+V
-        var inputs = new NativeMethods.INPUT[4];
-        int size = Marshal.SizeOf<NativeMethods.INPUT>();
-
-        // Ctrl down
-        inputs[0].Type = NativeMethods.INPUT_KEYBOARD;
-        inputs[0].Union.Keyboard.VirtualKey = NativeMethods.VK_CONTROL;
-
-        // V down
-        inputs[1].Type = NativeMethods.INPUT_KEYBOARD;
-        inputs[1].Union.Keyboard.VirtualKey = NativeMethods.VK_V;
-
-        // V up
-        inputs[2].Type = NativeMethods.INPUT_KEYBOARD;
-        inputs[2].Union.Keyboard.VirtualKey = NativeMethods.VK_V;
-        inputs[2].Union.Keyboard.Flags = NativeMethods.KEYEVENTF_KEYUP;
-
-        // Ctrl up
-        inputs[3].Type = NativeMethods.INPUT_KEYBOARD;
-        inputs[3].Union.Keyboard.VirtualKey = NativeMethods.VK_CONTROL;
-        inputs[3].Union.Keyboard.Flags = NativeMethods.KEYEVENTF_KEYUP;
-
-        var sent = NativeMethods.SendInput((uint)inputs.Length, inputs, size);
-        if (sent != inputs.Length)
-        {
-            _logger.LogWarning("SendInput returned {Sent}/{Expected} — keystrokes may not have been delivered",
-                sent, inputs.Length);
-        }
-
-        // Restore previous clipboard content after a delay for the paste to complete
-        if (previousClipboard is not null)
-        {
-            await Task.Delay(200);
             try
             {
-                Application.Current.Dispatcher.Invoke(() => Clipboard.SetDataObject(previousClipboard, copy: true));
+                // Save and restore clipboard on the STA thread
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    try { previousClipboard = Clipboard.GetDataObject(); } catch { /* clipboard may be locked */ }
+                    Clipboard.SetText(text);
+                });
             }
-            catch (Exception ex)
+            catch (COMException ex)
             {
-                _logger.LogDebug(ex, "Could not restore previous clipboard content");
+                _logger.LogError(ex, "Failed to set clipboard text");
+                throw;
+            }
+
+            // Brief delay for clipboard to settle
+            await Task.Delay(50);
+
+            // Simulate Ctrl+V
+            var inputs = new NativeMethods.INPUT[4];
+            int size = Marshal.SizeOf<NativeMethods.INPUT>();
+
+            // Ctrl down
+            inputs[0].Type = NativeMethods.INPUT_KEYBOARD;
+            inputs[0].Union.Keyboard.VirtualKey = NativeMethods.VK_CONTROL;
+
+            // V down
+            inputs[1].Type = NativeMethods.INPUT_KEYBOARD;
+            inputs[1].Union.Keyboard.VirtualKey = NativeMethods.VK_V;
+
+            // V up
+            inputs[2].Type = NativeMethods.INPUT_KEYBOARD;
+            inputs[2].Union.Keyboard.VirtualKey = NativeMethods.VK_V;
+            inputs[2].Union.Keyboard.Flags = NativeMethods.KEYEVENTF_KEYUP;
+
+            // Ctrl up
+            inputs[3].Type = NativeMethods.INPUT_KEYBOARD;
+            inputs[3].Union.Keyboard.VirtualKey = NativeMethods.VK_CONTROL;
+            inputs[3].Union.Keyboard.Flags = NativeMethods.KEYEVENTF_KEYUP;
+
+            var sent = NativeMethods.SendInput((uint)inputs.Length, inputs, size);
+            if (sent != inputs.Length)
+            {
+                _logger.LogWarning("SendInput returned {Sent}/{Expected} — keystrokes may not have been delivered",
+                    sent, inputs.Length);
+            }
+
+            // Wait for the paste to complete before restoring
+            await Task.Delay(200);
+        }
+        finally
+        {
+            // Always restore previous clipboard content, even if SendInput or delays fail
+            if (previousClipboard is not null)
+            {
+                try
+                {
+                    Application.Current.Dispatcher.Invoke(() => Clipboard.SetDataObject(previousClipboard, copy: true));
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogDebug(ex, "Could not restore previous clipboard content");
+                }
             }
         }
     }
