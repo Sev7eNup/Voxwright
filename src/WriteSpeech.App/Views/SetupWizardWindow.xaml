@@ -205,6 +205,7 @@
                             <TextBlock Text="API Key" FontSize="11" FontWeight="SemiBold"
                                        FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,4"/>
                             <TextBox x:Name="OpenAiApiKeyBox" Style="{StaticResource SettingsTextBoxStyle}"
+                                     Text="{Binding OpenAiApiKey, Mode=OneTime}"
                                      Tag="sk-..." MaxWidth="460" MinWidth="300"
                                      KeyDown="ApiKeyBox_KeyDown" TextChanged="OpenAiApiKeyBox_TextChanged"/>
                             <TextBlock Text="Model" FontSize="11" FontWeight="SemiBold"
@@ -239,6 +240,7 @@
                             <TextBlock Text="API Key" FontSize="11" FontWeight="SemiBold"
                                        FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,4"/>
                             <TextBox x:Name="GroqTranscriptionApiKeyBox" Style="{StaticResource SettingsTextBoxStyle}"
+                                     Text="{Binding GroqTranscriptionApiKey, Mode=OneTime}"
                                      Tag="gsk-..." MaxWidth="460" MinWidth="300"
                                      KeyDown="GroqTranscriptionApiKeyBox_KeyDown" TextChanged="GroqTranscriptionApiKeyBox_TextChanged"/>
                             <TextBlock Text="Model" FontSize="11" FontWeight="SemiBold"
@@ -692,6 +694,7 @@
                         <TextBlock Text="API Key" FontSize="11" FontWeight="SemiBold"
                                    FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,4"/>
                         <TextBox x:Name="AnthropicApiKeyBox" Style="{StaticResource SettingsTextBoxStyle}"
+                                 Text="{Binding AnthropicApiKey, Mode=OneTime}"
                                  Tag="sk-ant-..." MaxWidth="460" MinWidth="300"
                                  KeyDown="AnthropicApiKeyBox_KeyDown" TextChanged="AnthropicApiKeyBox_TextChanged"/>
                         <TextBlock Text="Model" FontSize="11" FontWeight="SemiBold"
@@ -726,6 +729,7 @@
                         <TextBlock Text="API Key" FontSize="11" FontWeight="SemiBold"
                                    FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,4"/>
                         <TextBox x:Name="GoogleApiKeyBox" Style="{StaticResource SettingsTextBoxStyle}"
+                                 Text="{Binding GoogleApiKey, Mode=OneTime}"
                                  Tag="AI..." MaxWidth="460" MinWidth="300"
                                  KeyDown="GoogleApiKeyBox_KeyDown" TextChanged="GoogleApiKeyBox_TextChanged"/>
                         <TextBlock Text="Model" FontSize="11" FontWeight="SemiBold"
@@ -760,6 +764,7 @@
                         <TextBlock Text="API Key" FontSize="11" FontWeight="SemiBold"
                                    FontFamily="Segoe UI Variable, Segoe UI" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,4"/>
                         <TextBox x:Name="GroqCorrectionApiKeyBox" Style="{StaticResource SettingsTextBoxStyle}"
+                                 Text="{Binding GroqCorrectionApiKey, Mode=OneTime}"
                                  Tag="gsk-..." MaxWidth="460" MinWidth="300"
                                  KeyDown="GroqCorrectionApiKeyBox_KeyDown" TextChanged="GroqCorrectionApiKeyBox_TextChanged"/>
                         <TextBlock Text="Model" FontSize="11" FontWeight="SemiBold"
