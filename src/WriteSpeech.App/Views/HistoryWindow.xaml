@@ -214,32 +214,6 @@
                                                         </ControlTemplate>
                                                     </Button.Template>
                                                 </Button>
-                                                <!-- Insert button (subtle pill) -->
-                                                <Button Cursor="Hand" Margin="6,0,0,0"
-                                                        Command="{Binding DataContext.InsertEntryCommand,
-                                                            RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                        CommandParameter="{Binding}">
-                                                    <Button.Template>
-                                                        <ControlTemplate TargetType="Button">
-                                                            <Border x:Name="Bd" Background="{DynamicResource ButtonBgBrush}"
-                                                                    CornerRadius="12" Padding="10,4"
-                                                                    BorderBrush="{DynamicResource ButtonBorderBrush}" BorderThickness="1">
-                                                                <StackPanel Orientation="Horizontal">
-                                                                    <TextBlock Text="&#xE8B1;" FontFamily="Segoe MDL2 Assets" FontSize="10"
-                                                                               Foreground="{DynamicResource TextPrimaryBrush}"
-                                                                               VerticalAlignment="Center" Margin="0,0,5,0"/>
-                                                                    <TextBlock Text="Insert" Foreground="{DynamicResource TextPrimaryBrush}"
-                                                                               VerticalAlignment="Center" FontFamily="Segoe UI" FontSize="11"/>
-                                                                </StackPanel>
-                                                            </Border>
-                                                            <ControlTemplate.Triggers>
-                                                                <Trigger Property="IsMouseOver" Value="True">
-                                                                    <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ButtonBorderBrush}"/>
-                                                                </Trigger>
-                                                            </ControlTemplate.Triggers>
-                                                        </ControlTemplate>
-                                                    </Button.Template>
-                                                </Button>
                                                 <!-- Remove button (icon) -->
                                                 <Button Cursor="Hand" Margin="6,0,0,0"
                                                         Command="{Binding DataContext.RemoveEntryCommand,

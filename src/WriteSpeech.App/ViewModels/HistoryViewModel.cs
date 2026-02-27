@@ -4,14 +4,11 @@ using CommunityToolkit.Mvvm.Input;
 using WriteSpeech.Core.Models;
 using WriteSpeech.Core.Services;
 using WriteSpeech.Core.Services.History;
-using WriteSpeech.Core.Services.TextInsertion;
-
 namespace WriteSpeech.App.ViewModels;
 
 public partial class HistoryViewModel : ObservableObject
 {
     private readonly ITranscriptionHistoryService _historyService;
-    private readonly ITextInsertionService _textInsertionService;
     private readonly IDispatcherService _dispatcher;
     private List<TranscriptionHistoryEntry> _allEntries = [];
 
@@ -32,11 +29,9 @@ public partial class HistoryViewModel : ObservableObject
 
     public HistoryViewModel(
         ITranscriptionHistoryService historyService,
-        ITextInsertionService textInsertionService,
         IDispatcherService dispatcher)
     {
         _historyService = historyService;
-        _textInsertionService = textInsertionService;
         _dispatcher = dispatcher;
     }
 
@@ -69,12 +64,6 @@ public partial class HistoryViewModel : ObservableObject
     private void CopyEntry(TranscriptionHistoryEntry entry)
     {
         _dispatcher.Invoke(() => System.Windows.Clipboard.SetText(entry.Text));
-    }
-
-    [RelayCommand]
-    private async Task InsertEntry(TranscriptionHistoryEntry entry)
-    {
-        await _textInsertionService.InsertTextAsync(entry.Text);
     }
 
     [RelayCommand]
