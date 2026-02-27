@@ -19,8 +19,9 @@ public class LowLevelHookHotkeyService : IGlobalHotkeyService
     private CachedBinding _cachedToggle;
     private CachedBinding _cachedPtt;
     private volatile bool _escapeRegistered;
-    private bool _isPttActive;
+    private volatile bool _isPttActive;
     private long _pttPressTimestamp;
+    private CancellationTokenSource? _pttDelayCts;
     private bool _disposed;
 
     private IntPtr _keyboardHookHandle;
@@ -183,6 +184,8 @@ public class LowLevelHookHotkeyService : IGlobalHotkeyService
             _hookThreadId = 0;
         }
 
+        _pttDelayCts?.Cancel();
+        _pttDelayCts = null;
         _syncContext = null;
         _hookThreadReady.Reset();
         _logger.LogInformation("Low-level hooks removed");
@@ -322,6 +325,9 @@ public class LowLevelHookHotkeyService : IGlobalHotkeyService
                         if (isDown && !_isPttActive
                             && HotkeyMatcher.MatchesMouseBinding(ptt, button, NativeMethods.GetAsyncKeyState))
                         {
+                            // Cancel any pending delayed release from a previous quick press
+                            _pttDelayCts?.Cancel();
+                            _pttDelayCts = null;
                             _isPttActive = true;
                             _pttPressTimestamp = Environment.TickCount64;
                             _syncContext?.Post(_ => PushToTalkHotkeyPressed?.Invoke(this, EventArgs.Empty), null);
@@ -329,21 +335,22 @@ public class LowLevelHookHotkeyService : IGlobalHotkeyService
                         else if (!isDown && _isPttActive
                             && ptt.MouseButtonKind == button)
                         {
+                            // Set _isPttActive = false immediately so the next press is not blocked
+                            _isPttActive = false;
                             var elapsed = Environment.TickCount64 - _pttPressTimestamp;
                             if (elapsed < MinPttHoldMs)
                             {
-                                // Delay release to ensure minimum recording duration
+                                // Delay release event to ensure minimum recording duration
                                 var delay = MinPttHoldMs - (int)elapsed;
-                                Task.Delay(delay).ContinueWith(_ =>
+                                var cts = new CancellationTokenSource();
+                                _pttDelayCts = cts;
+                                Task.Delay(delay, cts.Token).ContinueWith(_ =>
                                     _syncContext?.Post(_ =>
-                                    {
-                                        _isPttActive = false;
-                                        PushToTalkHotkeyReleased?.Invoke(this, EventArgs.Empty);
-                                    }, null));
+                                        PushToTalkHotkeyReleased?.Invoke(this, EventArgs.Empty), null),
+                                    TaskContinuationOptions.OnlyOnRanToCompletion);
                             }
                             else
                             {
-                                _isPttActive = false;
                                 _syncContext?.Post(_ => PushToTalkHotkeyReleased?.Invoke(this, EventArgs.Empty), null);
                             }
                         }
