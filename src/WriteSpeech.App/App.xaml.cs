@@ -211,6 +211,12 @@ public partial class App : Application
 
     internal static void RestartApp()
     {
+        // Release the single-instance mutex before starting the new process,
+        // otherwise it will see the mutex and show "already running".
+        _mutex?.ReleaseMutex();
+        _mutex?.Dispose();
+        _mutex = null;
+
         Process.Start(Environment.ProcessPath!);
         Current.Shutdown();
     }
