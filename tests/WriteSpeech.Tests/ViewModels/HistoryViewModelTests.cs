@@ -223,4 +223,48 @@ public class HistoryViewModelTests
         vm.SearchQuery.Should().BeEmpty();
         vm.Entries.Should().HaveCount(1);
     }
+
+    [Fact]
+    public void Refresh_EmptyHistory_ShowsEmptyState()
+    {
+        _historyService.GetEntries().Returns(new List<TranscriptionHistoryEntry>());
+
+        var vm = CreateViewModel();
+        vm.Refresh();
+
+        vm.Entries.Should().BeEmpty();
+        vm.TotalCount.Should().Be(0);
+        vm.EntryCountDisplay.Should().Be("0 entries");
+    }
+
+    [Fact]
+    public void ClearAll_ResetsSearchQuery()
+    {
+        _historyService.GetEntries().Returns(new List<TranscriptionHistoryEntry>
+        {
+            MakeEntry("Hello")
+        });
+
+        var vm = CreateViewModel();
+        vm.Refresh();
+        vm.SearchQuery = "Hello";
+
+        vm.ClearAllCommand.Execute(null);
+
+        vm.SearchQuery.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void EntryCountDisplay_SingleEntry_ShowsCount()
+    {
+        _historyService.GetEntries().Returns(new List<TranscriptionHistoryEntry>
+        {
+            MakeEntry("Hello")
+        });
+
+        var vm = CreateViewModel();
+        vm.Refresh();
+
+        vm.EntryCountDisplay.Should().Be("1 entries");
+    }
 }

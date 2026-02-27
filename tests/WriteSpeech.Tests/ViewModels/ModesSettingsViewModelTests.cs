@@ -215,4 +215,59 @@ public class ModesSettingsViewModelTests : IDisposable
 
         vm.NewModeTargetLanguage.Should().BeEmpty();
     }
+
+    // --- Validation Edge Cases ---
+
+    [Fact]
+    public void SaveModeCommand_DuplicateName_DoesNotAdd()
+    {
+        var vm = CreateViewModel();
+        vm.NewModeName = "Email"; // Built-in name
+        vm.NewModePrompt = "duplicate prompt";
+
+        vm.SaveModeCommand.Execute(null);
+
+        vm.Modes.Should().HaveCount(6);
+    }
+
+    [Fact]
+    public void SaveModeCommand_EmptyName_DoesNotAdd()
+    {
+        var vm = CreateViewModel();
+        vm.NewModeName = "";
+        vm.NewModePrompt = "some prompt";
+
+        vm.SaveModeCommand.Execute(null);
+
+        vm.Modes.Should().HaveCount(6);
+    }
+
+    [Fact]
+    public void SaveModeCommand_EmptyPrompt_DoesNotAdd()
+    {
+        var vm = CreateViewModel();
+        vm.NewModeName = "NewMode";
+        vm.NewModePrompt = "";
+
+        vm.SaveModeCommand.Execute(null);
+
+        vm.Modes.Should().HaveCount(6);
+    }
+
+    [Fact]
+    public void SaveModeCommand_EditingBuiltInMode_PreservesName()
+    {
+        var vm = CreateViewModel();
+        var email = vm.Modes.First(m => m.Name == "Email");
+        vm.EditModeCommand.Execute(email);
+
+        vm.NewModeName = "Renamed Email"; // Try to rename built-in
+        vm.NewModePrompt = "updated prompt";
+        vm.SaveModeCommand.Execute(null);
+
+        // Built-in mode name should be preserved
+        vm.Modes.Should().Contain(m => m.Name == "Email");
+        var updated = vm.Modes.First(m => m.Name == "Email");
+        updated.SystemPrompt.Should().Be("updated prompt");
+    }
 }

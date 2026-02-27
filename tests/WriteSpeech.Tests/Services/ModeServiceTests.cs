@@ -498,4 +498,64 @@ public class ModeServiceTests : IDisposable
         var translate = _service.GetModes().First(m => m.Name == "Translate");
         translate.SystemPrompt.Should().NotContain("NEVER translate");
     }
+
+    // --- Resolve Priority Tests ---
+
+    [Fact]
+    public void ResolveMode_AutoSwitchOn_MatchOverridesPinned()
+    {
+        _service.AutoSwitchEnabled = true;
+        _service.SetActiveMode("Email"); // Pinned to Email
+
+        // "Slack" matches Message mode — auto-switch should win over pin
+        var prompt = _service.ResolveSystemPrompt("Slack");
+        prompt.Should().Be(CorrectionModeDefaults.MessagePrompt);
+    }
+
+    [Fact]
+    public void ResolveMode_AutoSwitchOff_PinnedOverridesMatch()
+    {
+        _service.AutoSwitchEnabled = false;
+        _service.SetActiveMode("Email"); // Pinned to Email
+
+        // Even though "Slack" would match Message, auto-switch is off → pinned wins
+        var prompt = _service.ResolveSystemPrompt("Slack");
+        prompt.Should().Be(CorrectionModeDefaults.EmailPrompt);
+    }
+
+    [Fact]
+    public void ResolveMode_AutoSwitchOn_EmptyProcessName_UsesPinned()
+    {
+        _service.AutoSwitchEnabled = true;
+        _service.SetActiveMode("Code");
+
+        // Empty process name can't match anything → falls back to pinned
+        var prompt = _service.ResolveSystemPrompt("");
+        prompt.Should().Be(CorrectionModeDefaults.CodePrompt);
+    }
+
+    [Fact]
+    public void UpdateMode_RenameActivePinnedMode_UpdatesActiveModeName()
+    {
+        _service.AddMode("MyCustom", "custom prompt", []);
+        _service.SetActiveMode("MyCustom");
+        _service.ActiveModeName.Should().Be("MyCustom");
+
+        _service.UpdateMode("MyCustom", "Renamed", "custom prompt", []);
+
+        _service.ActiveModeName.Should().Be("Renamed");
+    }
+
+    [Fact]
+    public void ResolveMode_MessageModePatterns_AllMatch()
+    {
+        _service.AutoSwitchEnabled = true;
+
+        foreach (var app in new[] { "Slack", "Teams", "Discord", "Telegram", "WhatsApp", "Signal" })
+        {
+            var prompt = _service.ResolveSystemPrompt(app);
+            prompt.Should().Be(CorrectionModeDefaults.MessagePrompt,
+                because: $"{app} should match Message mode");
+        }
+    }
 }
