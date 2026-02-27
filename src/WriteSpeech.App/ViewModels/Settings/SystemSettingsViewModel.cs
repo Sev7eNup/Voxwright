@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using WriteSpeech.Core.Configuration;
@@ -124,6 +125,15 @@ public partial class SystemSettingsViewModel : ObservableObject
     [RelayCommand]
     internal async Task ResetSetupWizard()
     {
+        var result = MessageBox.Show(
+            "Are you sure you want to reset settings and re-run the setup wizard? The app will restart.",
+            "Reset Settings",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Question);
+
+        if (result != MessageBoxResult.Yes)
+            return;
+
         _persistenceService.ScheduleUpdate(section =>
         {
             SettingsViewModel.EnsureObject(section, "App")["SetupCompleted"] = false;
