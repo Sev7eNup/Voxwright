@@ -3,7 +3,6 @@ using NSubstitute;
 using WriteSpeech.App.ViewModels;
 using WriteSpeech.Core.Models;
 using WriteSpeech.Core.Services.History;
-using WriteSpeech.Core.Services.TextInsertion;
 using WriteSpeech.Tests.TestHelpers;
 
 namespace WriteSpeech.Tests.ViewModels;
@@ -11,11 +10,10 @@ namespace WriteSpeech.Tests.ViewModels;
 public class HistoryViewModelTests
 {
     private readonly ITranscriptionHistoryService _historyService = Substitute.For<ITranscriptionHistoryService>();
-    private readonly ITextInsertionService _textInsertionService = Substitute.For<ITextInsertionService>();
 
     private HistoryViewModel CreateViewModel()
     {
-        return new HistoryViewModel(_historyService, _textInsertionService, new SynchronousDispatcherService());
+        return new HistoryViewModel(_historyService, new SynchronousDispatcherService());
     }
 
     private static TranscriptionHistoryEntry MakeEntry(string text) => new()
