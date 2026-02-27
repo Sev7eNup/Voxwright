@@ -164,6 +164,82 @@ public class CloudTextCorrectionServiceBaseTests
         act.Should().NotThrow();
     }
 
+    [Fact]
+    public async Task CorrectAsync_WithTargetLanguage_DoesNotIncludeLanguageHint()
+    {
+        var service = CreateService();
+        service.ResponseToReturn = "translated text";
+
+        await service.CorrectAsync("test text", "de", targetLanguage: "English");
+
+        service.LastUserMessage.Should().Contain("[Translate to: English]");
+        service.LastUserMessage.Should().NotContain("Output language MUST be");
+        service.LastUserMessage.Should().NotContain("do NOT translate");
+    }
+
+    [Fact]
+    public async Task CorrectAsync_WithSystemPromptOverride_PassesRawTextOnly()
+    {
+        var service = CreateService();
+        service.ResponseToReturn = "transformed";
+
+        await service.CorrectAsync("raw text here", "en", systemPromptOverride: "Transform this");
+
+        service.LastUserMessage.Should().Be("raw text here");
+        service.LastUserMessage.Should().NotContain("[");
+    }
+
+    [Fact]
+    public async Task CorrectAsync_WithIdeContext_AppendsToSystemPrompt()
+    {
+        var options = OptionsHelper.CreateMonitor();
+        var dict = Substitute.For<IDictionaryService>();
+        dict.BuildPromptFragment().Returns("");
+        var ide = Substitute.For<IIDEContextService>();
+        ide.BuildPromptFragment().Returns("\n[Code context: MyClass, GetData, userId]");
+
+        var service = new TestCorrectionService(
+            NullLogger<TestCorrectionService>.Instance, options, dict, ide);
+        service.ResponseToReturn = "ok";
+
+        await service.CorrectAsync("test", "en");
+
+        service.LastSystemPrompt.Should().Contain("[Code context: MyClass, GetData, userId]");
+    }
+
+    [Fact]
+    public async Task CorrectAsync_AutoAddDisabled_NoVocabInstruction()
+    {
+        var service = CreateService(o => o.TextCorrection.AutoAddToDictionary = false);
+        service.ResponseToReturn = "corrected";
+
+        await service.CorrectAsync("test", "en");
+
+        service.LastSystemPrompt.Should().NotContain("VOCAB");
+    }
+
+    [Fact]
+    public async Task ProcessResponse_AutoAddDisabled_ReturnsFullResponse()
+    {
+        var service = CreateService(o => o.TextCorrection.AutoAddToDictionary = false);
+        service.ResponseToReturn = "Hello world\n---VOCAB---\nSomeWord";
+
+        var result = await service.CorrectAsync("test", "en");
+
+        result.Should().Contain("---VOCAB---");
+    }
+
+    [Fact]
+    public async Task ProcessResponse_CleanTextEmpty_FallsBackToRawText()
+    {
+        var service = CreateService(o => o.TextCorrection.AutoAddToDictionary = true);
+        service.ResponseToReturn = "   \n---VOCAB---\nWriteSpeech";
+
+        var result = await service.CorrectAsync("original text", "en");
+
+        result.Should().Be("original text");
+    }
+
     private class TestCorrectionService : CloudTextCorrectionServiceBase
     {
         public string? ResponseToReturn { get; set; } = "corrected";

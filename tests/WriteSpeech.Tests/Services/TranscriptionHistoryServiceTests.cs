@@ -133,4 +133,92 @@ public class TranscriptionHistoryServiceTests : IDisposable
         var act = () => service.Dispose();
         act.Should().NotThrow();
     }
+
+    [Fact]
+    public async Task AddEntry_NewestFirst_OrderPreserved()
+    {
+        var service = CreateService();
+        await service.LoadAsync();
+
+        service.AddEntry("First", "OpenAI", 1);
+        service.AddEntry("Second", "OpenAI", 1);
+        service.AddEntry("Third", "OpenAI", 1);
+
+        var entries = service.GetEntries();
+        entries[0].Text.Should().Be("Third");
+        entries[1].Text.Should().Be("Second");
+        entries[2].Text.Should().Be("First");
+    }
+
+    [Fact]
+    public async Task AddEntry_AtExactlyMaxEntries_RemovesOldest()
+    {
+        var service = CreateService(maxEntries: 3);
+        await service.LoadAsync();
+
+        service.AddEntry("One", "OpenAI", 1);
+        service.AddEntry("Two", "OpenAI", 1);
+        service.AddEntry("Three", "OpenAI", 1);
+        service.GetEntries().Should().HaveCount(3);
+
+        service.AddEntry("Four", "OpenAI", 1);
+
+        var entries = service.GetEntries();
+        entries.Should().HaveCount(3);
+        entries[0].Text.Should().Be("Four");
+        entries[2].Text.Should().Be("Two");
+        entries.Should().NotContain(e => e.Text == "One");
+    }
+
+    [Fact]
+    public async Task RemoveEntry_SpecificEntry_OthersPreserved()
+    {
+        var service = CreateService();
+        await service.LoadAsync();
+
+        service.AddEntry("One", "OpenAI", 1);
+        service.AddEntry("Two", "OpenAI", 1);
+        service.AddEntry("Three", "OpenAI", 1);
+
+        var entryToRemove = service.GetEntries().First(e => e.Text == "Two");
+        service.RemoveEntry(entryToRemove);
+
+        var entries = service.GetEntries();
+        entries.Should().HaveCount(2);
+        entries.Should().Contain(e => e.Text == "Three");
+        entries.Should().Contain(e => e.Text == "One");
+    }
+
+    [Fact]
+    public async Task LoadAsync_CorruptedJson_InitializesEmpty()
+    {
+        var filePath = Path.Combine(_tempDir, "corrupt-history.json");
+        File.WriteAllText(filePath, "{ not valid json !!! }");
+
+        var service = CreateService();
+        SetFilePath(service, filePath);
+
+        await service.LoadAsync();
+
+        service.GetEntries().Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task SaveAndLoad_PreservesAllFields()
+    {
+        var service = CreateService();
+        await service.LoadAsync();
+        service.AddEntry("Test text", "Parakeet", 42.5);
+        await service.SaveAsync();
+
+        var service2 = CreateService();
+        SetFilePath(service2, Path.Combine(_tempDir, "history.json"));
+        await service2.LoadAsync();
+
+        var entry = service2.GetEntries()[0];
+        entry.Text.Should().Be("Test text");
+        entry.Provider.Should().Be("Parakeet");
+        entry.DurationSeconds.Should().Be(42.5);
+        entry.TimestampUtc.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
+    }
 }

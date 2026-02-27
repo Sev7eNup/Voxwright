@@ -158,4 +158,61 @@ public class SettingsPersistenceServiceTests : IDisposable
         var doc = JsonNode.Parse(json)!;
         doc["WriteSpeech"]!["Language"]!.GetValue<string>().Should().Be("fr");
     }
+
+    [Fact]
+    public async Task ScheduleUpdate_InvalidJson_DoesNotThrow()
+    {
+        WriteInitialSettings("{ not valid json !!! }");
+        using var service = CreateService();
+
+        service.ScheduleUpdate(section => section["Language"] = "en");
+        await Task.Delay(200);
+
+        // File should remain unchanged (invalid JSON can't be parsed)
+        var content = await File.ReadAllTextAsync(_filePath);
+        content.Should().Contain("not valid json");
+    }
+
+    [Fact]
+    public async Task ScheduleUpdate_FileDoesNotExist_DoesNotThrow()
+    {
+        var missingPath = Path.Combine(_tempDir, "nonexistent", "appsettings.json");
+        var service = new SettingsPersistenceService(
+            NullLogger<SettingsPersistenceService>.Instance, missingPath, debounceMs: 50);
+
+        service.ScheduleUpdate(section => section["Language"] = "en");
+
+        // Should not throw, even though file doesn't exist
+        await Task.Delay(200);
+        service.Dispose();
+    }
+
+    [Fact]
+    public async Task ScheduleUpdate_MissingWriteSpeechSection_DoesNotCorrupt()
+    {
+        WriteInitialSettings("""{ "Logging": { "Level": "Info" } }""");
+        using var service = CreateService();
+
+        service.ScheduleUpdate(section => section["Language"] = "en");
+        await Task.Delay(200);
+
+        // File should still contain original content (skipped save due to missing section)
+        var content = await File.ReadAllTextAsync(_filePath);
+        content.Should().Contain("Logging");
+    }
+
+    [Fact]
+    public async Task ScheduleUpdate_WithJsonComments_PreservesValues()
+    {
+        // JSON with comments (common in appsettings.json)
+        WriteInitialSettings("{\n  // Comment\n  \"WriteSpeech\": { \"Language\": \"de\" }\n}");
+        using var service = CreateService();
+
+        service.ScheduleUpdate(section => section["Language"] = "en");
+        await Task.Delay(200);
+
+        var json = await File.ReadAllTextAsync(_filePath);
+        var doc = JsonNode.Parse(json)!;
+        doc["WriteSpeech"]!["Language"]!.GetValue<string>().Should().Be("en");
+    }
 }

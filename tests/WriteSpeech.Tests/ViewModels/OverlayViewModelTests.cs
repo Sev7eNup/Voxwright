@@ -1,3 +1,4 @@
+using System.IO;
 using FluentAssertions;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
@@ -783,6 +784,356 @@ public class OverlayViewModelTests : IDisposable
         // Fire the event after disposal — AudioLevel should NOT update
         _audioService.AudioLevelChanged += Raise.Event<EventHandler<float>>(_audioService, 0.5f);
         vm.AudioLevel.Should().Be(0f);
+    }
+
+    // --- Mode Resolution Tests ---
+
+    [Fact]
+    public async Task StopRecording_WithActiveMode_PassesModePromptToCorrector()
+    {
+        var modeService = Substitute.For<IModeService>();
+        modeService.ResolveSystemPrompt(Arg.Any<string?>()).Returns("Use formal email tone.");
+        modeService.ResolveTargetLanguage(Arg.Any<string?>()).Returns((string?)null);
+
+        _textCorrectionService.CorrectAsync(Arg.Any<string>(), Arg.Any<string?>(),
+            Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(x => x.ArgAt<string>(0));
+
+        var vm = CreateViewModelWithModeService(modeService, o =>
+            o.TextCorrection.Provider = TextCorrectionProvider.OpenAI);
+
+        _transcriptionProvider.TranscribeAsync(Arg.Any<byte[]>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(new TranscriptionResult { Text = "hello" });
+
+        await StartAndStopRecording(vm);
+
+        await _textCorrectionService.Received().CorrectAsync(
+            Arg.Any<string>(), Arg.Any<string?>(),
+            "Use formal email tone.", Arg.Is<string?>(x => x == null), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task StopRecording_WithTranslateMode_PassesTargetLanguage()
+    {
+        var modeService = Substitute.For<IModeService>();
+        modeService.ResolveSystemPrompt(Arg.Any<string?>()).Returns("Translate prompt");
+        modeService.ResolveTargetLanguage(Arg.Any<string?>()).Returns("English");
+
+        _textCorrectionService.CorrectAsync(Arg.Any<string>(), Arg.Any<string?>(),
+            Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(x => x.ArgAt<string>(0));
+
+        var vm = CreateViewModelWithModeService(modeService, o =>
+            o.TextCorrection.Provider = TextCorrectionProvider.OpenAI);
+
+        _transcriptionProvider.TranscribeAsync(Arg.Any<byte[]>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(new TranscriptionResult { Text = "hallo welt" });
+
+        await StartAndStopRecording(vm);
+
+        await _textCorrectionService.Received().CorrectAsync(
+            Arg.Any<string>(), Arg.Any<string?>(),
+            "Translate prompt", "English", Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task StopRecording_WithDefaultMode_PassesNullSystemPrompt()
+    {
+        var modeService = Substitute.For<IModeService>();
+        modeService.ResolveSystemPrompt(Arg.Any<string?>()).Returns((string?)null);
+        modeService.ResolveTargetLanguage(Arg.Any<string?>()).Returns((string?)null);
+
+        _textCorrectionService.CorrectAsync(Arg.Any<string>(), Arg.Any<string?>(),
+            Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(x => x.ArgAt<string>(0));
+
+        var vm = CreateViewModelWithModeService(modeService, o =>
+            o.TextCorrection.Provider = TextCorrectionProvider.OpenAI);
+
+        _transcriptionProvider.TranscribeAsync(Arg.Any<byte[]>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(new TranscriptionResult { Text = "hello" });
+
+        await StartAndStopRecording(vm);
+
+        await _textCorrectionService.Received().CorrectAsync(
+            Arg.Any<string>(), Arg.Any<string?>(),
+            Arg.Is<string?>(x => x == null), Arg.Is<string?>(x => x == null), Arg.Any<CancellationToken>());
+    }
+
+    // --- IDE Context Tests ---
+
+    [Fact]
+    public async Task StopRecording_IDEDetected_PreparesContext()
+    {
+        var ideDetection = Substitute.For<IIDEDetectionService>();
+        ideDetection.DetectIDE(Arg.Any<IntPtr>()).Returns(new IDEInfo("Code", "/workspace", null));
+        var ideContext = Substitute.For<IIDEContextService>();
+
+        _transcriptionProvider.TranscribeAsync(Arg.Any<byte[]>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(new TranscriptionResult { Text = "hello" });
+
+        var vm = CreateViewModelWithIDEServices(ideDetection, ideContext, o =>
+        {
+            o.Integration.VariableRecognition = true;
+            o.Integration.FileTagging = true;
+        });
+
+        await StartAndStopRecording(vm);
+
+        await ideContext.Received().PrepareContextAsync("/workspace", true, true, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task StopRecording_NoIDEDetected_ClearsContext()
+    {
+        var ideDetection = Substitute.For<IIDEDetectionService>();
+        ideDetection.DetectIDE(Arg.Any<IntPtr>()).Returns((IDEInfo?)null);
+        var ideContext = Substitute.For<IIDEContextService>();
+
+        _transcriptionProvider.TranscribeAsync(Arg.Any<byte[]>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(new TranscriptionResult { Text = "hello" });
+
+        var vm = CreateViewModelWithIDEServices(ideDetection, ideContext, o =>
+        {
+            o.Integration.VariableRecognition = true;
+        });
+
+        await StartAndStopRecording(vm);
+
+        ideContext.Received().Clear();
+    }
+
+    [Fact]
+    public async Task StopRecording_IntegrationDisabled_SkipsContext()
+    {
+        var ideDetection = Substitute.For<IIDEDetectionService>();
+        var ideContext = Substitute.For<IIDEContextService>();
+
+        _transcriptionProvider.TranscribeAsync(Arg.Any<byte[]>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(new TranscriptionResult { Text = "hello" });
+
+        var vm = CreateViewModelWithIDEServices(ideDetection, ideContext, o =>
+        {
+            o.Integration.VariableRecognition = false;
+            o.Integration.FileTagging = false;
+        });
+
+        await StartAndStopRecording(vm);
+
+        ideDetection.DidNotReceive().DetectIDE(Arg.Any<IntPtr>());
+    }
+
+    // --- Event Handler Tests ---
+
+    [Fact]
+    public async Task OnRecordingError_DuringRecording_SetsErrorState()
+    {
+        var vm = CreateViewModel();
+        await vm.HotkeyStartRecordingAsync();
+        vm.State.Should().Be(RecordingState.Recording);
+
+        _audioService.RecordingError += Raise.Event<EventHandler<Exception>>(
+            _audioService, new IOException("Device lost"));
+
+        vm.State.Should().Be(RecordingState.Error);
+        vm.ErrorMessage.Should().Contain("Device lost");
+    }
+
+    [Fact]
+    public async Task OnRecordingError_DuringRecording_UnmutesApps()
+    {
+        var vm = CreateViewModel(o => o.Audio.MuteWhileDictating = true);
+        await vm.HotkeyStartRecordingAsync();
+
+        _audioService.RecordingError += Raise.Event<EventHandler<Exception>>(
+            _audioService, new IOException("Device lost"));
+
+        _mutingService.Received().UnmuteAll();
+    }
+
+    [Fact]
+    public void OnRecordingError_WhenIdle_IsIgnored()
+    {
+        var vm = CreateViewModel();
+        vm.State.Should().Be(RecordingState.Idle);
+
+        _audioService.RecordingError += Raise.Event<EventHandler<Exception>>(
+            _audioService, new IOException("Device lost"));
+
+        vm.State.Should().Be(RecordingState.Idle);
+        vm.ErrorMessage.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task OnMaxDurationReached_DuringRecording_AutoStops()
+    {
+        var vm = CreateViewModel();
+        _audioService.StopRecordingAsync().Returns(new byte[2000]);
+        _transcriptionProvider.TranscribeAsync(Arg.Any<byte[]>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(new TranscriptionResult { Text = "max duration test" });
+
+        await vm.HotkeyStartRecordingAsync();
+        vm.State.Should().Be(RecordingState.Recording);
+
+        _audioService.MaxDurationReached += Raise.Event<EventHandler>(_audioService, EventArgs.Empty);
+        // Allow async handler to complete
+        await Task.Delay(100);
+
+        vm.State.Should().NotBe(RecordingState.Recording);
+    }
+
+    [Fact]
+    public void OnMaxDurationReached_WhenNotRecording_IsIgnored()
+    {
+        var vm = CreateViewModel();
+        vm.State.Should().Be(RecordingState.Idle);
+
+        _audioService.MaxDurationReached += Raise.Event<EventHandler>(_audioService, EventArgs.Empty);
+
+        vm.State.Should().Be(RecordingState.Idle);
+    }
+
+    [Fact]
+    public void UpdatePosition_PersistsViaPersistenceService()
+    {
+        var persistence = Substitute.For<ISettingsPersistenceService>();
+        var vm = CreateViewModelWithPersistence(persistence);
+
+        vm.UpdatePosition(100.5, 200.3);
+
+        persistence.Received().ScheduleUpdate(Arg.Any<Action<System.Text.Json.Nodes.JsonNode>>());
+        vm.PositionX.Should().Be(100.5);
+        vm.PositionY.Should().Be(200.3);
+    }
+
+    [Fact]
+    public async Task StopRecording_AppliesSnippetsAfterCorrection()
+    {
+        _snippetService.ApplySnippets("Hello world").Returns("Hello universe");
+        _transcriptionProvider.TranscribeAsync(Arg.Any<byte[]>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(new TranscriptionResult { Text = "Hello world" });
+        _audioService.StopRecordingAsync().Returns(new byte[2000]);
+
+        var vm = CreateViewModel(o => o.TextCorrection.Provider = TextCorrectionProvider.Off);
+        await vm.HotkeyStartRecordingAsync();
+        await vm.HotkeyStopRecordingAsync();
+
+        vm.TranscribedText.Should().Be("Hello universe");
+    }
+
+    // --- Helper methods for custom DI ---
+
+    private OverlayViewModel CreateViewModelWithModeService(
+        IModeService modeService, Action<WriteSpeechOptions>? configure = null)
+    {
+        configure?.Invoke(_optionsValue);
+        _audioService.StopRecordingAsync().Returns(new byte[2000]);
+
+        var optionsMonitor = OptionsHelper.CreateMonitor(o =>
+        {
+            o.Provider = _optionsValue.Provider;
+            o.Language = _optionsValue.Language;
+            o.TextCorrection = _optionsValue.TextCorrection;
+            o.OpenAI = _optionsValue.OpenAI;
+            o.Hotkey = _optionsValue.Hotkey;
+            o.Audio = _optionsValue.Audio;
+            o.Overlay = _optionsValue.Overlay;
+        });
+
+        return new OverlayViewModel(
+            _audioService, _mutingService,
+            new TestProviderFactory(_transcriptionProvider),
+            _textInsertionService,
+            new TestCorrectionProviderFactory(_textCorrectionService),
+            _combinedService, _snippetService,
+            Substitute.For<ISoundEffectService>(),
+            Substitute.For<IUsageStatsService>(),
+            Substitute.For<ITranscriptionHistoryService>(),
+            Substitute.For<IWindowFocusService>(),
+            Substitute.For<IIDEDetectionService>(),
+            Substitute.For<IIDEContextService>(),
+            modeService,
+            Substitute.For<ISelectedTextService>(),
+            new SynchronousDispatcherService(),
+            Substitute.For<ISettingsPersistenceService>(),
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<OverlayViewModel>.Instance,
+            optionsMonitor);
+    }
+
+    private OverlayViewModel CreateViewModelWithIDEServices(
+        IIDEDetectionService ideDetection, IIDEContextService ideContext,
+        Action<WriteSpeechOptions>? configure = null)
+    {
+        configure?.Invoke(_optionsValue);
+        _audioService.StopRecordingAsync().Returns(new byte[2000]);
+
+        var optionsMonitor = OptionsHelper.CreateMonitor(o =>
+        {
+            o.Provider = _optionsValue.Provider;
+            o.Language = _optionsValue.Language;
+            o.TextCorrection = _optionsValue.TextCorrection;
+            o.OpenAI = _optionsValue.OpenAI;
+            o.Hotkey = _optionsValue.Hotkey;
+            o.Audio = _optionsValue.Audio;
+            o.Overlay = _optionsValue.Overlay;
+            o.Integration = _optionsValue.Integration;
+        });
+
+        return new OverlayViewModel(
+            _audioService, _mutingService,
+            new TestProviderFactory(_transcriptionProvider),
+            _textInsertionService,
+            new TestCorrectionProviderFactory(_textCorrectionService),
+            _combinedService, _snippetService,
+            Substitute.For<ISoundEffectService>(),
+            Substitute.For<IUsageStatsService>(),
+            Substitute.For<ITranscriptionHistoryService>(),
+            Substitute.For<IWindowFocusService>(),
+            ideDetection, ideContext,
+            Substitute.For<IModeService>(),
+            Substitute.For<ISelectedTextService>(),
+            new SynchronousDispatcherService(),
+            Substitute.For<ISettingsPersistenceService>(),
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<OverlayViewModel>.Instance,
+            optionsMonitor);
+    }
+
+    private OverlayViewModel CreateViewModelWithPersistence(
+        ISettingsPersistenceService persistence)
+    {
+        var optionsMonitor = OptionsHelper.CreateMonitor(o =>
+        {
+            o.Provider = _optionsValue.Provider;
+            o.Hotkey = _optionsValue.Hotkey;
+            o.Audio = _optionsValue.Audio;
+            o.Overlay = _optionsValue.Overlay;
+        });
+
+        return new OverlayViewModel(
+            _audioService, _mutingService,
+            new TestProviderFactory(_transcriptionProvider),
+            _textInsertionService,
+            new TestCorrectionProviderFactory(_textCorrectionService),
+            _combinedService, _snippetService,
+            Substitute.For<ISoundEffectService>(),
+            Substitute.For<IUsageStatsService>(),
+            Substitute.For<ITranscriptionHistoryService>(),
+            Substitute.For<IWindowFocusService>(),
+            Substitute.For<IIDEDetectionService>(),
+            Substitute.For<IIDEContextService>(),
+            Substitute.For<IModeService>(),
+            Substitute.For<ISelectedTextService>(),
+            new SynchronousDispatcherService(),
+            persistence,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<OverlayViewModel>.Instance,
+            optionsMonitor);
+    }
+
+    private async Task StartAndStopRecording(OverlayViewModel vm)
+    {
+        _audioService.StopRecordingAsync().Returns(new byte[2000]);
+        await vm.HotkeyStartRecordingAsync();
+        await vm.HotkeyStopRecordingAsync();
     }
 
     public void Dispose()
