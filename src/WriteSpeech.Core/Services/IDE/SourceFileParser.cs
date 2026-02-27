@@ -96,7 +96,7 @@ public static partial class SourceFileParser
         foreach (var match in IdentifierRegex().EnumerateMatches(content.AsSpan()))
         {
             var value = content.Substring(match.Index, match.Length);
-            if (!CommonKeywords.Contains(value) && !IsAllLowerSingleWord(value))
+            if (!CommonKeywords.Contains(value) && !IsAllLowerSingleWord(value) && !SensitiveIdentifiers.Contains(value))
                 identifiers.Add(value);
         }
 
@@ -157,6 +157,24 @@ public static partial class SourceFileParser
             }
         }
     }
+
+    private static readonly HashSet<string> SensitiveIdentifiers =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            "apikey", "apikeys", "api_key", "api_keys",
+            "secret", "secrets", "secretkey", "secret_key",
+            "password", "passwords", "passwd", "passphrase",
+            "token", "tokens", "accesstoken", "access_token", "refreshtoken", "refresh_token",
+            "credential", "credentials",
+            "privatekey", "private_key", "privateKeys",
+            "connectionstring", "connection_string",
+            "authtoken", "auth_token", "bearertoken", "bearer_token",
+            "clientsecret", "client_secret",
+            "encryptionkey", "encryption_key", "signingkey", "signing_key",
+            "masterkey", "master_key"
+        };
+
+    internal static bool IsSensitiveIdentifier(string value) => SensitiveIdentifiers.Contains(value);
 
     /// <summary>
     /// Filters out short all-lowercase identifiers that are likely common English words

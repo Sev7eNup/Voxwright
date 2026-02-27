@@ -84,6 +84,48 @@ public class ModelDownloadHelperTests : IDisposable
     }
 
     [Fact]
+    public async Task DownloadToFileAsync_WithMatchingHash_Succeeds()
+    {
+        var data = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+        var expectedHash = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(data));
+        using var sourceStream = new MemoryStream(data);
+        var targetPath = Path.Combine(_tempDir, "hash-test.bin");
+
+        await _helper.DownloadToFileAsync(sourceStream, targetPath, data.Length, expectedSha256: expectedHash);
+
+        File.Exists(targetPath).Should().BeTrue();
+        (await File.ReadAllBytesAsync(targetPath)).Should().Equal(data);
+    }
+
+    [Fact]
+    public async Task DownloadToFileAsync_WithMismatchedHash_ThrowsAndDeletesTempFile()
+    {
+        var data = new byte[] { 1, 2, 3, 4, 5 };
+        using var sourceStream = new MemoryStream(data);
+        var targetPath = Path.Combine(_tempDir, "bad-hash-test.bin");
+
+        var act = () => _helper.DownloadToFileAsync(sourceStream, targetPath, data.Length,
+            expectedSha256: "0000000000000000000000000000000000000000000000000000000000000000");
+
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*hash mismatch*");
+        File.Exists(targetPath).Should().BeFalse();
+        File.Exists(targetPath + ".downloading").Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task DownloadToFileAsync_WithNullHash_SkipsVerification()
+    {
+        var data = new byte[] { 1, 2, 3 };
+        using var sourceStream = new MemoryStream(data);
+        var targetPath = Path.Combine(_tempDir, "no-hash-test.bin");
+
+        await _helper.DownloadToFileAsync(sourceStream, targetPath, data.Length, expectedSha256: null);
+
+        File.Exists(targetPath).Should().BeTrue();
+    }
+
+    [Fact]
     public void CreateClient_SetsTimeout()
     {
         var httpFactory = Substitute.For<IHttpClientFactory>();

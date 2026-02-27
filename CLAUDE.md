@@ -436,7 +436,7 @@ Environment variables prefixed with `WRITESPEECH_` also bind to config.
 - **WS_EX_NOACTIVATE blocks tray menu**: Temporarily remove the flag in `TrayRightMouseDown`, call `SetForegroundWindow`, restore when menu closes.
 - **IOptionsMonitor, not IOptions**: All core services must use `IOptionsMonitor<WriteSpeechOptions>` for live settings.
 - **Factory methods are `virtual`**: `TranscriptionProviderFactory.GetProvider` and `TextCorrectionProviderFactory.GetProvider` must stay `virtual` — tests override them for isolation (`OverlayViewModelTests`).
-- **appsettings.json contains API key locally**: Only `appsettings.Development.json` and `appsettings.Local.json` are gitignored — the main `appsettings.json` is tracked. Always check `git diff` before staging to avoid committing secrets.
+- **appsettings.json is gitignored**: `appsettings.json` contains local API keys and is NOT tracked. `appsettings.template.json` is the tracked template (no secrets). On first run, `EnsureAppSettings()` copies the template to `appsettings.json` if it doesn't exist.
 - **Single-instance Mutex**: `App.xaml.cs` uses `Mutex("WriteSpeech-SingleInstance")` — if the app crashes without disposing the mutex, you may need to restart or wait for the OS to release it.
 - **TestOptionsMonitor.OnChange() returns null**: `_optionsChangeRegistration` must be `IDisposable?` (nullable) because the test helper doesn't implement change notifications.
 - **LowLevelHook GetModuleHandle**: `GetModuleHandle(null)` must succeed for `SetWindowsHookEx`. Use the exe module name as entry point; crashes if called before module is loaded.

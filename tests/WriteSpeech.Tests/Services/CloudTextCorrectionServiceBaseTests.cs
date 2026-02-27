@@ -178,15 +178,14 @@ public class CloudTextCorrectionServiceBaseTests
     }
 
     [Fact]
-    public async Task CorrectAsync_WithSystemPromptOverride_PassesRawTextOnly()
+    public async Task CorrectAsync_WithSystemPromptOverride_WrapsInTranscriptionTags()
     {
         var service = CreateService();
         service.ResponseToReturn = "transformed";
 
         await service.CorrectAsync("raw text here", "en", systemPromptOverride: "Transform this");
 
-        service.LastUserMessage.Should().Be("raw text here");
-        service.LastUserMessage.Should().NotContain("[");
+        service.LastUserMessage.Should().Be("<transcription>raw text here</transcription>");
     }
 
     [Fact]
@@ -238,6 +237,70 @@ public class CloudTextCorrectionServiceBaseTests
         var result = await service.CorrectAsync("original text", "en");
 
         result.Should().Be("original text");
+    }
+
+    // --- M2: Input length limits ---
+
+    [Fact]
+    public async Task CorrectAsync_TruncatesInput_WhenExceedingMaxLength()
+    {
+        var service = CreateService();
+        service.ResponseToReturn = "corrected";
+        var longText = new string('a', CloudTextCorrectionServiceBase.MaxInputLength + 1000);
+
+        await service.CorrectAsync(longText, "en");
+
+        service.LastUserMessage.Should().HaveLength(
+            "<transcription>".Length + CloudTextCorrectionServiceBase.MaxInputLength + "</transcription>".Length
+            + "[Output language MUST be: en]\n".Length);
+    }
+
+    [Fact]
+    public async Task CorrectAsync_DoesNotTruncate_WhenWithinMaxLength()
+    {
+        var service = CreateService();
+        service.ResponseToReturn = "corrected";
+        var text = new string('a', 1000);
+
+        await service.CorrectAsync(text, "en");
+
+        service.LastUserMessage.Should().Contain(text);
+    }
+
+    // --- M4: Prompt injection mitigation ---
+
+    [Fact]
+    public async Task BuildPrompt_WrapsRawTextInTranscriptionTags()
+    {
+        var service = CreateService();
+        service.ResponseToReturn = "corrected";
+
+        await service.CorrectAsync("test input", "en");
+
+        service.LastUserMessage.Should().Contain("<transcription>test input</transcription>");
+    }
+
+    [Fact]
+    public async Task BuildPrompt_TranslateMode_WrapsInTranscriptionTags()
+    {
+        var service = CreateService();
+        service.ResponseToReturn = "translated";
+
+        await service.CorrectAsync("test", null, targetLanguage: "English");
+
+        service.LastUserMessage.Should().Contain("<transcription>test</transcription>");
+        service.LastUserMessage.Should().Contain("[Translate to: English]");
+    }
+
+    [Fact]
+    public async Task BuildPrompt_SystemPromptOverride_StillWrapsInTags()
+    {
+        var service = CreateService();
+        service.ResponseToReturn = "ok";
+
+        await service.CorrectAsync("some text", "en", systemPromptOverride: "Custom");
+
+        service.LastUserMessage.Should().Be("<transcription>some text</transcription>");
     }
 
     private class TestCorrectionService : CloudTextCorrectionServiceBase
