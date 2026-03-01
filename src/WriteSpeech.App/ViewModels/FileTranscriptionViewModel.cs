@@ -14,8 +14,13 @@ using WriteSpeech.Core.Services.Transcription;
 
 namespace WriteSpeech.App.ViewModels;
 
+public record RecentFileItem(string FilePath, string FileName, string TimeAgo, string FileInfo);
+
 public partial class FileTranscriptionViewModel : ObservableObject
 {
+    internal static readonly HashSet<string> AudioExtensions =
+        [".mp3", ".wav", ".m4a", ".flac", ".ogg", ".mp4"];
+
     private readonly TranscriptionProviderFactory _providerFactory;
     private readonly TextCorrectionProviderFactory _correctionFactory;
     private readonly IAudioFileReader _audioFileReader;
@@ -26,6 +31,12 @@ public partial class FileTranscriptionViewModel : ObservableObject
     private CancellationTokenSource? _cts;
 
     private WriteSpeechOptions Options => _optionsMonitor.CurrentValue;
+
+    [ObservableProperty]
+    private bool _isSelectingFile = true;
+
+    [ObservableProperty]
+    private bool _isDragOver;
 
     [ObservableProperty]
     private string? _fileName;
@@ -51,6 +62,9 @@ public partial class FileTranscriptionViewModel : ObservableObject
     [ObservableProperty]
     private bool _isCopied;
 
+    [ObservableProperty]
+    private List<RecentFileItem> _recentFiles = [];
+
     public FileTranscriptionViewModel(
         TranscriptionProviderFactory providerFactory,
         TextCorrectionProviderFactory correctionFactory,
@@ -69,6 +83,75 @@ public partial class FileTranscriptionViewModel : ObservableObject
         _optionsMonitor = optionsMonitor;
     }
 
+    internal static bool IsAudioFile(string path)
+        => AudioExtensions.Contains(Path.GetExtension(path).ToLowerInvariant());
+
+    public void LoadRecentFiles()
+    {
+        var entries = _historyService.GetEntries();
+        var recentFiles = entries
+            .Where(e => e.Provider.StartsWith("File", StringComparison.Ordinal)
+                     && !string.IsNullOrEmpty(e.SourceFilePath)
+                     && File.Exists(e.SourceFilePath))
+            .GroupBy(e => e.SourceFilePath, StringComparer.OrdinalIgnoreCase)
+            .Select(g => g.First())
+            .Take(5)
+            .Select(e =>
+            {
+                var ext = Path.GetExtension(e.SourceFilePath!).TrimStart('.').ToUpperInvariant();
+                string fileInfo;
+                try
+                {
+                    var fi = new FileInfo(e.SourceFilePath!);
+                    fileInfo = $"{ext}, {FormatFileSize(fi.Length)}";
+                }
+                catch (IOException)
+                {
+                    fileInfo = ext;
+                }
+                return new RecentFileItem(e.SourceFilePath!, Path.GetFileName(e.SourceFilePath!), e.TimeAgo, fileInfo);
+            })
+            .ToList();
+
+        RecentFiles = recentFiles;
+    }
+
+    [RelayCommand]
+    private void SelectFile(string path)
+    {
+        if (!IsAudioFile(path))
+        {
+            ErrorMessage = "Unsupported file format. Supported: MP3, WAV, M4A, FLAC, OGG, MP4.";
+            return;
+        }
+
+        if (!File.Exists(path))
+        {
+            ErrorMessage = "File not found.";
+            return;
+        }
+
+        ErrorMessage = null;
+        SetFile(path);
+        _ = TranscribeCommand.ExecuteAsync(null);
+    }
+
+    public void ResetToSelection()
+    {
+        _cts?.Cancel();
+        IsSelectingFile = true;
+        FilePath = null;
+        FileName = null;
+        FileInfo = null;
+        ResultText = null;
+        ErrorMessage = null;
+        StatusText = "";
+        IsCopied = false;
+        IsTranscribing = false;
+        IsDragOver = false;
+        LoadRecentFiles();
+    }
+
     public void SetFile(string path)
     {
         FilePath = path;
@@ -83,6 +166,7 @@ public partial class FileTranscriptionViewModel : ObservableObject
         {
             FileInfo = ext;
         }
+        IsSelectingFile = false;
         ResultText = null;
         ErrorMessage = null;
         IsCopied = false;
@@ -139,8 +223,8 @@ public partial class FileTranscriptionViewModel : ObservableObject
             _dispatcher.Invoke(() => System.Windows.Clipboard.SetText(text));
             IsCopied = true;
 
-            // Save to history
-            _historyService.AddEntry(text, $"File ({provider.ProviderName})", result.Duration?.TotalSeconds ?? 0);
+            // Save to history (include source file path for recent files)
+            _historyService.AddEntry(text, $"File ({provider.ProviderName})", result.Duration?.TotalSeconds ?? 0, FilePath);
 
             _logger.LogInformation("File transcription complete: {FileName} → {Length} chars", FileName, text.Length);
         }

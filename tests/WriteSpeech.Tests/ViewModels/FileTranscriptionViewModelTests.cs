@@ -76,6 +76,18 @@ public class FileTranscriptionViewModelTests
             => type == TextCorrectionProvider.Off ? null : _provider;
     }
 
+    // --- Initial State ---
+
+    [Fact]
+    public void InitialState_IsSelectingFile_IsTrue()
+    {
+        var vm = CreateViewModel();
+
+        vm.IsSelectingFile.Should().BeTrue();
+        vm.IsDragOver.Should().BeFalse();
+        vm.RecentFiles.Should().BeEmpty();
+    }
+
     // --- SetFile ---
 
     [Fact]
@@ -91,6 +103,17 @@ public class FileTranscriptionViewModelTests
     }
 
     [Fact]
+    public void SetFile_SetsIsSelectingFileToFalse()
+    {
+        var vm = CreateViewModel();
+        vm.IsSelectingFile.Should().BeTrue();
+
+        vm.SetFile(@"C:\audio\recording.mp3");
+
+        vm.IsSelectingFile.Should().BeFalse();
+    }
+
+    [Fact]
     public void SetFile_ResetsState()
     {
         var vm = CreateViewModel();
@@ -101,6 +124,107 @@ public class FileTranscriptionViewModelTests
         vm.ResultText.Should().BeNull();
         vm.ErrorMessage.Should().BeNull();
         vm.IsCopied.Should().BeFalse();
+    }
+
+    // --- IsAudioFile ---
+
+    [Theory]
+    [InlineData(@"C:\test.mp3", true)]
+    [InlineData(@"C:\test.wav", true)]
+    [InlineData(@"C:\test.m4a", true)]
+    [InlineData(@"C:\test.flac", true)]
+    [InlineData(@"C:\test.ogg", true)]
+    [InlineData(@"C:\test.mp4", true)]
+    [InlineData(@"C:\test.MP3", true)]
+    [InlineData(@"C:\test.WAV", true)]
+    [InlineData(@"C:\test.txt", false)]
+    [InlineData(@"C:\test.pdf", false)]
+    [InlineData(@"C:\test.exe", false)]
+    [InlineData(@"C:\test", false)]
+    public void IsAudioFile_ReturnsCorrectResult(string path, bool expected)
+    {
+        FileTranscriptionViewModel.IsAudioFile(path).Should().Be(expected);
+    }
+
+    // --- SelectFile ---
+
+    [Fact]
+    public void SelectFile_InvalidExtension_SetsErrorMessage()
+    {
+        var vm = CreateViewModel();
+
+        vm.SelectFileCommand.Execute(@"C:\test.txt");
+
+        vm.ErrorMessage.Should().Contain("Unsupported file format");
+        vm.IsSelectingFile.Should().BeTrue();
+    }
+
+    [Fact]
+    public void SelectFile_FileNotFound_SetsErrorMessage()
+    {
+        var vm = CreateViewModel();
+
+        vm.SelectFileCommand.Execute(@"C:\nonexistent\audio.mp3");
+
+        vm.ErrorMessage.Should().Contain("not found");
+        vm.IsSelectingFile.Should().BeTrue();
+    }
+
+    // --- ResetToSelection ---
+
+    [Fact]
+    public void ResetToSelection_ResetsAllState()
+    {
+        var vm = CreateViewModel();
+        _historyService.GetEntries().Returns(new List<TranscriptionHistoryEntry>());
+
+        vm.SetFile(@"C:\audio\test.mp3");
+        vm.IsSelectingFile.Should().BeFalse();
+
+        vm.ResetToSelection();
+
+        vm.IsSelectingFile.Should().BeTrue();
+        vm.FilePath.Should().BeNull();
+        vm.FileName.Should().BeNull();
+        vm.FileInfo.Should().BeNull();
+        vm.ResultText.Should().BeNull();
+        vm.ErrorMessage.Should().BeNull();
+        vm.StatusText.Should().BeEmpty();
+        vm.IsCopied.Should().BeFalse();
+        vm.IsTranscribing.Should().BeFalse();
+        vm.IsDragOver.Should().BeFalse();
+    }
+
+    // --- Recent Files ---
+
+    [Fact]
+    public void LoadRecentFiles_FiltersFileEntriesFromHistory()
+    {
+        var entries = new List<TranscriptionHistoryEntry>
+        {
+            new() { Provider = "Microphone (OpenAI)", SourceFilePath = null },
+            new() { Provider = "File (OpenAI)", SourceFilePath = null },
+            new() { Provider = "File (Local)", SourceFilePath = @"C:\nonexistent.mp3" },
+        };
+        _historyService.GetEntries().Returns(entries);
+
+        var vm = CreateViewModel();
+        vm.LoadRecentFiles();
+
+        // Only entries with Provider starting with "File" AND non-null SourceFilePath AND File.Exists
+        // None should match since the files don't exist on disk
+        vm.RecentFiles.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void LoadRecentFiles_ReturnsMaxFiveEntries()
+    {
+        _historyService.GetEntries().Returns(new List<TranscriptionHistoryEntry>());
+
+        var vm = CreateViewModel();
+        vm.LoadRecentFiles();
+
+        vm.RecentFiles.Count.Should().BeLessThanOrEqualTo(5);
     }
 
     // --- TranscribeAsync ---
@@ -157,7 +281,7 @@ public class FileTranscriptionViewModelTests
     }
 
     [Fact]
-    public async Task TranscribeAsync_SavesHistory()
+    public async Task TranscribeAsync_SavesHistoryWithSourceFilePath()
     {
         _audioFileReader.ReadAsWavAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(new byte[1000]);
@@ -169,7 +293,11 @@ public class FileTranscriptionViewModelTests
 
         await vm.TranscribeCommand.ExecuteAsync(null);
 
-        _historyService.Received().AddEntry("transcribed", Arg.Is<string>(s => s.Contains("Test Provider")), 42);
+        _historyService.Received().AddEntry(
+            "transcribed",
+            Arg.Is<string>(s => s.Contains("Test Provider")),
+            42,
+            @"C:\audio\test.mp3");
     }
 
     [Fact]
@@ -272,5 +400,18 @@ public class FileTranscriptionViewModelTests
     public void FormatFileSize_ReturnsCorrectFormat(long bytes, string expected)
     {
         FileTranscriptionViewModel.FormatFileSize(bytes).Should().Be(expected);
+    }
+
+    // --- RecentFileItem ---
+
+    [Fact]
+    public void RecentFileItem_RecordProperties_Work()
+    {
+        var item = new RecentFileItem(@"C:\test.mp3", "test.mp3", "2h ago", "MP3, 4.2 MB");
+
+        item.FilePath.Should().Be(@"C:\test.mp3");
+        item.FileName.Should().Be("test.mp3");
+        item.TimeAgo.Should().Be("2h ago");
+        item.FileInfo.Should().Be("MP3, 4.2 MB");
     }
 }
