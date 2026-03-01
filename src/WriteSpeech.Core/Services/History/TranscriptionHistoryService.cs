@@ -35,7 +35,7 @@ public class TranscriptionHistoryService : ITranscriptionHistoryService
         lock (_lock) return _entries!.AsReadOnly();
     }
 
-    public void AddEntry(string text, string provider, double durationSeconds)
+    public void AddEntry(string text, string provider, double durationSeconds, string? sourceFilePath = null)
     {
         EnsureLoaded();
         lock (_lock)
@@ -45,7 +45,8 @@ public class TranscriptionHistoryService : ITranscriptionHistoryService
                 Text = text,
                 TimestampUtc = DateTime.UtcNow,
                 Provider = provider,
-                DurationSeconds = durationSeconds
+                DurationSeconds = durationSeconds,
+                SourceFilePath = sourceFilePath
             });
 
             while (_entries.Count > _optionsMonitor.CurrentValue.App.MaxHistoryEntries)

@@ -6,6 +6,7 @@ public class TranscriptionHistoryEntry
     public DateTime TimestampUtc { get; set; } = DateTime.UtcNow;
     public string Provider { get; set; } = "";
     public double DurationSeconds { get; set; }
+    public string? SourceFilePath { get; set; }
 
     public string Preview => Text.Length > 80 ? Text[..80] + "..." : Text;
 

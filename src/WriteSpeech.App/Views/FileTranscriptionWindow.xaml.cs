@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.IO;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -12,6 +13,9 @@ public partial class FileTranscriptionWindow : Window
 {
     private readonly FileTranscriptionViewModel _viewModel;
     private readonly IDisposable? _optionsChangeRegistration;
+
+    private static readonly string s_audioFilter =
+        "Audio files (*.mp3;*.wav;*.m4a;*.flac;*.ogg;*.mp4)|*.mp3;*.wav;*.m4a;*.flac;*.ogg;*.mp4|All files (*.*)|*.*";
 
     public FileTranscriptionWindow(FileTranscriptionViewModel viewModel, IOptionsMonitor<WriteSpeechOptions> optionsMonitor)
     {
@@ -58,6 +62,13 @@ public partial class FileTranscriptionWindow : Window
         _optionsChangeRegistration?.Dispose();
     }
 
+    public void ShowForSelection()
+    {
+        _viewModel.ResetToSelection();
+        Show();
+        Activate();
+    }
+
     public void ShowWithFile(string filePath)
     {
         _viewModel.SetFile(filePath);
@@ -76,6 +87,81 @@ public partial class FileTranscriptionWindow : Window
     {
         _viewModel.CancelCommand.Execute(null);
         Hide();
+    }
+
+    private void BrowseButton_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "Select audio file to transcribe",
+            Filter = s_audioFilter
+        };
+        if (dialog.ShowDialog() == true)
+            _viewModel.SelectFileCommand.Execute(dialog.FileName);
+    }
+
+    private void RecentFile_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: string filePath })
+            _viewModel.SelectFileCommand.Execute(filePath);
+    }
+
+    private void NewFileButton_Click(object sender, RoutedEventArgs e)
+    {
+        _viewModel.ResetToSelection();
+    }
+
+    // --- Drag & Drop ---
+
+    private void DropZone_DragEnter(object sender, DragEventArgs e)
+    {
+        if (IsAudioDrag(e))
+        {
+            e.Effects = DragDropEffects.Copy;
+            _viewModel.IsDragOver = true;
+        }
+        else
+        {
+            e.Effects = DragDropEffects.None;
+        }
+        e.Handled = true;
+    }
+
+    private void DropZone_DragOver(object sender, DragEventArgs e)
+    {
+        e.Effects = IsAudioDrag(e) ? DragDropEffects.Copy : DragDropEffects.None;
+        e.Handled = true;
+    }
+
+    private void DropZone_DragLeave(object sender, DragEventArgs e)
+    {
+        _viewModel.IsDragOver = false;
+        e.Handled = true;
+    }
+
+    private void DropZone_Drop(object sender, DragEventArgs e)
+    {
+        _viewModel.IsDragOver = false;
+
+        if (e.Data.GetDataPresent(DataFormats.FileDrop)
+            && e.Data.GetData(DataFormats.FileDrop) is string[] files
+            && files.Length > 0)
+        {
+            _viewModel.SelectFileCommand.Execute(files[0]);
+        }
+
+        e.Handled = true;
+    }
+
+    private static bool IsAudioDrag(DragEventArgs e)
+    {
+        if (!e.Data.GetDataPresent(DataFormats.FileDrop))
+            return false;
+
+        if (e.Data.GetData(DataFormats.FileDrop) is not string[] files || files.Length == 0)
+            return false;
+
+        return FileTranscriptionViewModel.IsAudioFile(files[0]);
     }
 
     protected override void OnClosing(CancelEventArgs e)
