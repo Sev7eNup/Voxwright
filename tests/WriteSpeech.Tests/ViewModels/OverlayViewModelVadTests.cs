@@ -369,32 +369,4 @@ public class OverlayViewModelVadTests : IDisposable
         // Cleanup if needed
     }
 
-    // --- Test helpers ---
-
-    private class TestProviderFactory : TranscriptionProviderFactory
-    {
-        private readonly ITranscriptionService _provider;
-
-        public TestProviderFactory(ITranscriptionService provider)
-            : base([provider])
-        {
-            _provider = provider;
-        }
-
-        public override ITranscriptionService GetProvider(TranscriptionProvider provider) => _provider;
-    }
-
-    private class TestCorrectionProviderFactory : TextCorrectionProviderFactory
-    {
-        private readonly ITextCorrectionService _service;
-
-        public TestCorrectionProviderFactory(ITextCorrectionService service)
-            : base([service])
-        {
-            _service = service;
-        }
-
-        public override ITextCorrectionService? GetProvider(TextCorrectionProvider provider) =>
-            provider == TextCorrectionProvider.Off ? null : _service;
-    }
 }

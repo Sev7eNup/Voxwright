@@ -1,0 +1,22 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore
+        run: dotnet restore WriteSpeech.slnx
+      - name: Build
+        run: dotnet build WriteSpeech.slnx --no-restore
+      - name: Test
+        run: dotnet test tests/WriteSpeech.Tests --no-build --verbosity normal --collect:"XPlat Code Coverage"

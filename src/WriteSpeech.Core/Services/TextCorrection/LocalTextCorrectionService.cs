@@ -63,21 +63,24 @@ public class LocalTextCorrectionService : ITextCorrectionService, IDisposable
             if (correctionOpts.AutoAddToDictionary)
                 systemPrompt += TextCorrectionDefaults.VocabExtractionInstruction;
 
+            // Escape closing tags to prevent prompt injection via transcription text
+            var sanitizedText = rawText.Replace("</transcription>", "&lt;/transcription&gt;");
+
             string userMessage;
             if (!string.IsNullOrEmpty(targetLanguage))
             {
-                userMessage = $"[Translate to: {targetLanguage}]\n{rawText}";
+                userMessage = $"[Translate to: {targetLanguage}]\n<transcription>{sanitizedText}</transcription>";
             }
             else if (systemPromptOverride is not null)
             {
-                userMessage = rawText;
+                userMessage = $"<transcription>{sanitizedText}</transcription>";
             }
             else
             {
                 var languageHint = string.IsNullOrEmpty(language)
                     ? "Keep the SAME language as the input — do NOT translate"
                     : $"Output language MUST be: {language}";
-                userMessage = $"[{languageHint}]\n{rawText}";
+                userMessage = $"[{languageHint}]\n<transcription>{sanitizedText}</transcription>";
             }
 
             _logger.LogInformation("Running local text correction ({Length} chars, model: {Model})",

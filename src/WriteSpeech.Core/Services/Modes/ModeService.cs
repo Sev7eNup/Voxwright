@@ -209,7 +209,11 @@ public class ModeService : IModeService
         }
     }
 
-    public void Dispose() => _saveHelper.Dispose();
+    public void Dispose()
+    {
+        _saveHelper.FlushSync();
+        _saveHelper.Dispose();
+    }
 
     private CorrectionMode? ResolveMode(string? processName)
     {
@@ -250,16 +254,11 @@ public class ModeService : IModeService
             List<SavedMode> toSave;
             lock (_lock)
             {
+                // Save modified built-in modes and all custom modes
                 toSave = _modes
                     .Where(m => !m.IsBuiltIn || HasBeenModified(m))
                     .Select(m => new SavedMode(m.Name, m.SystemPrompt, m.AppPatterns.ToList(), m.TargetLanguage))
                     .ToList();
-
-                // Also save custom modes
-                toSave.AddRange(_modes
-                    .Where(m => !m.IsBuiltIn)
-                    .Where(m => !toSave.Any(s => s.Name.Equals(m.Name, StringComparison.OrdinalIgnoreCase)))
-                    .Select(m => new SavedMode(m.Name, m.SystemPrompt, m.AppPatterns.ToList(), m.TargetLanguage)));
             }
 
             var data = new ModeFileData(toSave);

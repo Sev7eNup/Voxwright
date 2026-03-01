@@ -736,22 +736,7 @@ public partial class SetupWizardViewModel : ObservableObject
     private void LoadMicrophones()
     {
         AvailableMicrophones.Clear();
-
-        var deviceCount = WaveInEvent.DeviceCount;
-        for (int i = 0; i < deviceCount; i++)
-        {
-            try
-            {
-                var caps = WaveInEvent.GetCapabilities(i);
-                AvailableMicrophones.Add(new MicrophoneInfo(i, caps.ProductName));
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to get capabilities for audio device {Index}", i);
-            }
-        }
-
-        if (AvailableMicrophones.Count == 0)
-            AvailableMicrophones.Add(new MicrophoneInfo(0, "No devices found"));
+        foreach (var mic in GeneralSettingsViewModel.EnumerateMicrophones())
+            AvailableMicrophones.Add(mic);
     }
 }
