@@ -240,8 +240,10 @@ public class AudioRecordingService : IAudioRecordingService
         }
 
         // Calculate RMS audio level for visualization
-        float sum = 0;
         int sampleCount = e.BytesRecorded / 2; // 16-bit = 2 bytes per sample
+        if (sampleCount == 0) return;
+
+        float sum = 0;
         for (int i = 0; i < e.BytesRecorded; i += 2)
         {
             short sample = BitConverter.ToInt16(e.Buffer, i);

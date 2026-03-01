@@ -379,7 +379,7 @@ Rolling `float[20]` buffer in ViewModel. `AudioLevelChanged` event shifts buffer
 - `Hotkey.PushToTalk`: default `"Control"` + `"Space"` (supports `MouseButton` for LowLevelHook)
 - `Audio.SampleRate`: default 16000
 - `Audio.DeviceIndex`: default 0 (system default mic)
-- `Audio.CompressBeforeUpload`: compress WAV→MP3 before cloud upload (default: `true`)
+- `Audio.CompressBeforeUpload`: compress WAV→MP3 before cloud upload (default: `false`)
 - `Audio.MuteWhileDictating`: mute other apps during recording (default: `true`)
 - `Audio.MaxRecordingSeconds`: max recording length (default: 300)
 - `Audio.VoiceActivity.Enabled`: enable VAD hands-free mode (default: `false`)
@@ -389,13 +389,13 @@ Rolling `float[20]` buffer in ViewModel. `AudioLevelChanged` event shifts buffer
 - `Audio.VoiceActivity.PreBufferSeconds`: pre-buffer duration for speech onset (default: 0.5)
 - `TextCorrection.Provider`: `"Off"`, `"Cloud"` (legacy→OpenAI), `"OpenAI"`, `"Anthropic"`, `"Google"`, `"Groq"`, or `"Local"`
 - `TextCorrection.Anthropic.ApiKey`: Anthropic API key
-- `TextCorrection.Anthropic.Model`: default `"claude-sonnet-4-5-20250514"`
+- `TextCorrection.Anthropic.Model`: default `"claude-sonnet-4-6"`
 - `TextCorrection.Google.ApiKey`: Google AI API key
 - `TextCorrection.Google.Endpoint`: Gemini OpenAI-compatible endpoint
-- `TextCorrection.Google.Model`: default `"gemini-2.5-flash"`
+- `TextCorrection.Google.Model`: default `"gemini-3-flash-preview"`
 - `TextCorrection.Groq.ApiKey`: Groq API key
 - `TextCorrection.Groq.Endpoint`: Groq OpenAI-compatible endpoint
-- `TextCorrection.Groq.Model`: default `"llama-3.3-70b-versatile"`
+- `TextCorrection.Groq.Model`: default `"qwen/qwen3-32b"`
 - `TextCorrection.Model`: cloud correction model (default: `"gpt-4.1-mini"`)
 - `TextCorrection.SystemPrompt`: custom system prompt for correction
 - `TextCorrection.LocalModelName`: GGUF model filename for local correction
@@ -413,11 +413,11 @@ Rolling `float[20]` buffer in ViewModel. `AudioLevelChanged` event shifts buffer
 - `Overlay.AlwaysVisible`: keep overlay visible in Idle state (default: `true`)
 - `Overlay.AutoDismissSeconds`: auto-dismiss result after N seconds (default: 10)
 - `Overlay.ShowInTaskbar`: show overlay in taskbar (default: `false`)
-- `Overlay.ShowResultOverlay`: show result text in overlay (default: `true`)
+- `Overlay.ShowResultOverlay`: show result text in overlay (default: `false`)
 - `Overlay.Scale`: overlay scale factor, 0.5-3.0 (default: `1.0`)
 - `Overlay.PositionX/PositionY`: saved overlay position (default: `-1`, auto-centers on screen)
 - `App.LaunchAtLogin`: auto-start with Windows (default: `false`)
-- `App.SoundEffects`: play sounds on start/stop (default: `true`)
+- `App.SoundEffects`: play sounds on start/stop (default: `false`)
 - `App.Theme`: `"Light"` or `"Dark"` (default: `"Dark"`)
 - `App.MaxHistoryEntries`: max history entries (default: 20)
 
@@ -478,3 +478,9 @@ GitHub: `https://github.com/Sev7eNup/WriteSpeech.NET`
 - App language (UI, code, comments) is English
 - All significant changes must be automatically pushed to GitHub
 - Write tests for every change where it makes sense
+
+## Planning Instructions
+
+- In plan mode: research the codebase thoroughly and present a complete plan
+- Do NOT ask clarifying questions during planning — make reasonable assumptions instead
+- Only ask questions when critical information is truly missing and cannot be inferred from the codebase

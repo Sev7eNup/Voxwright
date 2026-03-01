@@ -116,23 +116,35 @@ public partial class GeneralSettingsViewModel : ObservableObject
     private void LoadMicrophones()
     {
         AvailableMicrophones.Clear();
+        foreach (var mic in EnumerateMicrophones())
+            AvailableMicrophones.Add(mic);
+    }
 
+    /// <summary>
+    /// Enumerates available audio input devices via NAudio.
+    /// Returns a fallback entry if no devices are found.
+    /// </summary>
+    internal static List<MicrophoneInfo> EnumerateMicrophones()
+    {
+        var result = new List<MicrophoneInfo>();
         var deviceCount = WaveInEvent.DeviceCount;
         for (int i = 0; i < deviceCount; i++)
         {
             try
             {
                 var caps = WaveInEvent.GetCapabilities(i);
-                AvailableMicrophones.Add(new MicrophoneInfo(i, caps.ProductName));
+                result.Add(new MicrophoneInfo(i, caps.ProductName));
             }
-            catch (Exception ex)
+            catch
             {
-                _logger.LogWarning(ex, "Failed to get capabilities for audio device {Index}", i);
+                // Skip devices that fail to report capabilities
             }
         }
 
-        if (AvailableMicrophones.Count == 0)
-            AvailableMicrophones.Add(new MicrophoneInfo(0, "No devices found"));
+        if (result.Count == 0)
+            result.Add(new MicrophoneInfo(0, "No devices found"));
+
+        return result;
     }
 
     internal static string FormatMouseButton(string? mouseButton) => mouseButton switch

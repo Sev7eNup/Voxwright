@@ -47,5 +47,8 @@ ggml-*.bin
 publish/
 output/
 
+## Test results
+**/TestResults/
+
 ## Claude Code
 .claude/

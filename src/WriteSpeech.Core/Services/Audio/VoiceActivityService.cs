@@ -45,22 +45,11 @@ public class VoiceActivityService : IVoiceActivityService
 
             _detector?.Dispose();
 
-            var config = new VadModelConfig();
-            config.SileroVad.Model = modelPath;
-            config.SileroVad.Threshold = opts.Threshold;
-            config.SileroVad.MinSilenceDuration = opts.SilenceDurationSeconds;
-            config.SileroVad.MinSpeechDuration = 0.25f;
-            config.SileroVad.MaxSpeechDuration = 600f;
-            config.SileroVad.WindowSize = 512;
-            config.SampleRate = 16000;
-            config.NumThreads = 1;
-            config.Provider = "cpu";
-
             _logger.LogInformation(
                 "Loading Silero VAD model from {Path} (Threshold: {Threshold}, SilenceDuration: {Silence}s)",
                 modelPath, opts.Threshold, opts.SilenceDurationSeconds);
 
-            _detector = new VoiceActivityDetector(config, bufferSizeInSeconds: 120f);
+            _detector = CreateDetector(opts, modelPath);
             _loadedModelPath = modelPath;
             _wasSpeechActive = false;
         }
@@ -118,22 +107,26 @@ public class VoiceActivityService : IVoiceActivityService
             lock (_loadLock)
             {
                 _detector.Dispose();
-
-                var config = new VadModelConfig();
-                config.SileroVad.Model = modelPath;
-                config.SileroVad.Threshold = opts.Threshold;
-                config.SileroVad.MinSilenceDuration = opts.SilenceDurationSeconds;
-                config.SileroVad.MinSpeechDuration = 0.25f;
-                config.SileroVad.MaxSpeechDuration = 600f;
-                config.SileroVad.WindowSize = 512;
-                config.SampleRate = 16000;
-                config.NumThreads = 1;
-                config.Provider = "cpu";
-
-                _detector = new VoiceActivityDetector(config, bufferSizeInSeconds: 120f);
+                _detector = CreateDetector(opts, modelPath);
                 _wasSpeechActive = false;
             }
         }
+    }
+
+    private static VoiceActivityDetector CreateDetector(VoiceActivityOptions opts, string modelPath)
+    {
+        var config = new VadModelConfig();
+        config.SileroVad.Model = modelPath;
+        config.SileroVad.Threshold = opts.Threshold;
+        config.SileroVad.MinSilenceDuration = opts.SilenceDurationSeconds;
+        config.SileroVad.MinSpeechDuration = 0.25f;
+        config.SileroVad.MaxSpeechDuration = 600f;
+        config.SileroVad.WindowSize = 512;
+        config.SampleRate = 16000;
+        config.NumThreads = 1;
+        config.Provider = "cpu";
+
+        return new VoiceActivityDetector(config, bufferSizeInSeconds: 120f);
     }
 
     public void UnloadModel()

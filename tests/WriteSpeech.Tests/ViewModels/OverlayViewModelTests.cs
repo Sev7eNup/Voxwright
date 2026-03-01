@@ -1187,39 +1187,6 @@ public class OverlayViewModelTests : IDisposable
         // Cleanup if needed
     }
 
-    /// <summary>
-    /// Custom factory that wraps a mock provider, bypassing the OfType constraint.
-    /// </summary>
-    private class TestProviderFactory : TranscriptionProviderFactory
-    {
-        private readonly ITranscriptionService _provider;
-
-        public TestProviderFactory(ITranscriptionService provider)
-            : base([provider])
-        {
-            _provider = provider;
-        }
-
-        public override ITranscriptionService GetProvider(TranscriptionProvider provider) => _provider;
-    }
-
-    /// <summary>
-    /// Custom correction factory that wraps a mock provider, bypassing the OfType constraint.
-    /// </summary>
-    private class TestCorrectionProviderFactory : TextCorrectionProviderFactory
-    {
-        private readonly ITextCorrectionService _provider;
-
-        public TestCorrectionProviderFactory(ITextCorrectionService provider)
-            : base([provider])
-        {
-            _provider = provider;
-        }
-
-        public override ITextCorrectionService? GetProvider(TextCorrectionProvider provider) =>
-            provider == TextCorrectionProvider.Off ? null : _provider;
-    }
-
     // --- Security: Error message sanitization ---
 
     [Fact]

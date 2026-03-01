@@ -96,22 +96,6 @@ public class OverlayViewModelCommandModeTests : IDisposable
 
     public void Dispose() => _viewModel?.Dispose();
 
-    // Test factory classes (same as OverlayViewModelTests)
-    private class TestProviderFactory : TranscriptionProviderFactory
-    {
-        private readonly ITranscriptionService _provider;
-        public TestProviderFactory(ITranscriptionService provider) : base([provider]) => _provider = provider;
-        public override ITranscriptionService GetProvider(TranscriptionProvider type) => _provider;
-    }
-
-    private class TestCorrectionProviderFactory : TextCorrectionProviderFactory
-    {
-        private readonly ITextCorrectionService? _provider;
-        public TestCorrectionProviderFactory(ITextCorrectionService? provider) : base([]) => _provider = provider;
-        public override ITextCorrectionService? GetProvider(TextCorrectionProvider type)
-            => type == TextCorrectionProvider.Off ? null : _provider;
-    }
-
     // --- Command Mode Detection ---
 
     [Fact]
