@@ -306,6 +306,7 @@ public partial class App : Application
 
         var currentPath = Environment.GetEnvironmentVariable("PATH") ?? "";
         var additions = new List<string>();
+        bool foundValidCuda = false;
 
         foreach (var candidate in candidates)
         {
@@ -316,12 +317,20 @@ public partial class App : Application
             }
 
             var binX64 = Path.Combine(candidate, "bin", "x64");
-            if (Directory.Exists(binX64) && !currentPath.Contains(binX64, StringComparison.OrdinalIgnoreCase))
-                additions.Add(binX64);
+            if (Directory.Exists(binX64))
+            {
+                foundValidCuda = true;
+                if (!currentPath.Contains(binX64, StringComparison.OrdinalIgnoreCase))
+                    additions.Add(binX64);
+            }
 
             var bin = Path.Combine(candidate, "bin");
-            if (Directory.Exists(bin) && !currentPath.Contains(bin, StringComparison.OrdinalIgnoreCase))
-                additions.Add(bin);
+            if (Directory.Exists(bin))
+            {
+                foundValidCuda = true;
+                if (!currentPath.Contains(bin, StringComparison.OrdinalIgnoreCase))
+                    additions.Add(bin);
+            }
         }
 
         if (additions.Count > 0)
@@ -330,9 +339,11 @@ public partial class App : Application
             Log.Information("Added CUDA library paths: {Paths}", string.Join(", ", additions));
         }
 
-        CudaDetected = additions.Count > 0;
+        CudaDetected = foundValidCuda;
         if (!CudaDetected)
             Log.Warning("No CUDA libraries found — local models will use CPU inference (slower)");
+        else if (additions.Count == 0)
+            Log.Information("CUDA detected (already on PATH)");
     }
 
     private static void EnsureAppSettings()
