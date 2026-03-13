@@ -6,7 +6,7 @@ Windows desktop speech-to-text overlay inspired by [Wispr Flow](https://wisprflo
 ![Windows](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D6?logo=windows)
 ![License MIT](https://img.shields.io/badge/license-MIT-green)
 ![Tests 1400+](https://img.shields.io/badge/tests-1400%2B-brightgreen)
-![CI](https://github.com/Sev7eNup/Voxwright.NET/actions/workflows/ci.yml/badge.svg)
+![CI](https://github.com/Sev7eNup/Voxwright/actions/workflows/ci.yml/badge.svg)
 
 <!-- TODO: Add screenshot of overlay + settings window -->
 
@@ -83,7 +83,7 @@ For cloud transcription, enter your OpenAI API key in Settings > Transcription. 
 
 ### Pre-built Installer (Recommended)
 
-Download the latest installer from the [GitHub Releases](https://github.com/Sev7eNup/Voxwright.NET/releases) page:
+Download the latest installer from the [GitHub Releases](https://github.com/Sev7eNup/Voxwright/releases) page:
 
 - **`Voxwright-Setup-{version}.exe`** — Self-contained Inno Setup installer, no admin rights required
 - Installs to `%LOCALAPPDATA%\Voxwright` (user-level, no UAC prompt)
