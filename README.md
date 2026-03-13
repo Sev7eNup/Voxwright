@@ -17,35 +17,35 @@ Windows desktop speech-to-text overlay inspired by [Wispr Flow](https://wisprflo
 ## ✨ Features
 
 - 🎙️ **Speech-to-Text Overlay** — Transparent, always-on-top speech bubble with real-time waveform visualization and recording timer
+- 📋 **Auto-Insert** — Automatically pastes transcribed text at the cursor position in any app via clipboard + Win32 SendInput
+- 🗣️ **Voice Commands** — Select text in any app, then speak a command to transform it (translate, reformat, fix grammar, etc.)
+- 📁 **File Transcription** — Transcribe audio files (MP3, WAV, M4A, FLAC, OGG, MP4) via tray menu — supports drag & drop
 - ☁️ **Cloud Transcription** — OpenAI Whisper API, Groq, or any custom OpenAI-compatible endpoint — configurable model and endpoint per sub-provider
 - 💻 **Local Transcription** — Offline via Whisper.net (GGML models, 5 sizes from 75 MB to 3 GB) with optional CUDA GPU acceleration
 - 🦜 **NVIDIA Parakeet Transcription** — Offline English-only transcription via NVIDIA NeMo Parakeet TDT 0.6B (sherpa-onnx), GPU (CUDA) or CPU — auto-falls back to Whisper for non-English languages
 - 📡 **Realtime Streaming** — Progressive segment-by-segment text display during local transcription; cloud providers show a sweep animation
 - 🤖 **AI Text Correction** — Post-process transcriptions with **OpenAI** (GPT-4.1-mini), **Anthropic** (Claude), **Google** (Gemini), **Groq**, **Custom** (any OpenAI-compatible endpoint), or **Local** (LLamaSharp, offline GGUF models)
-- 🎧 **Combined Audio Model** — Direct audio-to-text via GPT-4o audio input (single API call for transcription + correction; requires OpenAI as cloud sub-provider)
-- 📋 **Auto-Insert** — Automatically pastes transcribed text at the cursor position in any app via clipboard + Win32 SendInput
-- ⌨️ **Global Hotkeys** — Toggle recording (Ctrl+Shift+Space), Push-to-Talk (Ctrl+Space), Escape to dismiss — all fully configurable with keyboard or mouse buttons
-- 🖱️ **Mouse Button Hotkeys** — Low-level hook method supporting XButton1/2 and Middle mouse button with modifier combinations
-- 🔇 **Audio Muting** — Optionally mutes other applications while recording
-- 🗜️ **WAV-to-MP3 Compression** — Compresses audio before cloud upload (64 kbps) to reduce API costs
-- 📖 **Custom Dictionary** — Add domain-specific terms injected into correction prompts
-- 🔄 **Snippet Expansion** — Define trigger-to-replacement text pairs with word-boundary matching
-- 📜 **Transcription History** — Browse, search, copy, and re-insert recent transcriptions
-- 📊 **Usage Statistics** — Track transcription counts, recording time, audio bytes, and per-provider breakdown
 - 🎯 **Correction Modes** — 6 built-in modes (Default, Email, Message, Code, Note, Translate) with auto-switch by active app, plus custom modes
 - 🌐 **Translation Mode** — Speak in one language, output in another (e.g., speak German → get English text). Configurable target language per mode
 - 🧹 **Smart Cleanup** — Automatically removes filler words (um, uh, ähm, basically, you know) and applies mid-speech self-corrections
-- 🗣️ **Voice Commands** — Select text in any app, then speak a command to transform it (translate, reformat, fix grammar, etc.)
-- 📁 **File Transcription** — Transcribe audio files (MP3, WAV, M4A, FLAC, OGG, MP4) via tray menu — supports drag & drop
 - 🔌 **IDE Integration** — Auto-detect VS Code, Cursor, Windsurf — injects workspace identifiers and file names into correction prompts for better accuracy
+- 🎧 **Combined Audio Model** — Direct audio-to-text via GPT-4o audio input (single API call for transcription + correction; requires OpenAI as cloud sub-provider)
+- 📖 **Custom Dictionary** — Add domain-specific terms injected into correction prompts
 - 📝 **Vocabulary Extraction** — Auto-learn proper nouns, brand names, and technical terms from AI correction responses
-- ⚙️ **Settings UI** — 8-page settings window: General, System, Intelligence, Modes, Integrations, Models, Dictionary/Snippets, Statistics
+- ⌨️ **Global Hotkeys** — Toggle recording (Ctrl+Shift+Space), Push-to-Talk (Ctrl+Space), Escape to dismiss — all fully configurable with keyboard or mouse buttons
+- 🖱️ **Mouse Button Hotkeys** — Low-level hook method supporting XButton1/2 and Middle mouse button with modifier combinations
+- 🎤 **Voice Activity Detection (VAD)** — Hands-free dictation mode using Silero VAD (sherpa-onnx) — automatically starts/stops recording on speech/silence detection with continuous loop
+- 🧙 **Setup Wizard** — 4-step first-run assistant (Language → Transcription → Correction → Microphone) with in-wizard model download, API key configuration, and automatic app restart
 - 🌍 **20 Languages** — German, English, French, Spanish, Italian, Portuguese, Dutch, Polish, Russian, Ukrainian, Chinese, Japanese, Korean, Arabic, Turkish, Swedish, Danish, Norwegian, Finnish, Czech — plus auto-detect
+- 🔄 **Snippet Expansion** — Define trigger-to-replacement text pairs with word-boundary matching
+- ⚙️ **Settings UI** — 8-page settings window: General, System, Intelligence, Modes, Integrations, Models, Dictionary/Snippets, Statistics
+- 📜 **Transcription History** — Browse, search, copy, and re-insert recent transcriptions
+- 📊 **Usage Statistics** — Track transcription counts, recording time, audio bytes, and per-provider breakdown
 - 🎨 **Dark & Light Themes** — Switchable via settings
 - 🔔 **System Tray** — Left-click toggles overlay, right-click for context menu (language, microphone, mode selection, transcribe file, Settings, History, Exit)
 - ⚡ **Live Settings** — All changes take effect immediately without restart
-- 🧙 **Setup Wizard** — 4-step first-run assistant (Language → Transcription → Correction → Microphone) with in-wizard model download, API key configuration, and automatic app restart
-- 🎤 **Voice Activity Detection (VAD)** — Hands-free dictation mode using Silero VAD (sherpa-onnx) — automatically starts/stops recording on speech/silence detection with continuous loop
+- 🔇 **Audio Muting** — Optionally mutes other applications while recording
+- 🗜️ **WAV-to-MP3 Compression** — Compresses audio before cloud upload (64 kbps) to reduce API costs
 - 🔐 **Security Hardening** — SHA-256 model verification on downloads, prompt injection mitigation via tagged input, sensitive identifier filtering in IDE context
 - 🔒 **Single Instance** — Enforced via named Mutex
 
