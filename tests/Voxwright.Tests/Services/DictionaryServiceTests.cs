@@ -64,7 +64,7 @@ public class DictionaryServiceTests : IDisposable
         await service.LoadAsync();
 
         service.AddEntry("Voxwright");
-        service.AddEntry("writespeech");
+        service.AddEntry("voxwright");
 
         service.GetEntries().Should().HaveCount(1);
     }

@@ -148,12 +148,12 @@ public class CloudTextCorrectionServiceBaseTests
 
         var service = new TestCorrectionService(
             NullLogger<TestCorrectionService>.Instance, options, dict, ide);
-        service.ResponseToReturn = "Hello, world!\n---VOCAB---\nVoxwright";
+        service.ResponseToReturn = "Hello, world!\n---VOCAB---\nTensorFlow";
 
         var result = await service.CorrectAsync("hello world", "en");
 
         result.Should().Be("Hello, world!");
-        dict.Received().AddEntry("Voxwright");
+        dict.Received().AddEntry("TensorFlow");
     }
 
     [Fact]
@@ -232,7 +232,7 @@ public class CloudTextCorrectionServiceBaseTests
     public async Task ProcessResponse_CleanTextEmpty_FallsBackToRawText()
     {
         var service = CreateService(o => o.TextCorrection.AutoAddToDictionary = true);
-        service.ResponseToReturn = "   \n---VOCAB---\nVoxwright";
+        service.ResponseToReturn = "   \n---VOCAB---\nTensorFlow";
 
         var result = await service.CorrectAsync("original text", "en");
 
