@@ -1,3 +1,4 @@
+using System.ClientModel;
 using System.Net.Http;
 using FluentAssertions;
 using Voxwright.App.ViewModels;
@@ -67,5 +68,77 @@ public class ErrorMessageHelperTests
         var result = ErrorMessageHelper.SanitizeErrorMessage(
             new InvalidOperationException("Some other error"));
         result.Should().Be("An unexpected error occurred. Check the log for details.");
+    }
+
+    [Fact]
+    public void ClientResultException_401_ReturnsInvalidApiKey()
+    {
+        var ex = new ClientResultException("HTTP 401 (invalid_api_key)");
+        var result = ErrorMessageHelper.SanitizeErrorMessage(ex);
+        result.Should().Be("Invalid API key. Check your key in Settings.");
+    }
+
+    [Fact]
+    public void ClientResultException_403_ReturnsAccessDenied()
+    {
+        var ex = new ClientResultException("HTTP 403 (forbidden)");
+        var result = ErrorMessageHelper.SanitizeErrorMessage(ex);
+        result.Should().Be("Access denied. Check your API key permissions.");
+    }
+
+    [Fact]
+    public void ClientResultException_429_ReturnsRateLimit()
+    {
+        var ex = new ClientResultException("HTTP 429 (rate_limit_exceeded)");
+        var result = ErrorMessageHelper.SanitizeErrorMessage(ex);
+        result.Should().Be("Rate limit exceeded. Please wait and try again.");
+    }
+
+    [Fact]
+    public void ClientResultException_400_WithModel_ReturnsInvalidModel()
+    {
+        var ex = new ClientResultException("HTTP 400 (invalid_model: model not found)");
+        var result = ErrorMessageHelper.SanitizeErrorMessage(ex);
+        result.Should().Be("Invalid model configured. Check Settings.");
+    }
+
+    [Fact]
+    public void ClientResultException_400_Generic_ReturnsBadRequest()
+    {
+        var ex = new ClientResultException("HTTP 400 (bad_request)");
+        var result = ErrorMessageHelper.SanitizeErrorMessage(ex);
+        result.Should().Be("Bad request — check your provider settings.");
+    }
+
+    [Fact]
+    public void ClientResultException_500_ReturnsServerError()
+    {
+        var ex = new ClientResultException("HTTP 500 (internal_server_error)");
+        var result = ErrorMessageHelper.SanitizeErrorMessage(ex);
+        result.Should().Be("Provider server error. Please try again later.");
+    }
+
+    [Fact]
+    public void ClientResultException_502_ReturnsServerError()
+    {
+        var ex = new ClientResultException("HTTP 502 (bad_gateway)");
+        var result = ErrorMessageHelper.SanitizeErrorMessage(ex);
+        result.Should().Be("Provider server error. Please try again later.");
+    }
+
+    [Fact]
+    public void ClientResultException_503_ReturnsServerError()
+    {
+        var ex = new ClientResultException("HTTP 503 (service_unavailable)");
+        var result = ErrorMessageHelper.SanitizeErrorMessage(ex);
+        result.Should().Be("Provider server error. Please try again later.");
+    }
+
+    [Fact]
+    public void ClientResultException_OtherStatus_ReturnsGenericApiError()
+    {
+        var ex = new ClientResultException("HTTP 418 (i_am_a_teapot)");
+        var result = ErrorMessageHelper.SanitizeErrorMessage(ex);
+        result.Should().Be("API error. Check the log for details.");
     }
 }
