@@ -119,7 +119,10 @@ public class LocalTextCorrectionService : ITextCorrectionService, IDisposable
             {
                 var (cleanText, vocab) = VocabResponseParser.Parse(corrected);
                 VocabResponseParser.AddExtractedVocabulary(vocab, _dictionaryService, _logger);
-                return string.IsNullOrWhiteSpace(cleanText) ? rawText : cleanText;
+                // Fall back to corrected (model output) rather than rawText (user input) to
+                // avoid returning the raw prompt in voice command mode where rawText contains
+                // XML-formatted <selected_text> tags.
+                return string.IsNullOrWhiteSpace(cleanText) ? corrected : cleanText;
             }
 
             return corrected;

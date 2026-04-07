@@ -373,6 +373,15 @@ public partial class OverlayViewModel : ObservableObject, IDisposable
             _isCommandMode = !string.IsNullOrWhiteSpace(_selectedText) && hasCorrectionCapability;
             IsCommandModeActive = _isCommandMode;
 
+            // Warn and abort if user selected text but correction is off (command mode can't work)
+            if (!string.IsNullOrWhiteSpace(_selectedText) && !hasCorrectionCapability)
+            {
+                _logger.LogWarning("Selected text detected but text correction is off — voice commands unavailable");
+                ErrorMessage = "Voice commands require Intelligence to be enabled";
+                State = RecordingState.Error;
+                return;
+            }
+
             _logger.LogInformation(
                 "Starting recording (ForegroundWindow: 0x{Handle:X}, Process: {Process}, CommandMode: {CommandMode})",
                 _previousForegroundWindow.ToInt64(), _activeProcessName ?? "unknown", _isCommandMode);

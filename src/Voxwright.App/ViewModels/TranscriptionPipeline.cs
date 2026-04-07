@@ -269,8 +269,19 @@ public class TranscriptionPipeline : IDisposable
             .Replace("<selected_text>", "&lt;selected_text&gt;")
             .Replace("</selected_text>", "&lt;/selected_text&gt;");
         var userMessage = $"<selected_text>{sanitizedSelected}</selected_text>\n\nVoice command: {voiceCommand}";
-        return await corrector.CorrectAsync(userMessage, options.Language,
+        var result = await corrector.CorrectAsync(userMessage, options.Language,
             TextCorrectionDefaults.VoiceCommandSystemPrompt, targetLanguage: null, ct);
+
+        // Guard against correction services returning the raw prompt (e.g., when VocabResponseParser
+        // strips the model output to empty and falls back to the input). The user should never see
+        // the XML-formatted prompt inserted into their document.
+        if (result.Contains("<selected_text>"))
+        {
+            _logger.LogWarning("Voice command correction returned raw prompt — discarding");
+            return voiceCommand;
+        }
+
+        return result;
     }
 
     /// <summary>Cancels any in-progress transcription and releases the cancellation token source.</summary>

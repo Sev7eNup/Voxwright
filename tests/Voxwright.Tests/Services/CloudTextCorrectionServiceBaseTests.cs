@@ -229,14 +229,16 @@ public class CloudTextCorrectionServiceBaseTests
     }
 
     [Fact]
-    public async Task ProcessResponse_CleanTextEmpty_FallsBackToRawText()
+    public async Task ProcessResponse_CleanTextEmpty_FallsBackToCorrectedText()
     {
         var service = CreateService(o => o.TextCorrection.AutoAddToDictionary = true);
         service.ResponseToReturn = "   \n---VOCAB---\nTensorFlow";
 
         var result = await service.CorrectAsync("original text", "en");
 
-        result.Should().Be("original text");
+        // Falls back to correctedText (model output) rather than rawText (user input)
+        // to avoid returning the raw prompt in voice command mode.
+        result.Should().Be("   \n---VOCAB---\nTensorFlow");
     }
 
     // --- M2: Input length limits ---

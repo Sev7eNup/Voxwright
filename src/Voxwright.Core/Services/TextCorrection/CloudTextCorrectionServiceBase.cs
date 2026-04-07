@@ -104,7 +104,9 @@ public abstract class CloudTextCorrectionServiceBase : ITextCorrectionService
         {
             var (cleanText, vocab) = VocabResponseParser.Parse(correctedText);
             VocabResponseParser.AddExtractedVocabulary(vocab, DictionaryService, Logger);
-            return string.IsNullOrWhiteSpace(cleanText) ? rawText : cleanText;
+            // Fall back to correctedText (model output) rather than rawText (user input) to
+            // avoid returning the raw prompt in voice command mode.
+            return string.IsNullOrWhiteSpace(cleanText) ? correctedText : cleanText;
         }
 
         return correctedText;

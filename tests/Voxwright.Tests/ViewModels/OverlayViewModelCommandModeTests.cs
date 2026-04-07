@@ -111,7 +111,7 @@ public class OverlayViewModelCommandModeTests : IDisposable
     }
 
     [Fact]
-    public async Task StartRecording_WithSelectedText_AndCorrectionOff_StaysInNormalMode()
+    public async Task StartRecording_WithSelectedText_AndCorrectionOff_ShowsError()
     {
         _selectedTextService.ReadSelectedTextAsync().Returns("Hello world");
         var vm = CreateViewModel(o => o.TextCorrection.Provider = TextCorrectionProvider.Off);
@@ -119,7 +119,8 @@ public class OverlayViewModelCommandModeTests : IDisposable
         await vm.ToggleRecordingCommand.ExecuteAsync(null);
 
         vm.IsCommandModeActive.Should().BeFalse();
-        vm.State.Should().Be(RecordingState.Recording);
+        vm.State.Should().Be(RecordingState.Error);
+        vm.ErrorMessage.Should().Contain("Intelligence");
     }
 
     [Fact]
@@ -206,24 +207,20 @@ public class OverlayViewModelCommandModeTests : IDisposable
     }
 
     [Fact]
-    public async Task NoCorrectionProvider_WithSelectedText_DoesNotEnterCommandMode()
+    public async Task NoCorrectionProvider_WithSelectedText_ShowsErrorInsteadOfRecording()
     {
         _selectedTextService.ReadSelectedTextAsync().Returns("Some text");
-        _audioService.StopRecordingAsync().Returns(new byte[2000]);
-        _transcriptionProvider.TranscribeAsync(Arg.Any<byte[]>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
-            .Returns(new TranscriptionResult { Text = "make it shorter" });
 
-        // TextCorrection is Off → command mode should not activate
+        // TextCorrection is Off → should show error, not start recording
         var vm = CreateViewModel(o => o.TextCorrection.Provider = TextCorrectionProvider.Off);
 
         await vm.ToggleRecordingCommand.ExecuteAsync(null);
+
         vm.IsCommandModeActive.Should().BeFalse();
-
-        await vm.ToggleRecordingCommand.ExecuteAsync(null);
-
-        // Normal dictation — text is inserted as-is, not treated as a command
-        vm.TranscribedText.Should().Be("make it shorter");
-        _snippetService.Received().ApplySnippets(Arg.Any<string>());
+        vm.State.Should().Be(RecordingState.Error);
+        vm.ErrorMessage.Should().Contain("Intelligence");
+        // Recording should NOT have started
+        await _audioService.DidNotReceive().StartRecordingAsync();
     }
 
     [Fact]
