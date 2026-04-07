@@ -13,7 +13,9 @@ public class ModelManager : IModelManager
     private readonly ModelDownloadHelper _downloadHelper;
 
     // Hashes set to null: Whisper.net controls the upstream model URLs and may update
-    // files at any time, breaking hardcoded hashes. Integrity is ensured by HTTPS transport.
+    // files at any time, breaking hardcoded hashes. TOFU (Trust On First Use) verification
+    // is applied automatically by ModelDownloadHelper: the SHA-256 hash from the first
+    // successful download is stored in a .sha256 sidecar file and verified on re-downloads.
     private static readonly (GgmlType Type, string Name, string FileName, long SizeBytes, string? Sha256)[] KnownModels =
     [
         (GgmlType.Tiny, "Tiny", "ggml-tiny.bin", 75_000_000, null),

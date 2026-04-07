@@ -150,7 +150,8 @@ public class ParakeetTranscriptionService : ITranscriptionService, IDisposable
     private static string? GetModelDir(ParakeetOptions opts)
     {
         var baseDir = opts.GetModelDirectory();
-        var modelDir = Path.Combine(baseDir, opts.ModelName);
+        var safeName = Path.GetFileName(opts.ModelName);
+        var modelDir = Path.Combine(baseDir, safeName);
 
         // Check if model directory exists with required files
         if (!Directory.Exists(modelDir))

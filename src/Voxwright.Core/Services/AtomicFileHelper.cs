@@ -10,7 +10,8 @@ public static class AtomicFileHelper
 {
     public static async Task WriteAllTextAsync(string filePath, string content)
     {
-        var tempPath = filePath + ".tmp";
+        var dir = Path.GetDirectoryName(filePath)!;
+        var tempPath = Path.Combine(dir, Path.GetRandomFileName());
         await File.WriteAllTextAsync(tempPath, content).ConfigureAwait(false);
         File.Move(tempPath, filePath, overwrite: true);
     }

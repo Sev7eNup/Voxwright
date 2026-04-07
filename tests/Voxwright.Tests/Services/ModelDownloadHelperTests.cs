@@ -114,7 +114,7 @@ public class ModelDownloadHelperTests : IDisposable
     }
 
     [Fact]
-    public async Task DownloadToFileAsync_WithNullHash_SkipsVerification()
+    public async Task DownloadToFileAsync_WithNullHash_StoresTofuSidecar()
     {
         var data = new byte[] { 1, 2, 3 };
         using var sourceStream = new MemoryStream(data);
@@ -123,6 +123,51 @@ public class ModelDownloadHelperTests : IDisposable
         await _helper.DownloadToFileAsync(sourceStream, targetPath, data.Length, expectedSha256: null);
 
         File.Exists(targetPath).Should().BeTrue();
+        var sidecar = targetPath + ".sha256";
+        File.Exists(sidecar).Should().BeTrue();
+        var storedHash = File.ReadAllText(sidecar);
+        var expectedHash = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(data));
+        storedHash.Should().Be(expectedHash);
+    }
+
+    [Fact]
+    public async Task DownloadToFileAsync_WithTofuSidecar_VerifiesHash()
+    {
+        var data = new byte[] { 10, 20, 30 };
+        var targetPath = Path.Combine(_tempDir, "tofu-verify.bin");
+        var hash = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(data));
+        File.WriteAllText(targetPath + ".sha256", hash);
+
+        using var sourceStream = new MemoryStream(data);
+        await _helper.DownloadToFileAsync(sourceStream, targetPath, data.Length, expectedSha256: null);
+
+        File.Exists(targetPath).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task DownloadToFileAsync_WithTofuMismatch_Throws()
+    {
+        var data = new byte[] { 10, 20, 30 };
+        var targetPath = Path.Combine(_tempDir, "tofu-mismatch.bin");
+        File.WriteAllText(targetPath + ".sha256", "0000000000000000000000000000000000000000000000000000000000000000");
+
+        using var sourceStream = new MemoryStream(data);
+        var act = () => _helper.DownloadToFileAsync(sourceStream, targetPath, data.Length, expectedSha256: null);
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*hash mismatch*");
+    }
+
+    [Fact]
+    public async Task DownloadToFileAsync_WithHardcodedHash_DoesNotStoreTofuSidecar()
+    {
+        var data = new byte[] { 5, 10, 15 };
+        var expectedHash = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(data));
+        using var sourceStream = new MemoryStream(data);
+        var targetPath = Path.Combine(_tempDir, "hardcoded-hash.bin");
+
+        await _helper.DownloadToFileAsync(sourceStream, targetPath, data.Length, expectedSha256: expectedHash);
+
+        File.Exists(targetPath + ".sha256").Should().BeFalse();
     }
 
     [Fact]

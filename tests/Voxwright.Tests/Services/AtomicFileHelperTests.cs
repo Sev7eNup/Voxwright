@@ -45,11 +45,12 @@ public class AtomicFileHelperTests : IDisposable
     public async Task WriteAllTextAsync_DoesNotLeaveTempFile()
     {
         var path = Path.Combine(_tempDir, "test.json");
-        var tempPath = path + ".tmp";
 
         await AtomicFileHelper.WriteAllTextAsync(path, "content");
 
-        File.Exists(tempPath).Should().BeFalse();
+        // After completion, only the target file should exist — no temp files
+        var allFiles = Directory.GetFiles(_tempDir);
+        allFiles.Should().ContainSingle().Which.Should().Be(path);
     }
 
     [Fact]
