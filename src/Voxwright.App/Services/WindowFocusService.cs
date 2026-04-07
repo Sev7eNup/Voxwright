@@ -50,6 +50,55 @@ public class WindowFocusService : IWindowFocusService
         if (windowHandle == IntPtr.Zero || !NativeMethods.IsWindow(windowHandle)) return false;
         var timing = _optionsMonitor.CurrentValue.Timing;
 
+        const int maxAttempts = 3;
+        for (int attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            TrySetForegroundWindow(windowHandle);
+
+            var delayMs = attempt == 1 ? timing.FocusRestoreMs : timing.FocusRetryMs;
+            await Task.Delay(delayMs);
+
+            if (NativeMethods.GetForegroundWindow() == windowHandle)
+                return true;
+
+            _logger.LogDebug(
+                "Focus verification failed (attempt {Attempt}/{Max}) for 0x{Handle:X}",
+                attempt, maxAttempts, windowHandle.ToInt64());
+        }
+
+        _logger.LogWarning("Failed to restore focus to window 0x{Handle:X} after {Max} attempts",
+            windowHandle.ToInt64(), maxAttempts);
+        return false;
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> EnsureFocusAsync(IntPtr windowHandle)
+    {
+        if (windowHandle == IntPtr.Zero || !NativeMethods.IsWindow(windowHandle)) return false;
+
+        // Fast path: focus is already on the target window
+        if (NativeMethods.GetForegroundWindow() == windowHandle)
+            return true;
+
+        // Single re-restore attempt — this is the last-millisecond guard before SendInput
+        _logger.LogDebug("Focus drifted from 0x{Handle:X}, attempting re-restore", windowHandle.ToInt64());
+        TrySetForegroundWindow(windowHandle);
+
+        // Minimal delay to let SetForegroundWindow take effect
+        await Task.Delay(_optionsMonitor.CurrentValue.Timing.FocusRetryMs);
+
+        var success = NativeMethods.GetForegroundWindow() == windowHandle;
+        if (!success)
+            _logger.LogWarning("EnsureFocus failed — target 0x{Handle:X} is not foreground", windowHandle.ToInt64());
+        return success;
+    }
+
+    /// <summary>
+    /// Attempts to set the specified window as the foreground window using
+    /// AttachThreadInput + SetForegroundWindow.
+    /// </summary>
+    private void TrySetForegroundWindow(IntPtr windowHandle)
+    {
         var foregroundThread = NativeMethods.GetWindowThreadProcessId(
             NativeMethods.GetForegroundWindow(), out _);
         var currentThread = NativeMethods.GetCurrentThreadId();
@@ -67,24 +116,6 @@ public class WindowFocusService : IWindowFocusService
 
         if (attached)
             NativeMethods.AttachThreadInput(currentThread, foregroundThread, false);
-
-        await Task.Delay(timing.FocusRestoreMs);
-
-        // Verify focus was restored
-        if (NativeMethods.GetForegroundWindow() == windowHandle)
-            return true;
-
-        // Retry once
-        _logger.LogDebug("Focus verification failed, retrying SetForegroundWindow for 0x{Handle:X}",
-            windowHandle.ToInt64());
-        NativeMethods.SetForegroundWindow(windowHandle);
-        await Task.Delay(timing.FocusRetryMs);
-
-        var success = NativeMethods.GetForegroundWindow() == windowHandle;
-        if (!success)
-            _logger.LogWarning("Failed to restore focus to window 0x{Handle:X} after retry",
-                windowHandle.ToInt64());
-        return success;
     }
 
     /// <summary>

@@ -102,6 +102,7 @@ public class OverlayViewModelFocusTests : IDisposable
         var targetHandle = new IntPtr(0xBEEF);
         _windowFocusService.GetForegroundWindow().Returns(targetHandle);
         _windowFocusService.RestoreFocusAsync(targetHandle).Returns(true);
+        _textInsertionService.InsertTextAsync(Arg.Any<string>(), Arg.Any<IntPtr>()).Returns(true);
         _audioService.StopRecordingAsync().Returns(new byte[2000]);
         _transcriptionProvider.TranscribeAsync(Arg.Any<byte[]>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
             .Returns(new TranscriptionResult { Text = "hello world" });
@@ -111,7 +112,7 @@ public class OverlayViewModelFocusTests : IDisposable
         await vm.ToggleRecordingCommand.ExecuteAsync(null); // → Transcribing → Idle
 
         await _windowFocusService.Received(1).RestoreFocusAsync(targetHandle);
-        await _textInsertionService.Received(1).InsertTextAsync("hello world");
+        await _textInsertionService.Received(1).InsertTextAsync("hello world", targetHandle);
     }
 
     [Fact]
@@ -120,6 +121,7 @@ public class OverlayViewModelFocusTests : IDisposable
         var targetHandle = new IntPtr(0xBEEF);
         _windowFocusService.GetForegroundWindow().Returns(targetHandle);
         _windowFocusService.RestoreFocusAsync(targetHandle).Returns(false);
+        _textInsertionService.InsertTextAsync(Arg.Any<string>(), Arg.Any<IntPtr>()).Returns(true);
         _audioService.StopRecordingAsync().Returns(new byte[2000]);
         _transcriptionProvider.TranscribeAsync(Arg.Any<byte[]>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
             .Returns(new TranscriptionResult { Text = "test text" });
@@ -128,8 +130,9 @@ public class OverlayViewModelFocusTests : IDisposable
         await vm.ToggleRecordingCommand.ExecuteAsync(null); // → Recording
         await vm.ToggleRecordingCommand.ExecuteAsync(null); // → Transcribing → Idle
 
-        // Text should still be inserted even when focus restoration fails
-        await _textInsertionService.Received(1).InsertTextAsync("test text");
+        // Text insertion is still attempted even when initial focus restoration fails
+        // (TextInsertionService has its own EnsureFocus guard before SendInput)
+        await _textInsertionService.Received(1).InsertTextAsync("test text", targetHandle);
     }
 
     [Fact]
@@ -139,6 +142,7 @@ public class OverlayViewModelFocusTests : IDisposable
         // RestoreFocusAsync should still be called (it handles zero gracefully)
         _windowFocusService.GetForegroundWindow().Returns(IntPtr.Zero);
         _windowFocusService.RestoreFocusAsync(IntPtr.Zero).Returns(false);
+        _textInsertionService.InsertTextAsync(Arg.Any<string>(), Arg.Any<IntPtr>()).Returns(true);
         _audioService.StopRecordingAsync().Returns(new byte[2000]);
         _transcriptionProvider.TranscribeAsync(Arg.Any<byte[]>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
             .Returns(new TranscriptionResult { Text = "test" });
@@ -148,7 +152,26 @@ public class OverlayViewModelFocusTests : IDisposable
         await vm.ToggleRecordingCommand.ExecuteAsync(null);
 
         await _windowFocusService.Received(1).RestoreFocusAsync(IntPtr.Zero);
-        await _textInsertionService.Received(1).InsertTextAsync("test");
+        await _textInsertionService.Received(1).InsertTextAsync("test", IntPtr.Zero);
+    }
+
+    [Fact]
+    public async Task InsertText_PassesWindowHandleToInsertionService()
+    {
+        var targetHandle = new IntPtr(0xCAFE);
+        _windowFocusService.GetForegroundWindow().Returns(targetHandle);
+        _windowFocusService.RestoreFocusAsync(targetHandle).Returns(true);
+        _textInsertionService.InsertTextAsync(Arg.Any<string>(), Arg.Any<IntPtr>()).Returns(true);
+        _audioService.StopRecordingAsync().Returns(new byte[2000]);
+        _transcriptionProvider.TranscribeAsync(Arg.Any<byte[]>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(new TranscriptionResult { Text = "focus test" });
+
+        var vm = CreateViewModel(o => o.Overlay.ShowResultOverlay = false);
+        await vm.ToggleRecordingCommand.ExecuteAsync(null);
+        await vm.ToggleRecordingCommand.ExecuteAsync(null);
+
+        // Verify the captured window handle is forwarded to TextInsertionService
+        await _textInsertionService.Received(1).InsertTextAsync("focus test", targetHandle);
     }
 
     [Fact]

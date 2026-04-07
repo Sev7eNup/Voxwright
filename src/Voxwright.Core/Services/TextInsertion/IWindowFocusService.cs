@@ -13,6 +13,14 @@ public interface IWindowFocusService
     /// <returns>True if focus was successfully restored.</returns>
     Task<bool> RestoreFocusAsync(IntPtr windowHandle);
 
+    /// <summary>
+    /// Lightweight focus guard: verifies the target window is still in the foreground and
+    /// attempts a single re-restore if not. Designed to be called immediately before SendInput
+    /// to close the race window between RestoreFocusAsync and the actual keystroke injection.
+    /// </summary>
+    /// <returns>True if the target window is (or was brought back to) the foreground.</returns>
+    Task<bool> EnsureFocusAsync(IntPtr windowHandle);
+
     /// <summary>Gets the process name associated with the given window handle.</summary>
     string? GetProcessName(IntPtr windowHandle);
 }

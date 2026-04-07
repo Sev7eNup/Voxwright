@@ -31,24 +31,23 @@ public class TextInsertionService : ITextInsertionService
 {
     private readonly ILogger<TextInsertionService> _logger;
     private readonly IOptionsMonitor<VoxwrightOptions> _optionsMonitor;
+    private readonly IWindowFocusService _windowFocusService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TextInsertionService"/> class.
     /// </summary>
-    public TextInsertionService(ILogger<TextInsertionService> logger, IOptionsMonitor<VoxwrightOptions> optionsMonitor)
+    public TextInsertionService(
+        ILogger<TextInsertionService> logger,
+        IOptionsMonitor<VoxwrightOptions> optionsMonitor,
+        IWindowFocusService windowFocusService)
     {
         _logger = logger;
         _optionsMonitor = optionsMonitor;
+        _windowFocusService = windowFocusService;
     }
 
-    /// <summary>
-    /// Inserts the specified text at the current cursor position in the foreground window.
-    /// The text is placed on the clipboard and pasted via a simulated Ctrl+V keystroke.
-    /// The previous clipboard contents are saved before the operation and restored afterward
-    /// in a <c>finally</c> block, so the user's clipboard is not permanently modified.
-    /// </summary>
-    /// <param name="text">The text to insert. Must not be null.</param>
-    public async Task InsertTextAsync(string text)
+    /// <inheritdoc />
+    public async Task<bool> InsertTextAsync(string text, IntPtr targetWindow = default)
     {
         _logger.LogInformation("Inserting text via clipboard ({Length} chars)", text.Length);
         var timing = _optionsMonitor.CurrentValue.Timing;
@@ -69,12 +68,28 @@ public class TextInsertionService : ITextInsertionService
             catch (COMException ex)
             {
                 _logger.LogWarning(ex, "Clipboard unavailable, falling back to SendInput character-by-character");
+
+                // Verify focus before character-by-character fallback too
+                if (targetWindow != IntPtr.Zero && !await _windowFocusService.EnsureFocusAsync(targetWindow))
+                {
+                    _logger.LogWarning("Focus lost before SendInput fallback — aborting insertion");
+                    return false;
+                }
+
                 await InsertViaSendInputAsync(text);
-                return;
+                return true;
             }
 
             // Brief delay for clipboard to settle
             await Task.Delay(timing.ClipboardSettleMs);
+
+            // Verify focus right before sending keystrokes to close the race window
+            if (targetWindow != IntPtr.Zero && !await _windowFocusService.EnsureFocusAsync(targetWindow))
+            {
+                _logger.LogWarning(
+                    "Focus lost before paste — text left on clipboard for manual Ctrl+V");
+                return false;
+            }
 
             // Simulate Ctrl+V
             var inputs = new NativeMethods.INPUT[4];
@@ -107,6 +122,7 @@ public class TextInsertionService : ITextInsertionService
 
             // Wait for the paste to complete before restoring (shorter = less clipboard exposure)
             await Task.Delay(timing.PasteCompletionMs);
+            return true;
         }
         finally
         {

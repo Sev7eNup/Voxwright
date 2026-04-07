@@ -594,9 +594,12 @@ public partial class OverlayViewModel : ObservableObject, IDisposable
         // Restore focus to previously active window
         var focusRestored = await _windowFocusService.RestoreFocusAsync(_previousForegroundWindow);
         if (!focusRestored)
-            _logger.LogWarning("Could not restore focus to target window — paste may go to wrong window");
+            _logger.LogWarning("Could not restore focus to target window");
 
-        await _textInsertionService.InsertTextAsync(TranscribedText);
+        var inserted = await _textInsertionService.InsertTextAsync(TranscribedText, _previousForegroundWindow);
+        if (!inserted)
+            _logger.LogWarning("Focus lost before paste — text left on clipboard for manual Ctrl+V");
+
         _transcriptionPipeline.ClearIDEContext();
     }
 
