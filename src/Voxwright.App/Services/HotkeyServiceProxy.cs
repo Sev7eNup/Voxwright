@@ -24,8 +24,7 @@ namespace Voxwright.App.Services;
 /// </summary>
 internal sealed class HotkeyServiceProxy : IGlobalHotkeyService
 {
-    private readonly ILoggerFactory _loggerFactory;
-    private readonly IOptionsMonitor<VoxwrightOptions> _optionsMonitor;
+    private readonly Func<string, IGlobalHotkeyService> _serviceFactory;
     private IGlobalHotkeyService _inner;
     private IntPtr _windowHandle;
     private bool _escapeRegistered;
@@ -56,22 +55,34 @@ internal sealed class HotkeyServiceProxy : IGlobalHotkeyService
     public HotkeyServiceProxy(
         ILoggerFactory loggerFactory,
         IOptionsMonitor<VoxwrightOptions> optionsMonitor)
+        : this(method => CreateDefaultService(method, loggerFactory, optionsMonitor),
+               optionsMonitor.CurrentValue.Hotkey.Method)
     {
-        _loggerFactory = loggerFactory;
-        _optionsMonitor = optionsMonitor;
+    }
 
-        var method = optionsMonitor.CurrentValue.Hotkey.Method;
-        _inner = CreateService(method);
+    /// <summary>
+    /// Test-only constructor that accepts a factory delegate, allowing the inner
+    /// implementation to be substituted with a mock.
+    /// </summary>
+    internal HotkeyServiceProxy(
+        Func<string, IGlobalHotkeyService> serviceFactory,
+        string initialMethod)
+    {
+        _serviceFactory = serviceFactory;
+        _inner = _serviceFactory(initialMethod);
         WireEvents();
     }
 
-    private IGlobalHotkeyService CreateService(string method)
+    private static IGlobalHotkeyService CreateDefaultService(
+        string method,
+        ILoggerFactory loggerFactory,
+        IOptionsMonitor<VoxwrightOptions> optionsMonitor)
     {
         if (method == "LowLevelHook")
             return new LowLevelHookHotkeyService(
-                _loggerFactory.CreateLogger<LowLevelHookHotkeyService>(), _optionsMonitor);
+                loggerFactory.CreateLogger<LowLevelHookHotkeyService>(), optionsMonitor);
         return new GlobalHotkeyService(
-            _loggerFactory.CreateLogger<GlobalHotkeyService>(), _optionsMonitor);
+            loggerFactory.CreateLogger<GlobalHotkeyService>(), optionsMonitor);
     }
 
     private void WireEvents()
@@ -153,7 +164,7 @@ internal sealed class HotkeyServiceProxy : IGlobalHotkeyService
         UnwireEvents();
         _inner.Dispose();
 
-        _inner = CreateService(method);
+        _inner = _serviceFactory(method);
         _inner.SuppressActions = wasSuppressed;
         WireEvents();
 

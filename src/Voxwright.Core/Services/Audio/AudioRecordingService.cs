@@ -150,12 +150,15 @@ public class AudioRecordingService : IAudioRecordingService
         var vadOptions = audioOptions.VoiceActivity;
         _waveFormat = new WaveFormat(audioOptions.SampleRate, 16, 1);
 
-        // Initialize circular pre-buffer
+        // Initialize circular pre-buffer (locked to pair with mutations from the NAudio callback thread)
         var preBufferSeconds = vadOptions.PreBufferSeconds;
-        _preBufferCapacity = (int)(audioOptions.SampleRate * 2 * preBufferSeconds); // 16-bit = 2 bytes/sample
-        _preBuffer = new byte[_preBufferCapacity];
-        _preBufferWritePos = 0;
-        _preBufferLength = 0;
+        lock (_recordingLock)
+        {
+            _preBufferCapacity = (int)(audioOptions.SampleRate * 2 * preBufferSeconds); // 16-bit = 2 bytes/sample
+            _preBuffer = new byte[_preBufferCapacity];
+            _preBufferWritePos = 0;
+            _preBufferLength = 0;
+        }
 
         _vadService.EnsureModelLoaded();
         _vadService.Reset();
@@ -338,39 +341,52 @@ public class AudioRecordingService : IAudioRecordingService
 
     // --- Circular pre-buffer ---
 
+    // Pre-buffer methods acquire _recordingLock internally so writes from the NAudio callback
+    // thread cannot race with reads from FlushPreBuffer (called via TransitionToRecording).
+    // _recordingLock is reentrant, so calling from within an existing lock block is safe.
+
     private void WriteToPreBuffer(byte[] data, int count)
     {
-        if (_preBuffer is null) return;
-
-        for (int i = 0; i < count; i++)
+        lock (_recordingLock)
         {
-            _preBuffer[_preBufferWritePos] = data[i];
-            _preBufferWritePos = (_preBufferWritePos + 1) % _preBufferCapacity;
-            if (_preBufferLength < _preBufferCapacity) _preBufferLength++;
+            if (_preBuffer is null) return;
+
+            for (int i = 0; i < count; i++)
+            {
+                _preBuffer[_preBufferWritePos] = data[i];
+                _preBufferWritePos = (_preBufferWritePos + 1) % _preBufferCapacity;
+                if (_preBufferLength < _preBufferCapacity) _preBufferLength++;
+            }
         }
     }
 
     private byte[] FlushPreBuffer()
     {
-        if (_preBuffer is null || _preBufferLength == 0)
-            return [];
+        lock (_recordingLock)
+        {
+            if (_preBuffer is null || _preBufferLength == 0)
+                return [];
 
-        var result = new byte[_preBufferLength];
-        int readStart = (_preBufferWritePos - _preBufferLength + _preBufferCapacity) % _preBufferCapacity;
-        for (int i = 0; i < _preBufferLength; i++)
-            result[i] = _preBuffer[(readStart + i) % _preBufferCapacity];
+            var result = new byte[_preBufferLength];
+            int readStart = (_preBufferWritePos - _preBufferLength + _preBufferCapacity) % _preBufferCapacity;
+            for (int i = 0; i < _preBufferLength; i++)
+                result[i] = _preBuffer[(readStart + i) % _preBufferCapacity];
 
-        _preBufferLength = 0;
-        _preBufferWritePos = 0;
-        return result;
+            _preBufferLength = 0;
+            _preBufferWritePos = 0;
+            return result;
+        }
     }
 
     private void ClearPreBuffer()
     {
-        _preBuffer = null;
-        _preBufferWritePos = 0;
-        _preBufferLength = 0;
-        _preBufferCapacity = 0;
+        lock (_recordingLock)
+        {
+            _preBuffer = null;
+            _preBufferWritePos = 0;
+            _preBufferLength = 0;
+            _preBufferCapacity = 0;
+        }
     }
 
     // --- Helpers ---

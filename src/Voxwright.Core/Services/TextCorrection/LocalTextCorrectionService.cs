@@ -127,6 +127,11 @@ public class LocalTextCorrectionService : ITextCorrectionService, IDisposable
 
             return corrected;
         }
+        catch (OperationCanceledException)
+        {
+            // Honor cancellation: let the caller decide how to handle it.
+            throw;
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Local text correction failed, returning raw text");

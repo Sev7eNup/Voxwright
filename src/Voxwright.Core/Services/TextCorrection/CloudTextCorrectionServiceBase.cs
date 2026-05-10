@@ -67,6 +67,11 @@ public abstract class CloudTextCorrectionServiceBase : ITextCorrectionService
 
             return ProcessResponse(correctedText, rawText, options.TextCorrection.AutoAddToDictionary);
         }
+        catch (OperationCanceledException)
+        {
+            // Honor cancellation: let the caller (e.g. OverlayViewModel) decide how to handle it.
+            throw;
+        }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Text correction failed ({Provider}), returning raw text", ProviderType);

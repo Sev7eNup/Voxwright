@@ -491,10 +491,51 @@ public class CloudTextCorrectionServiceBaseTests
         userMessage.Should().Contain("Output language MUST be: de");
     }
 
+    // --- Cancellation handling ---
+
+    [Fact]
+    public async Task CorrectAsync_PropagatesOperationCanceledException()
+    {
+        var service = CreateService();
+        service.ShouldThrowCanceled = true;
+
+        var act = async () => await service.CorrectAsync("hello world", "en");
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    [Fact]
+    public async Task CorrectAsync_PropagatesTaskCanceledException()
+    {
+        var service = CreateService();
+        service.ShouldThrowTaskCanceled = true;
+
+        var act = async () => await service.CorrectAsync("hello world", "en");
+
+        // TaskCanceledException derives from OperationCanceledException
+        await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    [Fact]
+    public async Task CorrectAsync_PropagatesCancellation_WhenTokenCancelledBeforeCall()
+    {
+        var service = CreateService();
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+        service.ObserveCancellationToken = true;
+
+        var act = async () => await service.CorrectAsync("hello world", "en", ct: cts.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
     private class TestCorrectionService : CloudTextCorrectionServiceBase
     {
         public string? ResponseToReturn { get; set; } = "corrected";
         public bool ShouldThrow { get; set; }
+        public bool ShouldThrowCanceled { get; set; }
+        public bool ShouldThrowTaskCanceled { get; set; }
+        public bool ObserveCancellationToken { get; set; }
         public string? LastSystemPrompt { get; private set; }
         public string? LastUserMessage { get; private set; }
 
@@ -512,6 +553,12 @@ public class CloudTextCorrectionServiceBaseTests
         {
             LastSystemPrompt = systemPrompt;
             LastUserMessage = userMessage;
+            if (ObserveCancellationToken)
+                ct.ThrowIfCancellationRequested();
+            if (ShouldThrowCanceled)
+                throw new OperationCanceledException("cancelled");
+            if (ShouldThrowTaskCanceled)
+                throw new TaskCanceledException("task cancelled");
             if (ShouldThrow)
                 throw new System.Net.Http.HttpRequestException("test error");
             return Task.FromResult(ResponseToReturn);
